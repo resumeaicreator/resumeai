@@ -226,7 +226,7 @@ app.get("/api/health", (_, res) => res.json({ status: "ok" }));
 // ─── Serve frontend build in production ───────
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "client/build")));
-  app.get("*", (_, res) => res.sendFile(path.join(__dirname, "client/build/index.html")));
+  app.get("/{*path}", (_, res) => res.sendFile(path.join(__dirname, "client/build/index.html")));
 }
 
 app.listen(PORT, () => {
