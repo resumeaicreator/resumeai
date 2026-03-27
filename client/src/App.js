@@ -134,10 +134,25 @@ const FontLink = () => (
     .mode-card {
       border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 24px;
       cursor: pointer; background: var(--mist2);
-      transition: border-color 0.3s, background 0.3s, transform 0.3s, box-shadow 0.3s;
+      transition: border-color 0.28s ease, background 0.28s ease, transform 0.32s cubic-bezier(0.22,1,0.36,1), box-shadow 0.32s cubic-bezier(0.22,1,0.36,1);
+      will-change: transform;
     }
-    .mode-card:hover { border-color: var(--gold-border); background: var(--gold-dim); transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
-    .mode-card.active { border-color: var(--gold); background: var(--gold-dim); box-shadow: 0 0 0 1px var(--gold-border), 0 8px 30px rgba(201,168,76,0.12); }
+    .mode-card:hover {
+      border-color: var(--gold-border);
+      background: var(--gold-dim);
+      transform: translateY(-10px) scale(1.03);
+      box-shadow:
+        0 2px 4px rgba(0,0,0,0.12),
+        0 8px 16px rgba(0,0,0,0.28),
+        0 20px 48px rgba(0,0,0,0.38),
+        0 0 0 1px rgba(201,168,76,0.18),
+        0 28px 32px -12px rgba(201,168,76,0.14);
+    }
+    .mode-card.active {
+      border-color: var(--gold);
+      background: var(--gold-dim);
+      box-shadow: 0 0 0 1px var(--gold-border), 0 8px 30px rgba(201,168,76,0.12);
+    }
 
     /* ── Drop zone ── */
     .drop-zone {
@@ -198,7 +213,7 @@ function Particles() {
 /* ─── Animated SVG Logo Mark ─── */
 function LogoMark({ size = 36 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width={size} height={size} viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display:"block", flexShrink:0 }}>
       <rect width="36" height="36" rx="9" fill="url(#logoGrad)" />
       {/* R shape */}
       <path d="M9 9h7a5 5 0 0 1 0 10h-7V9z M16 19l5 8" stroke="#0d0d0f" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
