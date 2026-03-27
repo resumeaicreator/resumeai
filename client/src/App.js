@@ -130,19 +130,17 @@ const FontLink = () => (
       transition: color 0.2s;
     }
 
-    /* ── Page border frame ── */
-    .page-frame {
-      position: fixed; inset: 10px; border: 1px solid rgba(201,168,76,0.18);
-      border-radius: 18px; pointer-events: none; z-index: 9999;
-      box-shadow: inset 0 0 60px rgba(201,168,76,0.025), 0 0 0 10px rgba(13,13,15,1);
+    /* ── Page border — top & bottom gold lines only ── */
+    .page-frame-top {
+      position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 9999;
+      background: linear-gradient(90deg, transparent 0%, rgba(201,168,76,0.55) 20%, rgba(240,217,138,0.9) 50%, rgba(201,168,76,0.55) 80%, transparent 100%);
+      pointer-events: none;
     }
-    /* corner accents */
-    .page-frame::before, .page-frame::after {
-      content: ''; position: absolute; width: 22px; height: 22px;
-      border-color: var(--gold); border-style: solid; opacity: 0.55;
+    .page-frame-bottom {
+      position: fixed; bottom: 0; left: 0; right: 0; height: 2px; z-index: 9999;
+      background: linear-gradient(90deg, transparent 0%, rgba(201,168,76,0.3) 30%, rgba(201,168,76,0.5) 50%, rgba(201,168,76,0.3) 70%, transparent 100%);
+      pointer-events: none;
     }
-    .page-frame::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; border-radius: 18px 0 0 0; }
-    .page-frame::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; border-radius: 0 0 18px 0; }
 
     /* ── Mode / Template cards ── */
     .mode-card {
@@ -173,7 +171,6 @@ const FontLink = () => (
 
     /* ── Mobile ── */
     @media (max-width: 640px) {
-      .page-frame { inset: 6px; border-radius: 12px; }
       header { padding: 0 16px !important; }
       header .header-pills { display: none !important; }
       .main-content { padding: 28px 16px 70px !important; }
@@ -538,7 +535,8 @@ export default function App() {
     <>
       <FontLink />
       <div style={{ minHeight:"100vh", background:"var(--ink)", position:"relative", overflowX:"hidden" }}>
-        <div className="page-frame" />
+        <div className="page-frame-top" />
+        <div className="page-frame-bottom" />
         <HeroGlow />
         <Particles />
 
