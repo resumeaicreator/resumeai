@@ -522,7 +522,6 @@ export default function App() {
   };
 
   const g2 = { display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 };
-  const g2cls = "g2";
 
   const TemplateSelector = () => (
     <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
