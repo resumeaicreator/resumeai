@@ -130,66 +130,14 @@ const FontLink = () => (
       transition: color 0.2s;
     }
 
-    /* ── Page border — top & bottom gold lines only ── */
-    .page-frame-top {
-      position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 9999;
-      background: linear-gradient(90deg, transparent 0%, rgba(201,168,76,0.55) 20%, rgba(240,217,138,0.9) 50%, rgba(201,168,76,0.55) 80%, transparent 100%);
-      pointer-events: none;
-    }
-    .page-frame-bottom {
-      position: fixed; bottom: 0; left: 0; right: 0; height: 2px; z-index: 9999;
-      background: linear-gradient(90deg, transparent 0%, rgba(201,168,76,0.3) 30%, rgba(201,168,76,0.5) 50%, rgba(201,168,76,0.3) 70%, transparent 100%);
-      pointer-events: none;
-    }
-
     /* ── Mode / Template cards ── */
     .mode-card {
       border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 24px;
-      cursor: pointer; background: var(--mist2); position: relative;
-      transition: border-color 0.3s ease, background 0.3s ease,
-                  transform 0.35s cubic-bezier(0.22,1,0.36,1),
-                  box-shadow 0.35s cubic-bezier(0.22,1,0.36,1);
-      will-change: transform, box-shadow;
+      cursor: pointer; background: var(--mist2);
+      transition: border-color 0.3s, background 0.3s, transform 0.3s, box-shadow 0.3s;
     }
-    .mode-card:hover {
-      border-color: rgba(201,168,76,0.5);
-      background: var(--gold-dim);
-      transform: translateY(-12px) scale(1.02);
-      box-shadow:
-        0 1px 2px rgba(0,0,0,0.18),
-        0 4px 8px rgba(0,0,0,0.22),
-        0 12px 24px rgba(0,0,0,0.32),
-        0 28px 48px rgba(0,0,0,0.28),
-        0 2px 60px -8px rgba(201,168,76,0.22),
-        inset 0 1px 0 rgba(255,255,255,0.06);
-    }
-    .mode-card.active {
-      border-color: var(--gold);
-      background: var(--gold-dim);
-      box-shadow: 0 0 0 1px var(--gold-border), 0 8px 30px rgba(201,168,76,0.12);
-    }
-
-    /* ── Mobile ── */
-    @media (max-width: 640px) {
-      header { padding: 0 16px !important; }
-      header .header-pills { display: none !important; }
-      .main-content { padding: 28px 16px 70px !important; }
-      .hero-title { font-size: 36px !important; letter-spacing: -0.5px !important; }
-      .hero-sub { font-size: 14px !important; }
-      .card { padding: 22px 18px !important; border-radius: 14px !important; }
-      .mode-cards-grid { grid-template-columns: 1fr !important; }
-      .mode-card:hover { transform: translateY(-6px) scale(1.01); }
-      .g2 { grid-template-columns: 1fr !important; }
-      .steps-row { gap: 4px !important; }
-      .step-connector { width: 24px !important; }
-      .gold-btn, .ghost-btn { font-size: 12px !important; padding: 11px 18px !important; }
-      .result-actions { flex-direction: column !important; gap: 8px !important; }
-      .result-actions button { width: 100% !important; }
-    }
-    @media (max-width: 400px) {
-      .hero-title { font-size: 28px !important; }
-      .card { padding: 16px 14px !important; }
-    }
+    .mode-card:hover { border-color: var(--gold-border); background: var(--gold-dim); transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+    .mode-card.active { border-color: var(--gold); background: var(--gold-dim); box-shadow: 0 0 0 1px var(--gold-border), 0 8px 30px rgba(201,168,76,0.12); }
 
     /* ── Drop zone ── */
     .drop-zone {
@@ -425,7 +373,7 @@ const Spinner = () => (
 function HeroGlow() {
   return (
     <>
-      <div style={{ position:"fixed", top:"-10%", left:"40%", width:700, height:500, background:"radial-gradient(ellipse, rgba(201,168,76,0.055) 0%, transparent 65%)", pointerEvents:"none", zIndex:0, animation:"breathe 8s ease-in-out infinite" }} />
+      <div style={{ position:"fixed", top:"-20%", left:"20%", width:"60%", height:600, background:"radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.04) 0%, transparent 70%)", pointerEvents:"none", zIndex:0 }} />
       <div style={{ position:"fixed", bottom:"10%", right:"-5%", width:400, height:400, background:"radial-gradient(ellipse, rgba(201,168,76,0.03) 0%, transparent 65%)", pointerEvents:"none", zIndex:0 }} />
     </>
   );
@@ -535,8 +483,6 @@ export default function App() {
     <>
       <FontLink />
       <div style={{ minHeight:"100vh", background:"var(--ink)", position:"relative", overflowX:"hidden" }}>
-        <div className="page-frame-top" />
-        <div className="page-frame-bottom" />
         <HeroGlow />
         <Particles />
 
@@ -558,7 +504,7 @@ export default function App() {
               </div>
             </div>
             {/* Feature pills */}
-            <div className="header-pills" style={{ marginLeft:"auto", display:"flex", gap:6 }}>
+            <div style={{ marginLeft:"auto", display:"flex", gap:6 }}>
               {["Build","PDF Tailor","LinkedIn","ATS Engine"].map((f,i)=>(
                 <span key={f} style={{ fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", padding:"5px 11px", borderRadius:7, border:"1px solid rgba(255,255,255,0.065)", color:"var(--ash2)", transition:"all 0.25s", animation:`fadeIn 0.5s ${0.2+i*0.08}s both` }}
                   onMouseEnter={e=>{e.target.style.borderColor="var(--gold-border)";e.target.style.color="var(--gold)";}}
@@ -570,18 +516,21 @@ export default function App() {
         </header>
 
         {/* ══ MAIN ══ */}
-        <div ref={containerRef} className="main-content" style={{ maxWidth:880, margin:"0 auto", padding:"44px 40px 90px", position:"relative", zIndex:2 }}>
+        <div ref={containerRef} style={{ maxWidth:880, margin:"0 auto", padding:"44px 40px 90px", position:"relative", zIndex:2 }}>
 
           {/* Hero heading */}
           {step<2 && (
             <div className="fade-up" style={{ textAlign:"center", marginBottom:52 }}>
-              <h1 className="hero-title" style={{ fontFamily:"var(--font-display)", fontSize:54, fontWeight:300, letterSpacing:"-1.5px", lineHeight:1.05, marginBottom:14, animation:"fadeUp 0.7s 0.15s both" }}>
+              <div style={{ display:"inline-block", fontSize:10, letterSpacing:"0.2em", textTransform:"uppercase", color:"var(--gold)", border:"1px solid var(--gold-border)", borderRadius:20, padding:"5px 16px", marginBottom:20, animation:"fadeIn 0.8s 0.1s both" }}>
+                AI-Powered Career Tools
+              </div>
+              <h1 style={{ fontFamily:"var(--font-display)", fontSize:54, fontWeight:300, letterSpacing:"-1.5px", lineHeight:1.05, marginBottom:14, animation:"fadeUp 0.7s 0.15s both" }}>
                 Your career,<br />
                 <em style={{ background:"linear-gradient(135deg,#c9a84c,#f0d98a,#c9a84c)", backgroundSize:"200% auto", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text", animation:"gradientShift 4s ease infinite" }}>
                   perfectly told.
                 </em>
               </h1>
-              <p className="hero-sub" style={{ color:"var(--ash)", fontSize:16, fontWeight:300, animation:"fadeUp 0.7s 0.25s both" }}>
+              <p style={{ color:"var(--ash)", fontSize:16, fontWeight:300, animation:"fadeUp 0.7s 0.25s both" }}>
                 ATS-optimised resumes, intelligent tailoring, and LinkedIn coaching — powered by Claude.
               </p>
             </div>
@@ -595,7 +544,7 @@ export default function App() {
               <div className="card">
                 <h2 style={{ fontFamily:"var(--font-display)", fontSize:28, fontWeight:300, marginBottom:6 }}>What would you like to do?</h2>
                 <p style={{ color:"var(--ash)", fontSize:13, marginBottom:28, fontWeight:300 }}>Choose a tool to get started.</p>
-                <div className="mode-cards-grid" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
                   {[
                     { id:"build",    icon:<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>, title:"Build Resume", desc:"Create a polished resume from scratch using your career details." },
                     { id:"tailor",   icon:<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>, title:"Tailor to a Job", desc:"Upload your current PDF and tailor it toward any job posting." },
@@ -621,9 +570,9 @@ export default function App() {
               <div className="card fade-up d1">
                 <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Personal Information</h2>
                 <p style={{ color:"var(--ash)", fontSize:13, marginBottom:24, fontWeight:300 }}>Your basic details and target role.</p>
-                <div className="g2" style={g2}><F label="Full Name"><input placeholder="Alexandra Chen" value={form.name} onChange={e=>set("name",e.target.value)} /></F><F label="Target Role"><input placeholder="Chief Product Officer" value={form.targetRole} onChange={e=>set("targetRole",e.target.value)} /></F></div>
-                <div className="g2" style={g2}><F label="Email"><input placeholder="alex@example.com" value={form.email} onChange={e=>set("email",e.target.value)} /></F><F label="Phone"><input placeholder="+1 555 000 1234" value={form.phone} onChange={e=>set("phone",e.target.value)} /></F></div>
-                <div className="g2" style={g2}><F label="Location"><input placeholder="San Francisco, CA" value={form.location} onChange={e=>set("location",e.target.value)} /></F><F label="Target Industry"><input placeholder="Technology / FinTech" value={form.targetIndustry} onChange={e=>set("targetIndustry",e.target.value)} /></F></div>
+                <div style={g2}><F label="Full Name"><input placeholder="Alexandra Chen" value={form.name} onChange={e=>set("name",e.target.value)} /></F><F label="Target Role"><input placeholder="Chief Product Officer" value={form.targetRole} onChange={e=>set("targetRole",e.target.value)} /></F></div>
+                <div style={g2}><F label="Email"><input placeholder="alex@example.com" value={form.email} onChange={e=>set("email",e.target.value)} /></F><F label="Phone"><input placeholder="+1 555 000 1234" value={form.phone} onChange={e=>set("phone",e.target.value)} /></F></div>
+                <div style={g2}><F label="Location"><input placeholder="San Francisco, CA" value={form.location} onChange={e=>set("location",e.target.value)} /></F><F label="Target Industry"><input placeholder="Technology / FinTech" value={form.targetIndustry} onChange={e=>set("targetIndustry",e.target.value)} /></F></div>
                 <F label="LinkedIn URL"><input placeholder="linkedin.com/in/alexandrachen" value={form.linkedin} onChange={e=>set("linkedin",e.target.value)} /></F>
               </div>
               {form.experiences.map((exp,i)=>(
@@ -635,8 +584,8 @@ export default function App() {
                     </div>
                     {i>0&&<button className="ghost-btn" style={{ fontSize:12,padding:"6px 14px" }} onClick={()=>rmExp(i)}>Remove</button>}
                   </div>
-                  <div className="g2" style={g2}><F label="Company"><input placeholder="Acme Corp" value={exp.company} onChange={e=>setExp(i,"company",e.target.value)} /></F><F label="Role"><input placeholder="VP Engineering" value={exp.role} onChange={e=>setExp(i,"role",e.target.value)} /></F></div>
-                  <div className="g2" style={g2}>
+                  <div style={g2}><F label="Company"><input placeholder="Acme Corp" value={exp.company} onChange={e=>setExp(i,"company",e.target.value)} /></F><F label="Role"><input placeholder="VP Engineering" value={exp.role} onChange={e=>setExp(i,"role",e.target.value)} /></F></div>
+                  <div style={g2}>
                     <F label="Start Date"><input placeholder="March 2020" value={exp.startDate} onChange={e=>setExp(i,"startDate",e.target.value)} /></F>
                     <F label="End Date">
                       <div style={{ display:"flex", gap:10, alignItems:"center" }}>
@@ -656,8 +605,8 @@ export default function App() {
                 <h2 style={{ fontFamily:"var(--font-display)", fontSize:22, fontWeight:300, marginBottom:20 }}>Education</h2>
                 {form.education.map((edu,i)=>(
                   <div key={i} style={{ marginBottom:14 }}>
-                    <div className="g2" style={g2}><F label="Institution"><input placeholder="MIT" value={edu.school} onChange={e=>setEdu(i,"school",e.target.value)} /></F><F label="Degree"><input placeholder="BSc Computer Science" value={edu.degree} onChange={e=>setEdu(i,"degree",e.target.value)} /></F></div>
-                    <div className="g2" style={g2}><F label="Field"><input placeholder="Computer Science" value={edu.field} onChange={e=>setEdu(i,"field",e.target.value)} /></F><F label="Year"><input placeholder="2019" value={edu.year} onChange={e=>setEdu(i,"year",e.target.value)} /></F></div>
+                    <div style={g2}><F label="Institution"><input placeholder="MIT" value={edu.school} onChange={e=>setEdu(i,"school",e.target.value)} /></F><F label="Degree"><input placeholder="BSc Computer Science" value={edu.degree} onChange={e=>setEdu(i,"degree",e.target.value)} /></F></div>
+                    <div style={g2}><F label="Field"><input placeholder="Computer Science" value={edu.field} onChange={e=>setEdu(i,"field",e.target.value)} /></F><F label="Year"><input placeholder="2019" value={edu.year} onChange={e=>setEdu(i,"year",e.target.value)} /></F></div>
                     {i<form.education.length-1&&<GoldLine />}
                   </div>
                 ))}
@@ -726,7 +675,7 @@ export default function App() {
               <div className="card fade-up d1">
                 <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Your LinkedIn Profile</h2>
                 <p style={{ color:"var(--ash)", fontSize:13, marginBottom:24, fontWeight:300 }}>Copy and paste your current LinkedIn sections below. Claude will score your profile and give specific, prioritised suggestions.</p>
-                <div className="g2" style={g2}>
+                <div style={g2}>
                   <F label="Your Name"><input placeholder="Alexandra Chen" value={liData.name} onChange={e=>setLiData(d=>({...d,name:e.target.value}))} /></F>
                   <F label="Target Role / Industry"><input placeholder="Cybersecurity Engineer · Tech" value={liData.targetRole} onChange={e=>setLiData(d=>({...d,targetRole:e.target.value}))} /></F>
                 </div>
@@ -755,7 +704,7 @@ export default function App() {
                         <div style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, color:"#4ade80", marginBottom:4 }}>✓ Resume Complete</div>
                         <div style={{ fontSize:13,color:"var(--ash)",fontWeight:300 }}>Your AI-crafted resume is ready. Review below, then download or print.</div>
                       </div>
-                      <div className="result-actions" style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={downloadTxt}>Download .txt</button>
                         <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>{setPrintTip(true);setTimeout(()=>window.print(),200);}}>Print / Save PDF</button>
