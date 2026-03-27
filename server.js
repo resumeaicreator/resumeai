@@ -81,7 +81,7 @@ Return ONLY a raw JSON object — absolutely no markdown fences, no preamble, no
 
 // ─── Security middleware ─────────────────────
 app.use(helmet());                    // Sets secure HTTP headers
-app.use(express.json({ limit: "16kb" }));  // Body size limit
+app.use(express.json({ limit: "10mb" }));  // Increased for PDF base64 uploads
 
 // CORS — restrict to your frontend domain in production
 app.use(cors({

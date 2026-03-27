@@ -56,6 +56,18 @@ const FontLink = () => (
     .drop-zone { border:1.5px dashed rgba(201,168,76,0.3); border-radius:12px; padding:36px; text-align:center; cursor:pointer; transition:all 0.25s; background:var(--mist2); }
     .drop-zone:hover, .drop-zone.drag-over { border-color:var(--gold); background:var(--gold-dim); }
     .noise::after { content:''; position:fixed; inset:-50%; width:200%; height:200%; opacity:0.025; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); pointer-events:none; z-index:0; animation:grain 8s steps(1) infinite; }
+    @media print {
+      body * { visibility: hidden !important; }
+      #resume-output, #resume-output * { visibility: visible !important; }
+      #resume-output {
+        position: fixed !important;
+        top: 0 !important; left: 0 !important;
+        width: 100% !important; height: auto !important;
+        margin: 0 !important; padding: 40px 60px !important;
+        box-shadow: none !important;
+        font-size: 13px !important;
+      }
+    }
     .linkedin-card { background:rgba(10,102,194,0.08); border:1px solid rgba(10,102,194,0.25); border-radius:12px; padding:16px 20px; margin-bottom:12px; }
     .linkedin-tag { display:inline-block; font-size:11px; padding:3px 10px; border-radius:20px; font-weight:500; margin-right:6px; }
     .tag-high { background:rgba(248,113,113,0.15); color:#f87171; }
@@ -525,10 +537,17 @@ export default function App() {
                       <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={downloadTxt}>Download .txt</button>
-                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 20px" }} onClick={()=>window.print()}>Print / Save PDF</button>
+                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 20px" }} onClick={()=>{
+                          const tip = document.getElementById("print-tip");
+                          if(tip) tip.style.display="block";
+                          setTimeout(()=>window.print(), 200);
+                        }}>Print / Save PDF</button>
                       </div>
                     </div>
                     <ATSMeter text={`${result.summary||""} ${result.experience||""} ${result.skills||""}`} />
+                  </div>
+                  <div id="print-tip" style={{ display:"none", marginBottom:12, padding:"12px 16px", background:"rgba(201,168,76,0.08)", border:"1px solid var(--gold-border)", borderRadius:10, fontSize:12, color:"#ccc", lineHeight:1.6 }}>
+                    <strong style={{ color:"var(--gold)" }}>Print tip:</strong> In the print dialog, set <em>Destination</em> to <strong>Save as PDF</strong>, and under <em>More settings</em> uncheck <strong>Headers and footers</strong> to get a clean resume with no browser chrome.
                   </div>
                   <div style={{ borderRadius:16, overflow:"hidden", boxShadow:"0 32px 80px rgba(0,0,0,0.6)" }}>
                     <Preview data={result} template={form.template} />
