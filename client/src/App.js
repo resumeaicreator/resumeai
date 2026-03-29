@@ -548,6 +548,13 @@ export default function App() {
   const [liData,setLiData]     = useState({name:"",targetRole:"",headline:"",about:"",experience:"",skills:""});
   const [printTip,setPrintTip] = useState(false);
 
+  // Apply Mode state
+  const [applyInput,setApplyInput]   = useState({ jobUrl:"", jobText:"", inputMode:"url" });
+  const [applyResume,setApplyResume] = useState(null); // uploaded PDF for apply mode
+  const [applyResult,setApplyResult] = useState(null); // { resume, coverLetter, interviewPrep, jobTitle, company }
+  const [applyTab,setApplyTab]       = useState("resume"); // "resume" | "cover" | "interview"
+  const applyFileRef = useRef(null);
+
   const fileRef      = useRef(null);
   const containerRef = useRef(null);
 
@@ -558,7 +565,7 @@ export default function App() {
   const rmExp  = i  => set("experiences",form.experiences.filter((_,j)=>j!==i));
   const addEdu = () => set("education",[...form.education,blankEdu()]);
   const go     = n  => { setStep(n); setTimeout(()=>containerRef.current?.scrollTo({top:0,behavior:"smooth"}),50); };
-  const resetAll = () => { setResult(null);setLiResult(null);setUploadedPdf(null);setJobDescription("");setMode("");setPrintTip(false);go(0); };
+  const resetAll = () => { setResult(null);setLiResult(null);setApplyResult(null);setUploadedPdf(null);setApplyResume(null);setJobDescription("");setMode("");setPrintTip(false);setApplyInput({jobUrl:"",jobText:"",inputMode:"url"});go(0); };
 
   const handleFile = file => {
     if (!file||file.type!=="application/pdf"){ setErr("Please upload a PDF file."); return; }
@@ -604,6 +611,36 @@ export default function App() {
     setLiResult(null);
     try { setLiResult(await callAPI("/api/linkedin",liData)); go(2); }
     catch(e){ setErr(e.message||"LinkedIn analysis failed."); }
+    finally { clearInterval(iv); setLoading(false); }
+  };
+
+  const generateApply = async () => {
+    const hasUrl  = applyInput.inputMode==="url"  && applyInput.jobUrl.trim();
+    const hasText = applyInput.inputMode==="text" && applyInput.jobText.trim();
+    const hasBoth = applyInput.inputMode==="both" && (applyInput.jobUrl.trim()||applyInput.jobText.trim());
+    if (!hasUrl && !hasText && !hasBoth){ setErr("Please provide a job URL or paste the job description."); return; }
+    if (!applyResume){ setErr("Please upload your resume PDF."); return; }
+
+    const iv=startLoad([
+      "Reading the job posting…",
+      "Analysing requirements…",
+      "Tailoring your resume…",
+      "Writing your cover letter…",
+      "Preparing interview questions…",
+      "Putting it all together…",
+    ]);
+    setApplyResult(null);
+    try {
+      const res = await callAPI("/api/apply", {
+        jobUrl:      applyInput.jobUrl.trim(),
+        jobText:     applyInput.jobText.trim(),
+        pdfBase64:   applyResume.base64,
+        template:    form.template,
+      });
+      setApplyResult(res);
+      setApplyTab("resume");
+      go(2);
+    } catch(e){ setErr(e.message||"Apply Mode failed — please try again."); }
     finally { clearInterval(iv); setLoading(false); }
   };
 
@@ -691,15 +728,17 @@ export default function App() {
               <div className="card">
                 <h2 style={{ fontFamily:"var(--font-display)", fontSize:28, fontWeight:300, marginBottom:6 }}>What would you like to do?</h2>
                 <p style={{ color:"var(--ash)", fontSize:13, marginBottom:28, fontWeight:300 }}>Choose a tool to get started.</p>
-                <div className="mode-grid" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
+                <div className="mode-grid" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16 }}>
                   {[
                     { id:"build",    icon:<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>, title:"Build Resume", desc:"Create a polished resume from scratch using your career details." },
                     { id:"tailor",   icon:<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>, title:"Tailor to a Job", desc:"Upload your current PDF and tailor it toward any job posting." },
                     { id:"linkedin", icon:<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>, title:"LinkedIn Optimizer", desc:"Get AI suggestions to strengthen your LinkedIn profile." },
+                    { id:"apply",    icon:<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>, title:"Apply Mode ✦ NEW", desc:"Paste a job URL or description — get a tailored resume, cover letter, and interview prep in one shot.", hot:true },
                   ].map((m,i)=>(
-                    <div key={m.id} className={`mode-card fade-up d${i+1}${mode===m.id?" active":""}`} onClick={()=>setMode(m.id)}>
+                    <div key={m.id} className={`mode-card fade-up d${i+1}${mode===m.id?" active":""}`} onClick={()=>setMode(m.id)} style={{ position:"relative" }}>
+                      {m.hot && <div style={{ position:"absolute", top:12, right:12, fontSize:9, padding:"2px 8px", borderRadius:10, background:"linear-gradient(135deg,#c9a84c,#e8c96d)", color:"#0d0d0f", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase" }}>New</div>}
                       <div style={{ color:mode===m.id?"var(--gold)":"var(--ash)", marginBottom:14, transition:"color 0.3s" }}>{m.icon}</div>
-                      <div style={{ fontWeight:500, fontSize:15, marginBottom:7, color:mode===m.id?"var(--gold)":"#e2e2ea", transition:"color 0.3s" }}>{m.title}</div>
+                      <div style={{ fontWeight:500, fontSize:15, marginBottom:7, color:mode===m.id?"var(--gold)":"#e2e2ea", transition:"color 0.3s" }}>{m.title.replace(" ✦ NEW","")}</div>
                       <div style={{ fontSize:12, color:"var(--ash)", fontWeight:300, lineHeight:1.55 }}>{m.desc}</div>
                     </div>
                   ))}
@@ -840,9 +879,208 @@ export default function App() {
             </div>
           )}
 
+          {/* ══ STEP 1 — APPLY MODE ══ */}
+          {step===1 && mode==="apply" && (
+            <div>
+              {/* Glowing banner */}
+              <div className="fade-up" style={{ background:"linear-gradient(135deg,rgba(201,168,76,0.08),rgba(201,168,76,0.04))", border:"1px solid var(--gold-border)", borderRadius:14, padding:"18px 24px", marginBottom:20, display:"flex", alignItems:"center", gap:14 }}>
+                <div style={{ fontSize:28 }}>⚡</div>
+                <div>
+                  <div style={{ fontFamily:"var(--font-display)", fontSize:18, fontWeight:300, color:"var(--gold)", marginBottom:2 }}>Apply Mode — Full Pre-Interview Package</div>
+                  <div style={{ fontSize:13, color:"var(--ash)", fontWeight:300 }}>Paste a job URL or description + upload your resume → get a tailored resume, cover letter, and interview prep in one shot.</div>
+                </div>
+              </div>
+
+              <div className="card fade-up d1">
+                <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>The Job</h2>
+                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:20, fontWeight:300 }}>Provide the job you want to apply for. You can paste the URL, paste the description, or both.</p>
+
+                {/* Input mode toggle */}
+                <div style={{ display:"flex", gap:8, marginBottom:20 }}>
+                  {[{id:"url",label:"Job URL"},{id:"text",label:"Paste Description"},{id:"both",label:"Both"}].map(t=>(
+                    <button key={t.id} onClick={()=>setApplyInput(a=>({...a,inputMode:t.id}))}
+                      style={{ padding:"8px 16px", borderRadius:8, border:`1px solid ${applyInput.inputMode===t.id?"var(--gold)":"rgba(255,255,255,0.1)"}`, background:applyInput.inputMode===t.id?"var(--gold-dim)":"transparent", color:applyInput.inputMode===t.id?"var(--gold)":"var(--ash)", cursor:"pointer", fontSize:12, fontFamily:"var(--font-body)", fontWeight:500, transition:"all 0.2s" }}
+                    >{t.label}</button>
+                  ))}
+                </div>
+
+                {(applyInput.inputMode==="url"||applyInput.inputMode==="both") && (
+                  <F label="Job Posting URL">
+                    <input placeholder="https://www.linkedin.com/jobs/view/... or any job board URL" value={applyInput.jobUrl} onChange={e=>setApplyInput(a=>({...a,jobUrl:e.target.value}))} />
+                    <p style={{ fontSize:11,color:"rgba(255,255,255,0.2)",marginTop:5 }}>Claude will fetch and read the full job posting automatically.</p>
+                  </F>
+                )}
+                {(applyInput.inputMode==="text"||applyInput.inputMode==="both") && (
+                  <F label="Job Description">
+                    <textarea placeholder={"Paste the full job description here...\n\nExample:\nSoftware Engineer – Payments Team\nAcme Corp · San Francisco, CA\n\nWe're looking for a backend engineer to join our payments team...\n\nRequirements:\n• 3+ years Python experience\n• Experience with distributed systems..."} value={applyInput.jobText} onChange={e=>setApplyInput(a=>({...a,jobText:e.target.value}))} style={{ minHeight:180 }} />
+                  </F>
+                )}
+              </div>
+
+              {/* Resume upload */}
+              <div className="card fade-up d2">
+                <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Your Resume</h2>
+                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:20, fontWeight:300 }}>Upload your current resume PDF — Claude will tailor it specifically to this job.</p>
+                <div className={`drop-zone${dragOver?" drag-over":""}`}
+                  onClick={()=>applyFileRef.current?.click()}
+                  onDragOver={e=>{e.preventDefault();setDragOver(true);}}
+                  onDragLeave={()=>setDragOver(false)}
+                  onDrop={e=>{e.preventDefault();setDragOver(false);
+                    const file=e.dataTransfer.files[0];
+                    if(!file||file.type!=="application/pdf"){setErr("Please upload a PDF.");return;}
+                    const r=new FileReader(); r.onload=ev=>{setApplyResume({name:file.name,base64:ev.target.result.split(",")[1]});setErr("");}; r.readAsDataURL(file);
+                  }}>
+                  <input ref={applyFileRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={e=>{
+                    const file=e.target.files[0]; if(!file) return;
+                    const r=new FileReader(); r.onload=ev=>{setApplyResume({name:file.name,base64:ev.target.result.split(",")[1]});setErr("");}; r.readAsDataURL(file);
+                  }} />
+                  {applyResume ? (
+                    <div><div style={{ fontSize:28,color:"var(--gold)",marginBottom:8 }}>✓</div><div style={{ fontWeight:500,color:"var(--gold)",fontSize:14,marginBottom:4 }}>{applyResume.name}</div><div style={{ fontSize:12,color:"var(--ash)" }}>Click to replace</div></div>
+                  ) : (
+                    <div>
+                      <div style={{ marginBottom:12,color:"var(--ash)" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+                      <div style={{ fontWeight:500,marginBottom:4,fontSize:14 }}>Drop your resume PDF here</div>
+                      <div style={{ fontSize:12,color:"var(--ash)" }}>or click to browse · Max 5MB</div>
+                    </div>
+                  )}
+                </div>
+                <div style={{ marginTop:20 }}>
+                  <F label="Resume Style"><TemplateSelector /></F>
+                </div>
+              </div>
+
+              <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+                <button className="ghost-btn" onClick={()=>go(0)}>← Back</button>
+                <button className="gold-btn" onClick={generateApply} disabled={loading} style={{ minWidth:240 }}>
+                  {loading
+                    ? <span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>
+                    : "⚡ Generate Full Package"}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* ══ STEP 2 — RESULTS ══ */}
           {step===2 && (
             <div>
+              {/* Apply Mode Results */}
+              {applyResult && (
+                <div className="fade-up">
+                  {/* Header */}
+                  <div className="card" style={{ borderColor:"rgba(201,168,76,0.3)", background:"linear-gradient(135deg,rgba(201,168,76,0.07),rgba(201,168,76,0.02))", marginBottom:24 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:14, marginBottom:16 }}>
+                      <div>
+                        <div style={{ fontFamily:"var(--font-display)", fontSize:26, fontWeight:300, color:"var(--gold)", marginBottom:4 }}>⚡ Apply Package Ready</div>
+                        <div style={{ fontSize:13,color:"var(--ash)",fontWeight:300 }}>
+                          {applyResult.company && <span style={{ color:"#e2e2ea",fontWeight:500 }}>{applyResult.company}</span>}
+                          {applyResult.jobTitle && <span style={{ color:"var(--ash)" }}> · {applyResult.jobTitle}</span>}
+                        </div>
+                      </div>
+                      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                        <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
+                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>{setPrintTip(true);setTimeout(()=>window.print(),200);}}>Print / Save PDF</button>
+                      </div>
+                    </div>
+
+                    {/* Fit score */}
+                    {applyResult.fitScore && (
+                      <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+                        <div style={{ flex:1 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                            <span style={{ fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--ash)" }}>Job Fit Score</span>
+                            <span style={{ fontFamily:"var(--font-display)",fontSize:22,fontWeight:300,color:applyResult.fitScore>=70?"#4ade80":applyResult.fitScore>=50?"#fbbf24":"#f87171" }}>{applyResult.fitScore}<span style={{ fontSize:13,color:"var(--ash)" }}>/100</span></span>
+                          </div>
+                          <div style={{ background:"rgba(255,255,255,0.06)",borderRadius:999,height:5,overflow:"hidden" }}>
+                            <div style={{ width:`${applyResult.fitScore}%`,height:"100%",background:`linear-gradient(90deg,${applyResult.fitScore>=70?"#4ade8088,#4ade80":applyResult.fitScore>=50?"#fbbf2488,#fbbf24":"#f8717188,#f87171"})`,borderRadius:999,transition:"width 1.4s cubic-bezier(0.16,1,0.3,1)" }} />
+                          </div>
+                          {applyResult.missingKeywords?.length>0 && (
+                            <p style={{ fontSize:11,color:"rgba(255,255,255,0.25)",marginTop:6 }}>
+                              Missing keywords: {applyResult.missingKeywords.slice(0,5).join(", ")}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tab switcher */}
+                  <div style={{ display:"flex", gap:4, marginBottom:20, background:"var(--mist2)", borderRadius:12, padding:4 }}>
+                    {[
+                      {id:"resume",   label:"📄 Tailored Resume"},
+                      {id:"cover",    label:"✉️ Cover Letter"},
+                      {id:"interview",label:"🎯 Interview Prep"},
+                    ].map(t=>(
+                      <button key={t.id} onClick={()=>setApplyTab(t.id)} style={{
+                        flex:1, padding:"10px 8px", borderRadius:9, border:"none", cursor:"pointer",
+                        fontFamily:"var(--font-body)", fontSize:13, fontWeight:500, transition:"all 0.25s",
+                        background: applyTab===t.id ? "var(--ink2)" : "transparent",
+                        color:      applyTab===t.id ? "#e2e2ea" : "var(--ash)",
+                        boxShadow:  applyTab===t.id ? "0 2px 8px rgba(0,0,0,0.3)" : "none",
+                      }}>{t.label}</button>
+                    ))}
+                  </div>
+
+                  {/* Tab: Resume */}
+                  {applyTab==="resume" && applyResult.resume && (
+                    <div className="scale-in">
+                      <ATSMeter text={`${applyResult.resume.summary||""} ${applyResult.resume.experience||""} ${applyResult.resume.skills||""}`} />
+                      {printTip && <div className="fade-in" style={{ margin:"12px 0",padding:"13px 18px",background:"rgba(201,168,76,0.07)",border:"1px solid var(--gold-border)",borderRadius:11,fontSize:12,color:"#ccc",lineHeight:1.65 }}><strong style={{ color:"var(--gold)" }}>Print tip:</strong> In Chrome's print dialog → <em>More settings</em> → uncheck <strong>Headers and footers</strong>.</div>}
+                      <div style={{ borderRadius:18,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.65)",marginTop:16 }}>
+                        <Preview data={applyResult.resume} template={form.template} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tab: Cover Letter */}
+                  {applyTab==="cover" && applyResult.coverLetter && (
+                    <div className="card scale-in" style={{ background:"#fff", color:"#1a1a2e" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24, flexWrap:"wrap", gap:10 }}>
+                        <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:22, fontWeight:300, color:"#1a1a2e" }}>Cover Letter</div>
+                        <button onClick={()=>{
+                          const blob=new Blob([applyResult.coverLetter],{type:"text/plain"});
+                          Object.assign(document.createElement("a"),{href:URL.createObjectURL(blob),download:"cover_letter.txt"}).click();
+                        }} style={{ fontSize:12,padding:"8px 16px",borderRadius:8,border:"1px solid #ddd",background:"transparent",cursor:"pointer",fontFamily:"var(--font-body)",color:"#555",transition:"all 0.2s" }}
+                          onMouseEnter={e=>{e.currentTarget.style.background="#f5f5f5";}}
+                          onMouseLeave={e=>{e.currentTarget.style.background="transparent";}}
+                        >Download .txt</button>
+                      </div>
+                      <div style={{ fontFamily:"'Outfit',sans-serif", fontSize:14, lineHeight:1.8, color:"#333", whiteSpace:"pre-wrap" }}>
+                        {applyResult.coverLetter}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tab: Interview Prep */}
+                  {applyTab==="interview" && applyResult.interviewPrep && (
+                    <div className="scale-in">
+                      <div style={{ marginBottom:16, padding:"14px 18px", background:"rgba(201,168,76,0.06)", border:"1px solid var(--gold-border)", borderRadius:11, fontSize:13, color:"var(--ash)", lineHeight:1.6 }}>
+                        <strong style={{ color:"var(--gold)" }}>🎯 Prep tip:</strong> These questions are tailored specifically to this job and your background. Practise answering out loud — aim for 2 minutes per answer using the STAR method (Situation, Task, Action, Result).
+                      </div>
+                      {(applyResult.interviewPrep||[]).map((item,i)=>(
+                        <div key={i} className="card fade-up" style={{ animationDelay:`${i*0.06}s`, marginBottom:14 }}>
+                          <div style={{ display:"flex", gap:12, alignItems:"flex-start", marginBottom:10 }}>
+                            <div style={{ width:28,height:28,borderRadius:8,background:"var(--gold-dim)",border:"1px solid var(--gold-border)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,color:"var(--gold)",flexShrink:0 }}>{i+1}</div>
+                            <div style={{ fontWeight:500,fontSize:15,lineHeight:1.4 }}>{item.question}</div>
+                          </div>
+                          <div style={{ marginLeft:40 }}>
+                            <div style={{ fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",color:"var(--gold)",marginBottom:6 }}>How to answer</div>
+                            <div style={{ fontSize:13,color:"var(--ash)",lineHeight:1.7 }}>{item.guidance}</div>
+                            {item.keyPoints && (
+                              <div style={{ marginTop:10, display:"flex", flexWrap:"wrap", gap:6 }}>
+                                {item.keyPoints.map((kp,j)=>(
+                                  <span key={j} style={{ fontSize:11,padding:"3px 10px",borderRadius:8,background:"var(--mist)",border:"1px solid rgba(255,255,255,0.08)",color:"var(--ash)" }}>{kp}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Regular resume result */}
               {result && (
                 <>
                   <div className="card scale-in" style={{ borderColor:"rgba(74,222,128,0.2)", background:"rgba(74,222,128,0.035)", marginBottom:24 }}>
@@ -867,11 +1105,10 @@ export default function App() {
                   <div className="fade-up" style={{ borderRadius:18,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.65)", marginBottom:32 }}>
                     <Preview data={result} template={form.template} />
                   </div>
-
-                  {/* ── Job Recommendations ── */}
                   <JobRecommendations role={result.targetRole} skills={result.skills} location={form.location} />
                 </>
               )}
+
               {liResult && (
                 <>
                   <div style={{ textAlign:"right", marginBottom:18 }}>

@@ -492,6 +492,134 @@ Match is a percentage 0-100 of how well this fits their profile. Keep reasons co
   }
 });
 
+// ─── Apply Mode endpoint ───────────────────────
+app.post("/api/apply", limiter, async (req, res) => {
+  try {
+    const { jobUrl, jobText, pdfBase64, template } = req.body;
+    if (!pdfBase64) return res.status(400).json({ error:"Resume PDF is required." });
+    if (!jobUrl?.trim() && !jobText?.trim()) return res.status(400).json({ error:"Job URL or description is required." });
+
+    const safeUrl  = sanitize(jobUrl  || "", 500);
+    const safeText = sanitize(jobText || "", 5000);
+
+    // Fetch job URL content if provided
+    let fetchedJobContent = "";
+    if (safeUrl) {
+      try {
+        const r = await fetch(safeUrl, { headers:{ "User-Agent":"Mozilla/5.0" }, signal:AbortSignal.timeout(8000) });
+        if (r.ok) {
+          const html = await r.text();
+          // Strip HTML tags, collapse whitespace
+          fetchedJobContent = html.replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim().slice(0,6000);
+        }
+      } catch(e) { console.log("URL fetch failed, continuing with text only"); }
+    }
+
+    const jobContent = [fetchedJobContent, safeText].filter(Boolean).join("\n\n").trim();
+
+    // ═══════════════════════════════════════════════════
+    //  ✦ APPLY MODE PROMPT — Edit this to change how
+    //    Claude generates the full apply package.
+    // ═══════════════════════════════════════════════════
+    const APPLY_PROMPT = `You are an elite career coach, resume writer, and interview strategist. You are helping a job seeker apply for a specific role.
+
+JOB POSTING:
+${jobContent}
+
+Your tasks — using the candidate's resume (provided as a PDF) and the job posting above:
+
+1. TAILORED RESUME: Rewrite their resume specifically for this job. Mirror the job's language, emphasise matching experience, reorder bullet points by relevance. Keep facts true.
+
+2. COVER LETTER: Write a compelling, human-sounding cover letter (3 short paragraphs). Opening: hook with genuine enthusiasm and a specific thing about the company. Middle: connect 2-3 of their strongest achievements directly to the role's key requirements. Close: confident call to action. Tone should match the company culture inferred from the posting. No generic fluff.
+
+3. INTERVIEW PREP: Generate the 6 most likely interview questions for this specific role and company. For each, give specific guidance on how to answer based on the candidate's actual background.
+
+4. FIT ANALYSIS: Score how well their background matches this job (0-100) and identify any missing keywords.
+
+Return ONLY a raw JSON object, no markdown:
+{
+  "jobTitle": "exact job title from posting",
+  "company": "company name from posting",
+  "fitScore": 78,
+  "missingKeywords": ["keyword1", "keyword2"],
+  "resume": {
+    "name": "...", "email": "...", "phone": "...", "location": "...", "linkedin": "...",
+    "targetRole": "...", "summary": "...", "experience": "...", "education": "...",
+    "skills": "...", "certifications": "..."
+  },
+  "coverLetter": "Full cover letter text with line breaks. Include date and sign-off.",
+  "interviewPrep": [
+    {
+      "question": "Tell me about yourself.",
+      "guidance": "Specific 2-3 sentence guidance on how this candidate should answer based on their background and this role.",
+      "keyPoints": ["point 1", "point 2", "point 3"]
+    }
+  ]
+}`;
+
+    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type":"application/json", "x-api-key":ANTHROPIC_API_KEY, "anthropic-version":"2023-06-01" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4000,
+        messages: [{
+          role: "user",
+          content: [
+            { type:"document", source:{ type:"base64", media_type:"application/pdf", data:pdfBase64 } },
+            { type:"text", text:APPLY_PROMPT }
+          ]
+        }]
+      }),
+    });
+
+    if (!anthropicRes.ok) {
+      const e = await anthropicRes.json().catch(()=>({}));
+      console.error("Anthropic error (apply):", e);
+      return res.status(502).json({ error:"AI service error — please try again." });
+    }
+
+    const aiData  = await anthropicRes.json();
+    const rawText = (aiData.content||[]).map(b=>b.text||"").join("");
+    const cleaned = rawText.replace(/```json|```/g,"").trim();
+
+    let data;
+    try { data = JSON.parse(cleaned); }
+    catch { return res.status(502).json({ error:"AI returned malformed data — please try again." }); }
+
+    // Sanitise and return
+    return res.json({
+      jobTitle:        String(data.jobTitle        || ""),
+      company:         String(data.company         || ""),
+      fitScore:        Math.min(100, Math.max(0, Number(data.fitScore) || 70)),
+      missingKeywords: (data.missingKeywords||[]).slice(0,8).map(k=>String(k)),
+      coverLetter:     String(data.coverLetter     || ""),
+      resume: {
+        name:           String(data.resume?.name           || ""),
+        email:          String(data.resume?.email          || ""),
+        phone:          String(data.resume?.phone          || ""),
+        location:       String(data.resume?.location       || ""),
+        linkedin:       String(data.resume?.linkedin       || ""),
+        targetRole:     String(data.resume?.targetRole     || ""),
+        summary:        String(data.resume?.summary        || ""),
+        experience:     String(data.resume?.experience     || ""),
+        education:      String(data.resume?.education      || ""),
+        skills:         String(data.resume?.skills         || ""),
+        certifications: String(data.resume?.certifications || ""),
+      },
+      interviewPrep: (data.interviewPrep||[]).slice(0,8).map(q=>({
+        question:  String(q.question  || ""),
+        guidance:  String(q.guidance  || ""),
+        keyPoints: (q.keyPoints||[]).slice(0,4).map(k=>String(k)),
+      })),
+    });
+
+  } catch(err) {
+    console.error("Apply Mode error:", err);
+    return res.status(500).json({ error:"Internal server error." });
+  }
+});
+
 // ─── Health check ─────────────────────────────
 app.get("/api/health", (_, res) => res.json({ status: "ok" }));
 
