@@ -166,6 +166,16 @@ const FontLink = () => (
       #resume-output, #resume-output * { visibility: visible !important; }
       #resume-output { position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; margin: 0 !important; padding: 40px 60px !important; box-shadow: none !important; font-size: 13px !important; }
     }
+
+    /* ── Mobile ── */
+    @media (max-width: 640px) {
+      .card { padding: 20px 18px !important; border-radius: 14px !important; }
+      .mode-card { padding: 16px 14px !important; }
+      .gold-btn { padding: 12px 16px !important; font-size: 12px !important; width: 100% !important; }
+      .ghost-btn { padding: 11px 14px !important; font-size: 12px !important; }
+      .drop-zone { padding: 28px 16px !important; }
+      .li-card { padding: 14px 14px !important; }
+    }
   `}</style>
 );
 
@@ -379,6 +389,143 @@ function HeroGlow() {
   );
 }
 
+/* ─── Job Recommendations ─── */
+const JOB_BOARDS = [
+  { name:"LinkedIn Jobs",  color:"#0a66c2", icon:"in", url:(r,l)=>`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(r)}&location=${encodeURIComponent(l||"")}` },
+  { name:"Indeed",         color:"#003a9b", icon:"in", url:(r,l)=>`https://www.indeed.com/jobs?q=${encodeURIComponent(r)}&l=${encodeURIComponent(l||"")}` },
+  { name:"Glassdoor",      color:"#0caa41", icon:"gd", url:(r,l)=>`https://www.glassdoor.com/Job/jobs.htm?sc.keyword=${encodeURIComponent(r)}&locT=C&locId=1` },
+  { name:"Google Jobs",    color:"#4285f4", icon:"g",  url:(r,l)=>`https://www.google.com/search?q=${encodeURIComponent(r+" jobs "+(l||""))}` },
+  { name:"Remotive",       color:"#7c3aed", icon:"re", url:(r)  =>`https://remotive.com/remote-jobs?search=${encodeURIComponent(r)}` },
+  { name:"We Work Remotely",color:"#1a9e6e",icon:"ww", url:(r)  =>`https://weworkremotely.com/remote-jobs/search?term=${encodeURIComponent(r)}` },
+];
+
+const SEARCH_TIPS = [
+  r => `${r} remote`,
+  r => `${r} entry level`,
+  r => `${r} senior`,
+  r => `junior ${r}`,
+  r => `${r} contract`,
+];
+
+function JobRecommendations({ role, skills, location }) {
+  const [loading, setLoading] = useState(false);
+  const [jobs, setJobs]       = useState(null);
+  const [expanded, setExpanded] = useState(false);
+
+  const roleClean = (role||"").trim();
+  const skillList = (skills||"").split(/[,|]/).map(s=>s.trim()).filter(Boolean).slice(0,5);
+
+  const fetchJobs = async () => {
+    setLoading(true);
+    const API = process.env.REACT_APP_API_URL || "";
+    try {
+      const res = await fetch(`${API}/api/jobs`, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ role: roleClean, skills: skillList, location }),
+      });
+      if (res.ok) setJobs(await res.json());
+    } catch(e) {}
+    finally { setLoading(false); setExpanded(true); }
+  };
+
+  if (!roleClean) return null;
+
+  return (
+    <div className="card fade-up" style={{ borderColor:"rgba(201,168,76,0.15)", marginTop:8 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12, marginBottom: expanded ? 24 : 0 }}>
+        <div>
+          <div style={{ fontFamily:"var(--font-display)", fontSize:22, fontWeight:300, marginBottom:3 }}>
+            Find Jobs for <em style={{ color:"var(--gold)" }}>{roleClean}</em>
+          </div>
+          <div style={{ fontSize:13, color:"var(--ash)", fontWeight:300 }}>Search live job boards or get AI-curated suggestions based on your resume.</div>
+        </div>
+        {!expanded && (
+          <button className="gold-btn" style={{ fontSize:12, padding:"10px 20px", flexShrink:0 }} onClick={fetchJobs} disabled={loading}>
+            {loading ? <span style={{ display:"flex",alignItems:"center",gap:8 }}><span style={{ width:12,height:12,border:"2px solid rgba(0,0,0,0.25)",borderTopColor:"#0d0d0f",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block" }} />Finding jobs…</span> : "✦ Find Jobs"}
+          </button>
+        )}
+      </div>
+
+      {expanded && (
+        <div className="fade-in">
+          {/* Quick search links */}
+          <div style={{ marginBottom:24 }}>
+            <div style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--ash)", marginBottom:12 }}>Search on job boards</div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(160px, 1fr))", gap:10 }}>
+              {JOB_BOARDS.map(b => (
+                <a key={b.name} href={b.url(roleClean, location)} target="_blank" rel="noopener noreferrer"
+                  style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", borderRadius:10, border:"1px solid rgba(255,255,255,0.08)", background:"var(--mist2)", textDecoration:"none", transition:"all 0.25s", color:"#e2e2ea" }}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor=b.color+"66";e.currentTarget.style.background=b.color+"12";}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.08)";e.currentTarget.style.background="var(--mist2)";}}
+                >
+                  <div style={{ width:28, height:28, borderRadius:6, background:b.color, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700, color:"#fff", flexShrink:0 }}>{b.icon.toUpperCase().slice(0,2)}</div>
+                  <span style={{ fontSize:13, fontWeight:400 }}>{b.name}</span>
+                  <span style={{ marginLeft:"auto", fontSize:14, color:"var(--ash)" }}>↗</span>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Refined search suggestions */}
+          <div style={{ marginBottom: jobs ? 24 : 0 }}>
+            <div style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--ash)", marginBottom:12 }}>Try these searches</div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+              {SEARCH_TIPS.map((tip,i) => {
+                const q = tip(roleClean);
+                return (
+                  <a key={i} href={`https://www.google.com/search?q=${encodeURIComponent(q+" jobs "+(location||""))}`} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize:12, padding:"6px 14px", borderRadius:20, border:"1px solid var(--gold-border)", color:"var(--gold)", textDecoration:"none", background:"var(--gold-dim)", transition:"all 0.2s" }}
+                    onMouseEnter={e=>{e.currentTarget.style.background="rgba(201,168,76,0.22)";}}
+                    onMouseLeave={e=>{e.currentTarget.style.background="var(--gold-dim)";}}
+                  >{q} ↗</a>
+                );
+              })}
+              {skillList.slice(0,3).map((skill,i) => (
+                <a key={"s"+i} href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(skill)}&location=${encodeURIComponent(location||"")}`} target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize:12, padding:"6px 14px", borderRadius:20, border:"1px solid rgba(255,255,255,0.1)", color:"var(--ash)", textDecoration:"none", background:"var(--mist2)", transition:"all 0.2s" }}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.2)";e.currentTarget.style.color="#e2e2ea";}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.1)";e.currentTarget.style.color="var(--ash)";}}
+                >{skill} jobs ↗</a>
+              ))}
+            </div>
+          </div>
+
+          {/* AI-curated job suggestions */}
+          {jobs && jobs.suggestions && (
+            <div className="fade-in">
+              <div style={{ height:1, background:"linear-gradient(90deg,transparent,var(--gold-border),transparent)", margin:"20px 0" }} />
+              <div style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--ash)", marginBottom:14 }}>AI-curated roles to consider</div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(260px, 1fr))", gap:12 }}>
+                {jobs.suggestions.map((job,i) => (
+                  <div key={i} className="li-card fade-up" style={{ animationDelay:`${i*0.07}s`, borderColor:"rgba(201,168,76,0.15)" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
+                      <div style={{ fontWeight:500, fontSize:14, color:"#e2e2ea" }}>{job.title}</div>
+                      <span style={{ fontSize:10, padding:"2px 8px", borderRadius:10, background:"var(--gold-dim)", color:"var(--gold)", whiteSpace:"nowrap", marginLeft:8 }}>{job.match}% match</span>
+                    </div>
+                    <div style={{ fontSize:12, color:"var(--ash)", marginBottom:10, lineHeight:1.5 }}>{job.reason}</div>
+                    <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:12 }}>
+                      {(job.skills||[]).map((s,j)=>(
+                        <span key={j} style={{ fontSize:10, padding:"2px 8px", borderRadius:8, background:"var(--mist)", border:"1px solid rgba(255,255,255,0.08)", color:"var(--ash)" }}>{s}</span>
+                      ))}
+                    </div>
+                    <a href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(job.title)}&location=${encodeURIComponent(location||"")}`} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize:11, color:"var(--gold)", textDecoration:"none", letterSpacing:"0.06em", textTransform:"uppercase", display:"inline-flex", alignItems:"center", gap:5 }}
+                    >Search on LinkedIn ↗</a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginTop:18, textAlign:"center" }}>
+            <button className="ghost-btn" style={{ fontSize:11 }} onClick={()=>setExpanded(false)}>Collapse ↑</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ══════════════════════════════════════════════
    MAIN APP
 ══════════════════════════════════════════════ */
@@ -466,7 +613,7 @@ export default function App() {
     Object.assign(document.createElement("a"),{href:URL.createObjectURL(new Blob([t],{type:"text/plain"})),download:`${(result.name||"resume").replace(/\s/g,"_")}_resume.txt`}).click();
   };
 
-  const g2 = { display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 };
+  const g2 = { display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))", gap:14 };
 
   const TemplateSelector = () => (
     <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
@@ -504,11 +651,11 @@ export default function App() {
               </div>
             </div>
             {/* Feature pills */}
-            <div style={{ marginLeft:"auto", display:"flex", gap:6 }}>
+            <div style={{ marginLeft:"auto", display:"flex", gap:6, flexShrink:0 }} className="header-pills">
               {["Build","PDF Tailor","LinkedIn","ATS Engine"].map((f,i)=>(
-                <span key={f} style={{ fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", padding:"5px 11px", borderRadius:7, border:"1px solid rgba(255,255,255,0.065)", color:"var(--ash2)", transition:"all 0.25s", animation:`fadeIn 0.5s ${0.2+i*0.08}s both` }}
-                  onMouseEnter={e=>{e.target.style.borderColor="var(--gold-border)";e.target.style.color="var(--gold)";}}
-                  onMouseLeave={e=>{e.target.style.borderColor="rgba(255,255,255,0.065)";e.target.style.color="var(--ash2)";}}
+                <span key={f} style={{ fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", padding:"5px 11px", borderRadius:7, border:"1px solid rgba(255,255,255,0.065)", color:"var(--ash2)", transition:"all 0.25s", animation:`fadeIn 0.5s ${0.2+i*0.08}s both`, cursor:"default" }}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--gold-border)";e.currentTarget.style.color="var(--gold)";}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.065)";e.currentTarget.style.color="var(--ash2)";}}
                 >{f}</span>
               ))}
             </div>
@@ -516,7 +663,7 @@ export default function App() {
         </header>
 
         {/* ══ MAIN ══ */}
-        <div ref={containerRef} style={{ maxWidth:880, margin:"0 auto", padding:"44px 40px 90px", position:"relative", zIndex:2 }}>
+        <div ref={containerRef} className="main-pad" style={{ maxWidth:880, margin:"0 auto", padding:"44px 40px 90px", position:"relative", zIndex:2 }}>
 
           {/* Hero heading */}
           {step<2 && (
@@ -524,7 +671,7 @@ export default function App() {
               <div style={{ display:"inline-block", fontSize:10, letterSpacing:"0.2em", textTransform:"uppercase", color:"var(--gold)", border:"1px solid var(--gold-border)", borderRadius:20, padding:"5px 16px", marginBottom:20, animation:"fadeIn 0.8s 0.1s both" }}>
                 AI-Powered Career Tools
               </div>
-              <h1 style={{ fontFamily:"var(--font-display)", fontSize:54, fontWeight:300, letterSpacing:"-1.5px", lineHeight:1.05, marginBottom:14, animation:"fadeUp 0.7s 0.15s both" }}>
+              <h1 className="hero-h1" style={{ fontFamily:"var(--font-display)", fontSize:54, fontWeight:300, letterSpacing:"-1.5px", lineHeight:1.05, marginBottom:14, animation:"fadeUp 0.7s 0.15s both" }}>
                 Your career,<br />
                 <em style={{ background:"linear-gradient(135deg,#c9a84c,#f0d98a,#c9a84c)", backgroundSize:"200% auto", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text", animation:"gradientShift 4s ease infinite" }}>
                   perfectly told.
@@ -544,7 +691,7 @@ export default function App() {
               <div className="card">
                 <h2 style={{ fontFamily:"var(--font-display)", fontSize:28, fontWeight:300, marginBottom:6 }}>What would you like to do?</h2>
                 <p style={{ color:"var(--ash)", fontSize:13, marginBottom:28, fontWeight:300 }}>Choose a tool to get started.</p>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
+                <div className="mode-grid" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
                   {[
                     { id:"build",    icon:<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>, title:"Build Resume", desc:"Create a polished resume from scratch using your career details." },
                     { id:"tailor",   icon:<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>, title:"Tailor to a Job", desc:"Upload your current PDF and tailor it toward any job posting." },
@@ -621,7 +768,7 @@ export default function App() {
                 <h2 style={{ fontFamily:"var(--font-display)", fontSize:22, fontWeight:300, marginBottom:16 }}>Resume Style</h2>
                 <TemplateSelector />
               </div>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
                 <button className="ghost-btn" onClick={()=>go(0)}>← Back</button>
                 <button className="gold-btn" onClick={generateBuild} disabled={loading} style={{ minWidth:210 }}>
                   {loading?<span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>:"✦ Generate Resume"}
@@ -660,7 +807,7 @@ export default function App() {
                 <p style={{ fontSize:11,color:"rgba(255,255,255,0.18)",marginTop:-8,marginBottom:20 }}>The more context you give, the better the tailoring.</p>
                 <F label="Resume Style"><TemplateSelector /></F>
               </div>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
                 <button className="ghost-btn" onClick={()=>go(0)}>← Back</button>
                 <button className="gold-btn" onClick={generateTailor} disabled={loading} style={{ minWidth:220 }}>
                   {loading?<span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>:"⟳ Tailor My Resume"}
@@ -684,7 +831,7 @@ export default function App() {
                 <F label="Experience"><textarea placeholder={"Senior Security Analyst at ABC Corp (2021–present)\n– Monitored network traffic\n– Led incident response\n\nJunior Analyst at DEF Ltd (2019–2021)"} value={liData.experience} onChange={e=>setLiData(d=>({...d,experience:e.target.value}))} style={{ minHeight:140 }} /></F>
                 <F label="Skills (comma separated)"><input placeholder="Penetration Testing, SIEM, Python, Network Security..." value={liData.skills} onChange={e=>setLiData(d=>({...d,skills:e.target.value}))} /></F>
               </div>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
                 <button className="ghost-btn" onClick={()=>go(0)}>← Back</button>
                 <button className="gold-btn" onClick={generateLinkedIn} disabled={loading} style={{ minWidth:220 }}>
                   {loading?<span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>:"in  Analyse My Profile"}
@@ -704,7 +851,7 @@ export default function App() {
                         <div style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, color:"#4ade80", marginBottom:4 }}>✓ Resume Complete</div>
                         <div style={{ fontSize:13,color:"var(--ash)",fontWeight:300 }}>Your AI-crafted resume is ready. Review below, then download or print.</div>
                       </div>
-                      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                      <div className="result-actions" style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={downloadTxt}>Download .txt</button>
                         <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>{setPrintTip(true);setTimeout(()=>window.print(),200);}}>Print / Save PDF</button>
@@ -717,9 +864,12 @@ export default function App() {
                       <strong style={{ color:"var(--gold)" }}>Print tip:</strong> In Chrome's print dialog → <em>More settings</em> → uncheck <strong>Headers and footers</strong> → set <strong>Destination</strong> to <em>Save as PDF</em>.
                     </div>
                   )}
-                  <div className="fade-up" style={{ borderRadius:18,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.65)" }}>
+                  <div className="fade-up" style={{ borderRadius:18,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.65)", marginBottom:32 }}>
                     <Preview data={result} template={form.template} />
                   </div>
+
+                  {/* ── Job Recommendations ── */}
+                  <JobRecommendations role={result.targetRole} skills={result.skills} location={form.location} />
                 </>
               )}
               {liResult && (

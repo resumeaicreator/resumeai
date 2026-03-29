@@ -423,6 +423,75 @@ Provide 4-6 suggestions total. Be specific — generic advice is not helpful.`;
   }
 });
 
+// ─── Job recommendations endpoint ─────────────
+app.post("/api/jobs", limiter, async (req, res) => {
+  try {
+    const role     = sanitize(req.body.role || "", 200);
+    const skills   = (req.body.skills || []).slice(0, 8).map(s => sanitize(s, 60));
+    const location = sanitize(req.body.location || "", 120);
+
+    if (!role) return res.status(400).json({ error: "Role is required." });
+
+    // ═══════════════════════════════════════════════════
+    //  ✦ JOB RECOMMENDATIONS PROMPT — Edit this to change
+    //    how Claude suggests roles and search strategies.
+    // ═══════════════════════════════════════════════════
+    const JOBS_PROMPT = `You are a career advisor helping someone find jobs after creating their resume.
+
+Their target role: ${role}
+Their skills: ${skills.join(", ")}
+Their location: ${location || "not specified"}
+
+Suggest 4 specific job titles they should search for. These should include:
+- 1 exact match for their target role
+- 1 slightly more senior version
+- 1 adjacent role that uses similar skills
+- 1 creative alternative they may not have considered
+
+Return ONLY a raw JSON object, no markdown:
+{
+  "suggestions": [
+    {
+      "title": "Exact job title to search",
+      "match": 95,
+      "reason": "One sentence explaining why this is a good fit",
+      "skills": ["skill1", "skill2", "skill3"]
+    }
+  ]
+}
+
+Match is a percentage 0-100 of how well this fits their profile. Keep reasons concise and specific.`;
+
+    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "x-api-key":ANTHROPIC_API_KEY, "anthropic-version":"2023-06-01" },
+      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:600, messages:[{ role:"user", content:JOBS_PROMPT }] }),
+    });
+
+    if (!anthropicRes.ok) return res.status(502).json({ error: "AI service error." });
+
+    const aiData  = await anthropicRes.json();
+    const rawText = (aiData.content||[]).map(b=>b.text||"").join("");
+    const cleaned = rawText.replace(/```json|```/g,"").trim();
+
+    let data;
+    try { data = JSON.parse(cleaned); } catch { return res.status(502).json({ error:"Malformed response." }); }
+
+    return res.json({
+      suggestions: (data.suggestions||[]).slice(0,4).map(j=>({
+        title:  String(j.title||""),
+        match:  Math.min(100, Math.max(0, Number(j.match)||80)),
+        reason: String(j.reason||""),
+        skills: (j.skills||[]).slice(0,4).map(s=>String(s)),
+      }))
+    });
+
+  } catch(err) {
+    console.error("Jobs error:", err);
+    return res.status(500).json({ error:"Internal server error." });
+  }
+});
+
 // ─── Health check ─────────────────────────────
 app.get("/api/health", (_, res) => res.json({ status: "ok" }));
 
