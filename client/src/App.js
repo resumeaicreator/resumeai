@@ -1016,7 +1016,7 @@ export default function App() {
                       </div>
                       <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
-                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>{setPrintTip(true);setTimeout(()=>window.print(),200);}}>Print / Save PDF</button>
+                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>window.print()}>⬇ Download PDF</button>
                       </div>
                     </div>
 
@@ -1129,7 +1129,7 @@ export default function App() {
                       <div className="result-actions" style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={downloadTxt}>Download .txt</button>
-                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>{setPrintTip(true);setTimeout(()=>window.print(),200);}}>Print / Save PDF</button>
+                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>window.print()}>⬇ Download PDF</button>
                       </div>
                     </div>
                     <ATSMeter text={`${result.summary||""} ${result.experience||""} ${result.skills||""}`} />
