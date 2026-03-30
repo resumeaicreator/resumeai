@@ -175,6 +175,9 @@ const FontLink = () => (
       .ghost-btn { padding: 11px 14px !important; font-size: 12px !important; }
       .drop-zone { padding: 28px 16px !important; }
       .li-card { padding: 14px 14px !important; }
+      .hero-h1 { font-size: 38px !important; letter-spacing: -1px !important; }
+      .main-pad { padding: 0 16px 80px !important; }
+      .header-pills { display: none !important; }
     }
   `}</style>
 );
@@ -677,8 +680,12 @@ export default function App() {
         {/* ══ HEADER ══ */}
         <header style={{ position:"sticky", top:0, zIndex:100, borderBottom:"1px solid rgba(255,255,255,0.055)", background:"rgba(13,13,15,0.82)", backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)", padding:"0 40px" }}>
           <div style={{ maxWidth:880, margin:"0 auto", display:"flex", alignItems:"center", height:66 }}>
-            {/* Logo */}
-            <div style={{ display:"flex", alignItems:"center", gap:11, cursor:"default" }}>
+            {/* Logo — clickable, returns to homepage */}
+            <div onClick={resetAll} style={{ display:"flex", alignItems:"center", gap:11, cursor:"pointer", textDecoration:"none" }}
+              title="Back to home"
+              onMouseEnter={e=>e.currentTarget.style.opacity="0.8"}
+              onMouseLeave={e=>e.currentTarget.style.opacity="1"}
+            >
               <LogoMark size={36} />
               <div>
                 <div style={{ fontFamily:"var(--font-display)", fontSize:20, fontWeight:300, letterSpacing:"0.06em", color:"#e2e2ea", lineHeight:1, animation:"logoFade 0.7s 0.2s both" }}>
@@ -700,55 +707,164 @@ export default function App() {
         </header>
 
         {/* ══ MAIN ══ */}
-        <div ref={containerRef} className="main-pad" style={{ maxWidth:880, margin:"0 auto", padding:"44px 40px 90px", position:"relative", zIndex:2 }}>
+        <div ref={containerRef} className="main-pad" style={{ maxWidth:960, margin:"0 auto", padding:"0 40px 90px", position:"relative", zIndex:2 }}>
 
-          {/* Hero heading */}
-          {step<2 && (
-            <div className="fade-up" style={{ textAlign:"center", marginBottom:52 }}>
-              <div style={{ display:"inline-block", fontSize:10, letterSpacing:"0.2em", textTransform:"uppercase", color:"var(--gold)", border:"1px solid var(--gold-border)", borderRadius:20, padding:"5px 16px", marginBottom:20, animation:"fadeIn 0.8s 0.1s both" }}>
-                AI-Powered Career Tools
-              </div>
-              <h1 className="hero-h1" style={{ fontFamily:"var(--font-display)", fontSize:54, fontWeight:300, letterSpacing:"-1.5px", lineHeight:1.05, marginBottom:14, animation:"fadeUp 0.7s 0.15s both" }}>
-                Your career,<br />
-                <em style={{ background:"linear-gradient(135deg,#c9a84c,#f0d98a,#c9a84c)", backgroundSize:"200% auto", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text", animation:"gradientShift 4s ease infinite" }}>
-                  perfectly told.
-                </em>
-              </h1>
-              <p style={{ color:"var(--ash)", fontSize:16, fontWeight:300, animation:"fadeUp 0.7s 0.25s both" }}>
-                ATS-optimised resumes, intelligent tailoring, and LinkedIn coaching — powered by Claude.
-              </p>
-            </div>
-          )}
-
-          <Steps current={step} />
-
-          {/* ══ STEP 0 — Mode ══ */}
+          {/* ══ LANDING HERO (step 0 only) ══ */}
           {step===0 && (
-            <div className="scale-in">
-              <div className="card">
-                <h2 style={{ fontFamily:"var(--font-display)", fontSize:28, fontWeight:300, marginBottom:6 }}>What would you like to do?</h2>
-                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:28, fontWeight:300 }}>Choose a tool to get started.</p>
-                <div className="mode-grid" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16 }}>
-                  {[
-                    { id:"build",    icon:<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>, title:"Build Resume", desc:"Create a polished resume from scratch using your career details." },
-                    { id:"tailor",   icon:<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>, title:"Tailor to a Job", desc:"Upload your current PDF and tailor it toward any job posting." },
-                    { id:"linkedin", icon:<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>, title:"LinkedIn Optimizer", desc:"Get AI suggestions to strengthen your LinkedIn profile." },
-                    { id:"apply",    icon:<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>, title:"Apply Mode ✦ NEW", desc:"Paste a job URL or description — get a tailored resume, cover letter, and interview prep in one shot.", hot:true },
-                  ].map((m,i)=>(
-                    <div key={m.id} className={`mode-card fade-up d${i+1}${mode===m.id?" active":""}`} onClick={()=>setMode(m.id)} style={{ position:"relative" }}>
-                      {m.hot && <div style={{ position:"absolute", top:12, right:12, fontSize:9, padding:"2px 8px", borderRadius:10, background:"linear-gradient(135deg,#c9a84c,#e8c96d)", color:"#0d0d0f", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase" }}>New</div>}
-                      <div style={{ color:mode===m.id?"var(--gold)":"var(--ash)", marginBottom:14, transition:"color 0.3s" }}>{m.icon}</div>
-                      <div style={{ fontWeight:500, fontSize:15, marginBottom:7, color:mode===m.id?"var(--gold)":"#e2e2ea", transition:"color 0.3s" }}>{m.title.replace(" ✦ NEW","")}</div>
-                      <div style={{ fontSize:12, color:"var(--ash)", fontWeight:300, lineHeight:1.55 }}>{m.desc}</div>
+            <div>
+              {/* Hero */}
+              <div style={{ textAlign:"center", padding:"72px 0 56px" }}>
+                <div className="fade-in" style={{ display:"inline-flex", alignItems:"center", gap:8, fontSize:10, letterSpacing:"0.2em", textTransform:"uppercase", color:"var(--gold)", border:"1px solid var(--gold-border)", borderRadius:20, padding:"6px 18px", marginBottom:24 }}>
+                  <span style={{ width:6, height:6, borderRadius:"50%", background:"var(--gold)", display:"inline-block", animation:"breathe 2s ease-in-out infinite" }} />
+                  Powered by Claude AI
+                </div>
+                <h1 className="hero-h1 fade-up" style={{ fontFamily:"var(--font-display)", fontSize:64, fontWeight:300, letterSpacing:"-2px", lineHeight:1.0, marginBottom:18, animationDelay:"0.1s" }}>
+                  From resume to<br />
+                  <em style={{ background:"linear-gradient(135deg,#c9a84c,#f0d98a,#c9a84c)", backgroundSize:"200% auto", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text", animation:"gradientShift 4s ease infinite" }}>interview-ready.</em>
+                </h1>
+                <p className="fade-up" style={{ color:"var(--ash)", fontSize:17, fontWeight:300, maxWidth:520, margin:"0 auto 36px", lineHeight:1.7, animationDelay:"0.2s" }}>
+                  The only tool that tailors your resume, writes your cover letter, and preps you for the interview — all from one job posting.
+                </p>
+                <div className="fade-up" style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap", animationDelay:"0.3s" }}>
+                  <button className="gold-btn pulse" onClick={()=>{setMode("apply");go(1);}} style={{ fontSize:14, padding:"14px 36px", letterSpacing:"0.06em" }}>
+                    ⚡ Try Apply Mode Free
+                  </button>
+                  <button className="ghost-btn" onClick={()=>document.getElementById("tools-section").scrollIntoView({behavior:"smooth"})} style={{ fontSize:13, padding:"14px 28px" }}>
+                    Browse All Tools ↓
+                  </button>
+                </div>
+                {/* Trust strip */}
+                <div className="fade-in" style={{ marginTop:36, display:"flex", alignItems:"center", justifyContent:"center", gap:24, flexWrap:"wrap", animationDelay:"0.5s" }}>
+                  {["No account required","No paywall","No watermarks","Powered by Claude"].map((t,i)=>(
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--ash)" }}>
+                      <span style={{ color:"#4ade80", fontSize:14 }}>✓</span> {t}
                     </div>
                   ))}
                 </div>
               </div>
-              <div style={{ textAlign:"right" }}>
-                <button className={`gold-btn${mode?" pulse":""}`} disabled={!mode} onClick={()=>go(1)}>Continue →</button>
+
+              {/* Apply Mode feature spotlight */}
+              <div className="card fade-up" style={{ borderColor:"rgba(201,168,76,0.2)", background:"linear-gradient(135deg,rgba(201,168,76,0.06),rgba(201,168,76,0.02))", marginBottom:16, padding:"36px 40px" }}>
+                <div style={{ display:"flex", alignItems:"flex-start", gap:32, flexWrap:"wrap" }}>
+                  <div style={{ flex:"1 1 280px" }}>
+                    <div style={{ display:"inline-block", fontSize:9, letterSpacing:"0.15em", textTransform:"uppercase", color:"var(--gold)", border:"1px solid var(--gold-border)", borderRadius:10, padding:"3px 10px", marginBottom:14 }}>Exclusive Feature</div>
+                    <h2 style={{ fontFamily:"var(--font-display)", fontSize:32, fontWeight:300, marginBottom:12, lineHeight:1.2 }}>Apply Mode<br /><em style={{ color:"var(--gold)" }}>One click. Full package.</em></h2>
+                    <p style={{ color:"var(--ash)", fontSize:14, lineHeight:1.75, marginBottom:20, fontWeight:300 }}>Paste any job URL or description, upload your resume — and get a tailored resume, a human-sounding cover letter, and 6 interview questions with coaching. In under 60 seconds.</p>
+                    <button className="gold-btn" onClick={()=>{setMode("apply");go(1);}} style={{ fontSize:12 }}>⚡ Launch Apply Mode →</button>
+                  </div>
+                  <div style={{ flex:"1 1 240px", display:"flex", flexDirection:"column", gap:12 }}>
+                    {[
+                      { icon:"📄", label:"Tailored Resume",     desc:"Rewritten to mirror the job's exact language" },
+                      { icon:"✉️", label:"Cover Letter",        desc:"Human-sounding, company-specific, 3 paragraphs" },
+                      { icon:"🎯", label:"Interview Prep",      desc:"6 role-specific questions with coaching" },
+                      { icon:"📊", label:"Job Fit Score",       desc:"See exactly how well you match the posting" },
+                    ].map((f,i)=>(
+                      <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", borderRadius:10, background:"rgba(0,0,0,0.2)", border:"1px solid rgba(255,255,255,0.05)" }}>
+                        <span style={{ fontSize:18, flexShrink:0 }}>{f.icon}</span>
+                        <div>
+                          <div style={{ fontSize:13, fontWeight:500, marginBottom:1 }}>{f.label}</div>
+                          <div style={{ fontSize:11, color:"var(--ash)" }}>{f.desc}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* All tools */}
+              <div id="tools-section" style={{ paddingTop:8 }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+                  <div style={{ fontSize:10, letterSpacing:"0.15em", textTransform:"uppercase", color:"var(--ash)" }}>All Tools</div>
+                </div>
+                <div className="mode-grid" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:14 }}>
+                  {[
+                    { id:"build",    icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>, title:"Build Resume", desc:"Create a polished resume from scratch with AI writing assistance." },
+                    { id:"tailor",   icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>, title:"Tailor to a Job", desc:"Upload your current PDF and tailor it toward any new role." },
+                    { id:"linkedin", icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>, title:"LinkedIn Optimizer", desc:"AI audit of your LinkedIn profile with prioritised fixes." },
+                    { id:"apply",    icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>, title:"Apply Mode", desc:"Full apply package from a single job URL.", hot:true },
+                  ].map((m,i)=>(
+                    <div key={m.id} className={`mode-card fade-up d${i+1}${mode===m.id?" active":""}`} onClick={()=>setMode(m.id)} style={{ position:"relative" }}>
+                      {m.hot && <div style={{ position:"absolute", top:10, right:10, fontSize:8, padding:"2px 7px", borderRadius:8, background:"linear-gradient(135deg,#c9a84c,#e8c96d)", color:"#0d0d0f", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase" }}>New</div>}
+                      <div style={{ color:mode===m.id?"var(--gold)":"var(--ash)", marginBottom:12, transition:"color 0.3s" }}>{m.icon}</div>
+                      <div style={{ fontWeight:500, fontSize:14, marginBottom:5, color:mode===m.id?"var(--gold)":"#e2e2ea", transition:"color 0.3s" }}>{m.title}</div>
+                      <div style={{ fontSize:12, color:"var(--ash)", fontWeight:300, lineHeight:1.5 }}>{m.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* How it works */}
+              <div style={{ marginTop:48 }}>
+                <div style={{ textAlign:"center", marginBottom:28 }}>
+                  <div style={{ fontSize:10, letterSpacing:"0.15em", textTransform:"uppercase", color:"var(--ash)", marginBottom:10 }}>How it works</div>
+                  <h2 style={{ fontFamily:"var(--font-display)", fontSize:32, fontWeight:300 }}>Interview-ready in <em style={{ color:"var(--gold)" }}>3 steps</em></h2>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16 }}>
+                  {[
+                    { n:"01", title:"Paste the job",      desc:"Drop in a job URL or paste the description. Claude reads every word." },
+                    { n:"02", title:"Upload your resume", desc:"Your current PDF. Any format, any industry, any experience level." },
+                    { n:"03", title:"Get the package",    desc:"Tailored resume, cover letter, and interview prep. Ready in under 60 seconds." },
+                  ].map((s,i)=>(
+                    <div key={i} className="card fade-up" style={{ animationDelay:`${i*0.1}s`, textAlign:"center", padding:"28px 24px" }}>
+                      <div style={{ fontFamily:"var(--font-display)", fontSize:42, fontWeight:300, color:"var(--gold)", opacity:0.4, marginBottom:12, lineHeight:1 }}>{s.n}</div>
+                      <div style={{ fontWeight:500, fontSize:15, marginBottom:8 }}>{s.title}</div>
+                      <div style={{ fontSize:13, color:"var(--ash)", lineHeight:1.65 }}>{s.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Why better than competitors */}
+              <div style={{ marginTop:48 }}>
+                <div style={{ textAlign:"center", marginBottom:28 }}>
+                  <div style={{ fontSize:10, letterSpacing:"0.15em", textTransform:"uppercase", color:"var(--ash)", marginBottom:10 }}>vs. the competition</div>
+                  <h2 style={{ fontFamily:"var(--font-display)", fontSize:32, fontWeight:300 }}>Why <em style={{ color:"var(--gold)" }}>RésuméAI</em> wins</h2>
+                </div>
+                <div style={{ overflowX:"auto" }}>
+                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+                    <thead>
+                      <tr>
+                        {["Feature","Zety","Kickresume","Enhancv","RésuméAI"].map((h,i)=>(
+                          <th key={i} style={{ padding:"10px 14px", textAlign:i===0?"left":"center", fontSize:10, letterSpacing:"0.1em", textTransform:"uppercase", color:i===4?"var(--gold)":"var(--ash)", borderBottom:"1px solid rgba(255,255,255,0.08)", whiteSpace:"nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ["Apply Mode (full loop)",    "✗","✗","✗","✓"],
+                        ["PDF resume tailoring",      "✗","✗","✗","✓"],
+                        ["LinkedIn optimizer",        "✗","✗","✗","✓"],
+                        ["No account needed",         "✗","✗","✗","✓"],
+                        ["Free PDF download",         "✗","limited","✗ watermark","✓"],
+                        ["Interview prep",            "paid","paid","✗","✓"],
+                        ["Job fit score",             "paid","✗","paid","✓"],
+                      ].map((row,i)=>(
+                        <tr key={i} style={{ borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
+                          {row.map((cell,j)=>(
+                            <td key={j} style={{ padding:"11px 14px", textAlign:j===0?"left":"center", color: j===4 ? (cell==="✓"?"#4ade80":"var(--ash)") : (cell==="✓"?"#4ade80":cell==="✗"?"rgba(255,255,255,0.2)":"var(--ash)"), fontWeight:j===4&&cell==="✓"?500:400, background:j===4?"rgba(201,168,76,0.04)":"transparent" }}>
+                              {cell}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* CTA footer */}
+              <div style={{ textAlign:"center", marginTop:56, padding:"48px 0 8px" }}>
+                <h2 style={{ fontFamily:"var(--font-display)", fontSize:36, fontWeight:300, marginBottom:12 }}>Ready to land the interview?</h2>
+                <p style={{ color:"var(--ash)", fontSize:15, marginBottom:28, fontWeight:300 }}>No account. No credit card. No watermarks. Just results.</p>
+                <button className="gold-btn pulse" onClick={()=>{setMode("apply");go(1);}} style={{ fontSize:14, padding:"16px 44px", letterSpacing:"0.06em" }}>
+                  ⚡ Get Started Free
+                </button>
               </div>
             </div>
           )}
+
+          {/* Steps indicator — only show on steps 1 and 2 */}
+          {step > 0 && <Steps current={step} />}
 
           {/* ══ STEP 1 — BUILD ══ */}
           {step===1 && mode==="build" && (
