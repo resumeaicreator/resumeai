@@ -1,16 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 
 /* ─── Fonts + Global Styles ─── */
-const FontLink = () => {
-  useEffect(() => {
-    if (!document.getElementById("html2pdf-script")) {
-      const s = document.createElement("script");
-      s.id  = "html2pdf-script";
-      s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-      document.head.appendChild(s);
-    }
-  }, []);
-  return (
+const FontLink = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -189,8 +180,7 @@ const FontLink = () => {
       .header-pills { display: none !important; }
     }
   `}</style>
-  );
-};
+);
 
 /* ─── Floating Particles ─── */
 function Particles() {
@@ -539,75 +529,6 @@ function JobRecommendations({ role, skills, location }) {
   );
 }
 
-/* ─── LinkedIn URL Import ─── */
-function LinkedInImport({ onImport }) {
-  const [url, setUrl]       = useState("");
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg]       = useState("");
-
-  const doImport = async () => {
-    if (!url.trim()) return;
-    setLoading(true); setMsg("");
-    try {
-      const API = process.env.REACT_APP_API_URL || "";
-      const res = await fetch(`${API}/api/linkedin-import`, {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ url: url.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setMsg(data.error || "Import failed."); return; }
-      onImport(data);
-      setMsg("✓ Profile imported — review and edit below.");
-    } catch(e) {
-      setMsg("Couldn't reach the server.");
-    } finally { setLoading(false); }
-  };
-
-  return (
-    <div style={{ marginBottom:24, padding:"16px 18px", background:"rgba(10,102,194,0.06)", border:"1px solid rgba(10,102,194,0.2)", borderRadius:12 }}>
-      <div style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"#60a5fa", marginBottom:10 }}>Auto-import from LinkedIn</div>
-      <div style={{ display:"flex", gap:8 }}>
-        <input
-          placeholder="https://linkedin.com/in/yourname"
-          value={url} onChange={e=>setUrl(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&doImport()}
-          style={{ flex:1 }}
-        />
-        <button
-          onClick={doImport} disabled={loading || !url.trim()}
-          style={{ padding:"10px 18px", borderRadius:9, border:"none", background:"#0a66c2", color:"#fff",
-            fontFamily:"var(--font-body)", fontSize:13, fontWeight:500, cursor:"pointer",
-            opacity: loading||!url.trim() ? 0.5 : 1, whiteSpace:"nowrap", flexShrink:0 }}>
-          {loading ? "Importing…" : "Import →"}
-        </button>
-      </div>
-      {msg && <div style={{ marginTop:8, fontSize:12, color: msg.startsWith("✓") ? "#4ade80" : "#f87171" }}>{msg}</div>}
-      <div style={{ marginTop:8, fontSize:11, color:"rgba(255,255,255,0.2)" }}>
-        Note: Only public profiles can be imported. If blocked, fill in the fields below manually.
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════
-   EXAMPLE DATA — "Fill Example" button
-══════════════════════════════════════════════ */
-const EXAMPLE_FORM = {
-  name:"Alex Rivera", email:"alex.rivera@email.com", phone:"+1 415 555 0192",
-  location:"San Francisco, CA", linkedin:"linkedin.com/in/alexrivera",
-  targetRole:"Senior Product Manager", targetIndustry:"Technology / SaaS",
-  template:"executive",
-  experiences:[
-    { company:"Acme Tech", role:"Product Manager", startDate:"Jan 2021", endDate:"", current:true,
-      bullets:"Led cross-functional team of 12 to ship payments redesign, increasing conversion by 24%.\nOwned roadmap for core checkout flow serving 2M monthly users.\nDrove 0→1 launch of subscription product generating $1.8M ARR in first year." },
-    { company:"StartupCo", role:"Associate PM", startDate:"Jun 2019", endDate:"Dec 2020", current:false,
-      bullets:"Defined MVP requirements for mobile app, shipped in 10 weeks.\nManaged backlog of 200+ tickets across 3 engineering squads.\nIncreased DAU by 18% through A/B tested onboarding redesign." },
-  ],
-  education:[{ school:"UC Berkeley", degree:"BSc", field:"Computer Science", year:"2019" }],
-  skills:"Product Strategy, Roadmapping, A/B Testing, SQL, Figma, Agile / Scrum, Stakeholder Management",
-  certifications:"Pragmatic Marketing Certified",
-};
-
 /* ══════════════════════════════════════════════
    MAIN APP
 ══════════════════════════════════════════════ */
@@ -628,6 +549,8 @@ export default function App() {
   const [jobDescription,setJobDescription] = useState("");
   const [dragOver,setDragOver]             = useState(false);
   const [liData,setLiData]     = useState({name:"",targetRole:"",headline:"",about:"",experience:"",skills:""});
+
+  // Apply Mode state
   const [applyInput,setApplyInput]   = useState({ jobUrl:"", jobText:"", inputMode:"url" });
   const [applyResume,setApplyResume] = useState(null); // uploaded PDF for apply mode
   const [applyResult,setApplyResult] = useState(null); // { resume, coverLetter, interviewPrep, jobTitle, company }
@@ -636,64 +559,6 @@ export default function App() {
 
   const fileRef      = useRef(null);
   const containerRef = useRef(null);
-
-  /* ── localStorage auto-save ── */
-  const LS_KEY = "resumeai_form_v1";
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(LS_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setForm(f => ({ ...f, ...parsed }));
-      }
-    } catch(e) {}
-  }, []);
-  useEffect(() => {
-    try { localStorage.setItem(LS_KEY, JSON.stringify(form)); } catch(e) {}
-  }, [form]);
-
-  /* ── Share link ── */
-  const [shareMsg, setShareMsg] = useState("");
-  const makeShareLink = (data) => {
-    try {
-      const encoded = btoa(encodeURIComponent(JSON.stringify(data)));
-      const url = `${window.location.origin}${window.location.pathname}?resume=${encoded}`;
-      navigator.clipboard.writeText(url).then(() => {
-        setShareMsg("Link copied!");
-        setTimeout(() => setShareMsg(""), 2500);
-      });
-    } catch(e) { setShareMsg("Couldn't copy link"); }
-  };
-
-  /* ── Check URL for shared resume on load ── */
-  useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const encoded = params.get("resume");
-      if (encoded) {
-        const data = JSON.parse(decodeURIComponent(atob(encoded)));
-        setResult(data);
-        go(2);
-        window.history.replaceState({}, "", window.location.pathname);
-      }
-    } catch(e) {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  /* ── PDF export via html2pdf ── */
-  const exportPDF = (filename = "resume") => {
-    const el = document.getElementById("resume-output");
-    if (!el) { window.print(); return; }
-    const w = window.html2pdf;
-    if (!w) { window.print(); return; }
-    w().set({
-      margin: [10,10,10,10],
-      filename: `${filename.replace(/\s+/g,"_")}_resume.pdf`,
-      image: { type:"jpeg", quality:0.98 },
-      html2canvas: { scale:2, useCORS:true },
-      jsPDF: { unit:"mm", format:"a4", orientation:"portrait" },
-    }).from(el).save();
-  };
 
   const set    = (k,v) => setForm(f=>({...f,[k]:v}));
   const setExp = (i,k,v) => { const a=[...form.experiences]; a[i]={...a[i],[k]:v}; set("experiences",a); };
@@ -727,7 +592,7 @@ export default function App() {
   const generateBuild = async () => {
     const iv=startLoad(["Analysing your career story…","Crafting compelling bullets…","Optimising for ATS…","Applying finishing polish…"]);
     setResult(null);
-    try { setResult(await callAPI("/api/generate",{name:form.name,email:form.email,phone:form.phone,location:form.location,linkedin:form.linkedin,targetRole:form.targetRole,targetIndustry:form.targetIndustry,experiences:form.experiences,education:form.education,skills:form.skills,certifications:form.certifications})); go(2); }
+    try { setResult(await callAPI("/api/generate",{name:form.name,email:form.email,phone:form.phone,location:form.location,linkedin:form.linkedin,targetRole:form.targetRole,targetIndustry:form.targetIndustry,experiences:form.experiences,education:form.education,skills:form.skills,certifications:form.certifications})); go(3); }
     catch(e){ setErr(e.message||"Generation failed."); }
     finally { clearInterval(iv); setLoading(false); }
   };
@@ -737,7 +602,7 @@ export default function App() {
     if (!jobDescription.trim()){ setErr("Please describe the job you're targeting."); return; }
     const iv=startLoad(["Reading your resume…","Understanding the role…","Tailoring your experience…","Polishing the result…"]);
     setResult(null);
-    try { setResult(await callAPI("/api/tailor",{pdfBase64:uploadedPdf.base64,jobDescription,template:form.template})); go(2); }
+    try { setResult(await callAPI("/api/tailor",{pdfBase64:uploadedPdf.base64,jobDescription,template:form.template})); go(3); }
     catch(e){ setErr(e.message||"Tailoring failed."); }
     finally { clearInterval(iv); setLoading(false); }
   };
@@ -746,7 +611,7 @@ export default function App() {
     if (!liData.name.trim()){ setErr("Please enter your name at minimum."); return; }
     const iv=startLoad(["Reviewing your profile…","Identifying gaps…","Crafting suggestions…","Finalising report…"]);
     setLiResult(null);
-    try { setLiResult(await callAPI("/api/linkedin",liData)); go(2); }
+    try { setLiResult(await callAPI("/api/linkedin",liData)); go(3); }
     catch(e){ setErr(e.message||"LinkedIn analysis failed."); }
     finally { clearInterval(iv); setLoading(false); }
   };
@@ -776,7 +641,7 @@ export default function App() {
       });
       setApplyResult(res);
       setApplyTab("resume");
-      go(2);
+      go(3);
     } catch(e){ setErr(e.message||"Apply Mode failed — please try again."); }
     finally { clearInterval(iv); setLoading(false); }
   };
@@ -828,22 +693,14 @@ export default function App() {
                 <div style={{ fontSize:8, letterSpacing:"0.22em", textTransform:"uppercase", color:"var(--ash2)", marginTop:1, animation:"logoFade 0.7s 0.5s both" }}>Powered by Claude</div>
               </div>
             </div>
-            {/* Feature pills + autosave indicator */}
-            <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
-              {step===1 && mode==="build" && (
-                <div style={{ fontSize:10, color:"var(--ash2)", letterSpacing:"0.06em", display:"flex", alignItems:"center", gap:5 }}>
-                  <span style={{ width:5, height:5, borderRadius:"50%", background:"#4ade80", display:"inline-block" }} />
-                  Progress saved
-                </div>
-              )}
-              <div className="header-pills" style={{ display:"flex", gap:6 }}>
+            {/* Feature pills */}
+            <div style={{ marginLeft:"auto", display:"flex", gap:6, flexShrink:0 }} className="header-pills">
               {["Build","PDF Tailor","LinkedIn","ATS Engine"].map((f,i)=>(
                 <span key={f} style={{ fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", padding:"5px 11px", borderRadius:7, border:"1px solid rgba(255,255,255,0.065)", color:"var(--ash2)", transition:"all 0.25s", animation:`fadeIn 0.5s ${0.2+i*0.08}s both`, cursor:"default" }}
                   onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--gold-border)";e.currentTarget.style.color="var(--gold)";}}
                   onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.065)";e.currentTarget.style.color="var(--ash2)";}}
                 >{f}</span>
               ))}
-              </div>
             </div>
           </div>
         </header>
@@ -851,163 +708,92 @@ export default function App() {
         {/* ══ MAIN ══ */}
         <div ref={containerRef} className="main-pad" style={{ maxWidth:960, margin:"0 auto", padding:"0 40px 90px", position:"relative", zIndex:2 }}>
 
-          {/* ══ LANDING HERO (step 0 only) ══ */}
+          {/* ══ LANDING (step 0) — hero only ══ */}
           {step===0 && (
-            <div>
-              {/* Hero */}
-              <div style={{ textAlign:"center", padding:"72px 0 56px" }}>
-                <div className="fade-in" style={{ display:"inline-flex", alignItems:"center", gap:8, fontSize:10, letterSpacing:"0.2em", textTransform:"uppercase", color:"var(--gold)", border:"1px solid var(--gold-border)", borderRadius:20, padding:"6px 18px", marginBottom:24 }}>
-                  <span style={{ width:6, height:6, borderRadius:"50%", background:"var(--gold)", display:"inline-block", animation:"breathe 2s ease-in-out infinite" }} />
-                  Powered by Claude AI
-                </div>
-                <h1 className="hero-h1 fade-up" style={{ fontFamily:"var(--font-display)", fontSize:64, fontWeight:300, letterSpacing:"-2px", lineHeight:1.0, marginBottom:18, animationDelay:"0.1s" }}>
-                  From resume to<br />
-                  <em style={{ background:"linear-gradient(135deg,#c9a84c,#f0d98a,#c9a84c)", backgroundSize:"200% auto", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text", animation:"gradientShift 4s ease infinite" }}>interview-ready.</em>
-                </h1>
-                <p className="fade-up" style={{ color:"var(--ash)", fontSize:17, fontWeight:300, maxWidth:520, margin:"0 auto 36px", lineHeight:1.7, animationDelay:"0.2s" }}>
-                  The only tool that tailors your resume, writes your cover letter, and preps you for the interview — all from one job posting.
-                </p>
-                <div className="fade-up" style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap", animationDelay:"0.3s" }}>
-                  <button className="gold-btn pulse" onClick={()=>{setMode("apply");go(1);}} style={{ fontSize:14, padding:"14px 36px", letterSpacing:"0.06em" }}>
-                    ⚡ Try Apply Mode Free
-                  </button>
-                  <button className="ghost-btn" onClick={()=>document.getElementById("tools-section").scrollIntoView({behavior:"smooth"})} style={{ fontSize:13, padding:"14px 28px" }}>
-                    Browse All Tools ↓
-                  </button>
-                </div>
-                {/* Trust strip */}
-                <div className="fade-in" style={{ marginTop:36, display:"flex", alignItems:"center", justifyContent:"center", gap:24, flexWrap:"wrap", animationDelay:"0.5s" }}>
-                  {["No account required","No paywall","No watermarks","Powered by Claude"].map((t,i)=>(
-                    <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--ash)" }}>
-                      <span style={{ color:"#4ade80", fontSize:14 }}>✓</span> {t}
-                    </div>
-                  ))}
-                </div>
+            <div style={{ textAlign:"center", padding:"120px 0 100px", maxWidth:620, margin:"0 auto" }}>
+              <div className="fade-in" style={{ display:"inline-flex", alignItems:"center", gap:8, fontSize:10, letterSpacing:"0.2em", textTransform:"uppercase", color:"var(--gold)", border:"1px solid var(--gold-border)", borderRadius:20, padding:"6px 18px", marginBottom:28 }}>
+                <span style={{ width:5, height:5, borderRadius:"50%", background:"var(--gold)", display:"inline-block" }} />
+                Powered by Claude AI
               </div>
-
-              {/* Apply Mode feature spotlight */}
-              <div className="card fade-up" style={{ borderColor:"rgba(201,168,76,0.2)", background:"linear-gradient(135deg,rgba(201,168,76,0.06),rgba(201,168,76,0.02))", marginBottom:16, padding:"36px 40px" }}>
-                <div style={{ display:"flex", alignItems:"flex-start", gap:32, flexWrap:"wrap" }}>
-                  <div style={{ flex:"1 1 280px" }}>
-                    <div style={{ display:"inline-block", fontSize:9, letterSpacing:"0.15em", textTransform:"uppercase", color:"var(--gold)", border:"1px solid var(--gold-border)", borderRadius:10, padding:"3px 10px", marginBottom:14 }}>Exclusive Feature</div>
-                    <h2 style={{ fontFamily:"var(--font-display)", fontSize:32, fontWeight:300, marginBottom:12, lineHeight:1.2 }}>Apply Mode<br /><em style={{ color:"var(--gold)" }}>One click. Full package.</em></h2>
-                    <p style={{ color:"var(--ash)", fontSize:14, lineHeight:1.75, marginBottom:20, fontWeight:300 }}>Paste any job URL or description, upload your resume — and get a tailored resume, a human-sounding cover letter, and 6 interview questions with coaching. In under 60 seconds.</p>
-                    <button className="gold-btn" onClick={()=>{setMode("apply");go(1);}} style={{ fontSize:12 }}>⚡ Launch Apply Mode →</button>
-                  </div>
-                  <div style={{ flex:"1 1 240px", display:"flex", flexDirection:"column", gap:12 }}>
-                    {[
-                      { icon:"📄", label:"Tailored Resume",     desc:"Rewritten to mirror the job's exact language" },
-                      { icon:"✉️", label:"Cover Letter",        desc:"Human-sounding, company-specific, 3 paragraphs" },
-                      { icon:"🎯", label:"Interview Prep",      desc:"6 role-specific questions with coaching" },
-                      { icon:"📊", label:"Job Fit Score",       desc:"See exactly how well you match the posting" },
-                    ].map((f,i)=>(
-                      <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", borderRadius:10, background:"rgba(0,0,0,0.2)", border:"1px solid rgba(255,255,255,0.05)" }}>
-                        <span style={{ fontSize:18, flexShrink:0 }}>{f.icon}</span>
-                        <div>
-                          <div style={{ fontSize:13, fontWeight:500, marginBottom:1 }}>{f.label}</div>
-                          <div style={{ fontSize:11, color:"var(--ash)" }}>{f.desc}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* All tools */}
-              <div id="tools-section" style={{ paddingTop:8 }}>
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
-                  <div style={{ fontSize:10, letterSpacing:"0.15em", textTransform:"uppercase", color:"var(--ash)" }}>All Tools</div>
-                </div>
-                <div className="mode-grid" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:14 }}>
-                  {[
-                    { id:"build",    icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>, title:"Build Resume", desc:"Create a polished resume from scratch with AI writing assistance." },
-                    { id:"tailor",   icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>, title:"Tailor to a Job", desc:"Upload your current PDF and tailor it toward any new role." },
-                    { id:"linkedin", icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>, title:"LinkedIn Optimizer", desc:"AI audit of your LinkedIn profile with prioritised fixes." },
-                    { id:"apply",    icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>, title:"Apply Mode", desc:"Full apply package from a single job URL.", hot:true },
-                  ].map((m,i)=>(
-                    <div key={m.id} className={`mode-card fade-up d${i+1}${mode===m.id?" active":""}`} onClick={()=>setMode(m.id)} style={{ position:"relative" }}>
-                      {m.hot && <div style={{ position:"absolute", top:10, right:10, fontSize:8, padding:"2px 7px", borderRadius:8, background:"linear-gradient(135deg,#c9a84c,#e8c96d)", color:"#0d0d0f", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase" }}>New</div>}
-                      <div style={{ color:mode===m.id?"var(--gold)":"var(--ash)", marginBottom:12, transition:"color 0.3s" }}>{m.icon}</div>
-                      <div style={{ fontWeight:500, fontSize:14, marginBottom:5, color:mode===m.id?"var(--gold)":"#e2e2ea", transition:"color 0.3s" }}>{m.title}</div>
-                      <div style={{ fontSize:12, color:"var(--ash)", fontWeight:300, lineHeight:1.5 }}>{m.desc}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* How it works */}
-              <div style={{ marginTop:48 }}>
-                <div style={{ textAlign:"center", marginBottom:28 }}>
-                  <div style={{ fontSize:10, letterSpacing:"0.15em", textTransform:"uppercase", color:"var(--ash)", marginBottom:10 }}>How it works</div>
-                  <h2 style={{ fontFamily:"var(--font-display)", fontSize:32, fontWeight:300 }}>Interview-ready in <em style={{ color:"var(--gold)" }}>3 steps</em></h2>
-                </div>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16 }}>
-                  {[
-                    { n:"01", title:"Paste the job",      desc:"Drop in a job URL or paste the description. Claude reads every word." },
-                    { n:"02", title:"Upload your resume", desc:"Your current PDF. Any format, any industry, any experience level." },
-                    { n:"03", title:"Get the package",    desc:"Tailored resume, cover letter, and interview prep. Ready in under 60 seconds." },
-                  ].map((s,i)=>(
-                    <div key={i} className="card fade-up" style={{ animationDelay:`${i*0.1}s`, textAlign:"center", padding:"28px 24px" }}>
-                      <div style={{ fontFamily:"var(--font-display)", fontSize:42, fontWeight:300, color:"var(--gold)", opacity:0.4, marginBottom:12, lineHeight:1 }}>{s.n}</div>
-                      <div style={{ fontWeight:500, fontSize:15, marginBottom:8 }}>{s.title}</div>
-                      <div style={{ fontSize:13, color:"var(--ash)", lineHeight:1.65 }}>{s.desc}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Feature highlights — no competitor names */}
-              <div style={{ marginTop:48 }}>
-                <div style={{ textAlign:"center", marginBottom:28 }}>
-                  <div style={{ fontSize:10, letterSpacing:"0.15em", textTransform:"uppercase", color:"var(--ash)", marginBottom:10 }}>Everything included</div>
-                  <h2 style={{ fontFamily:"var(--font-display)", fontSize:32, fontWeight:300 }}>All the tools. <em style={{ color:"var(--gold)" }}>Zero paywalls.</em></h2>
-                </div>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:14 }}>
-                  {[
-                    { icon:"⚡", title:"Apply Mode",        desc:"Full resume + cover letter + interview prep from one job URL." },
-                    { icon:"📄", title:"PDF Tailoring",     desc:"Upload any resume and rewrite it for any role." },
-                    { icon:"🔗", title:"LinkedIn Optimizer",desc:"AI audit of your profile with prioritised fixes." },
-                    { icon:"📊", title:"ATS Scoring",       desc:"Know your keyword match before you apply." },
-                    { icon:"🎯", title:"Interview Prep",    desc:"6 role-specific questions with coaching guidance." },
-                    { icon:"🆓", title:"Always Free",       desc:"No account, no credit card, no watermarks ever." },
-                  ].map((f,i)=>(
-                    <div key={i} className="card fade-up" style={{ animationDelay:`${i*0.06}s`, padding:"22px 24px", marginBottom:0 }}>
-                      <div style={{ fontSize:24, marginBottom:10 }}>{f.icon}</div>
-                      <div style={{ fontWeight:500, fontSize:14, marginBottom:6 }}>{f.title}</div>
-                      <div style={{ fontSize:12, color:"var(--ash)", lineHeight:1.6 }}>{f.desc}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* CTA footer */}
-              <div style={{ textAlign:"center", marginTop:56, padding:"48px 0 8px" }}>
-                <h2 style={{ fontFamily:"var(--font-display)", fontSize:36, fontWeight:300, marginBottom:12 }}>Ready to land the interview?</h2>
-                <p style={{ color:"var(--ash)", fontSize:15, marginBottom:28, fontWeight:300 }}>No account. No credit card. No watermarks. Just results.</p>
-                <button className="gold-btn pulse" onClick={()=>{setMode("apply");go(1);}} style={{ fontSize:14, padding:"16px 44px", letterSpacing:"0.06em" }}>
-                  ⚡ Get Started Free
+              <h1 className="hero-h1 fade-up" style={{ fontFamily:"var(--font-display)", fontSize:68, fontWeight:300, letterSpacing:"-2.5px", lineHeight:1.0, marginBottom:22, animationDelay:"0.1s" }}>
+                From resume to<br />
+                <em style={{ background:"linear-gradient(135deg,#c9a84c,#f0d98a,#c9a84c)", backgroundSize:"200% auto", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text", animation:"gradientShift 4s ease infinite" }}>
+                  interview-ready.
+                </em>
+              </h1>
+              <p className="fade-up" style={{ color:"var(--ash)", fontSize:18, fontWeight:300, lineHeight:1.75, marginBottom:44, animationDelay:"0.18s" }}>
+                AI-powered resume tools. Tailored cover letters. Interview prep.<br />All from a single job posting.
+              </p>
+              <div className="fade-up" style={{ animationDelay:"0.28s" }}>
+                <button className="gold-btn pulse" onClick={()=>go(1)} style={{ fontSize:15, padding:"16px 48px", letterSpacing:"0.07em" }}>
+                  Get Started →
                 </button>
+              </div>
+              <div className="fade-in" style={{ marginTop:44, display:"flex", alignItems:"center", justifyContent:"center", gap:28, flexWrap:"wrap", animationDelay:"0.42s" }}>
+                {["No account required","No paywall","No watermarks"].map((t,i)=>(
+                  <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--ash)" }}>
+                    <span style={{ color:"#4ade80" }}>✓</span> {t}
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* Steps indicator — only show on steps 1 and 2 */}
-          {step > 0 && <Steps current={step} />}
+          {/* ══ TOOL PICKER (step 1) ══ */}
+          {step===1 && !mode && (
+            <div className="scale-in">
+              <div style={{ textAlign:"center", padding:"52px 0 36px" }}>
+                <h2 style={{ fontFamily:"var(--font-display)", fontSize:40, fontWeight:300, letterSpacing:"-1px", marginBottom:10 }}>
+                  What do you need?
+                </h2>
+                <p style={{ color:"var(--ash)", fontSize:15, fontWeight:300 }}>Pick a tool to get started.</p>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))", gap:16, marginBottom:20 }}>
+                {[
+                  { id:"apply",    hot:true,
+                    icon:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+                    title:"Apply Mode",
+                    desc:"Paste a job URL. Get a tailored resume, cover letter, and interview prep in one shot." },
+                  { id:"build",
+                    icon:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
+                    title:"Build Resume",
+                    desc:"Start from scratch. Fill in your details and Claude writes your resume." },
+                  { id:"tailor",
+                    icon:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+                    title:"Tailor to a Job",
+                    desc:"Upload your existing resume PDF and rewrite it for any role." },
+                  { id:"linkedin",
+                    icon:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>,
+                    title:"LinkedIn Optimizer",
+                    desc:"AI audit of your LinkedIn profile with prioritised, actionable fixes." },
+                ].map((m,i)=>(
+                  <div key={m.id} className={`mode-card fade-up d${i+1}`}
+                    onClick={()=>{ setMode(m.id); go(2); }}
+                    style={{ position:"relative", padding:"28px 24px" }}>
+                    {m.hot && (
+                      <div style={{ position:"absolute", top:14, right:14, fontSize:8, padding:"2px 8px", borderRadius:8, background:"linear-gradient(135deg,#c9a84c,#e8c96d)", color:"#0d0d0f", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase" }}>New</div>
+                    )}
+                    <div style={{ color:"var(--ash)", marginBottom:16, transition:"color 0.3s" }}>{m.icon}</div>
+                    <div style={{ fontWeight:500, fontSize:16, marginBottom:8, color:"#e2e2ea" }}>{m.title}</div>
+                    <div style={{ fontSize:13, color:"var(--ash)", fontWeight:300, lineHeight:1.6 }}>{m.desc}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ textAlign:"center", paddingTop:8 }}>
+                <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>go(0)}>← Back</button>
+              </div>
+            </div>
+          )}
+
+          {/* Steps indicator — only show on form + results */}
+          {step > 1 && <Steps current={step-1} />}
 
           {/* ══ STEP 1 — BUILD ══ */}
-          {step===1 && mode==="build" && (
+          {step===2 && mode==="build" && (
             <div>
               <div className="card fade-up d1">
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20, flexWrap:"wrap", gap:10 }}>
-                  <div>
-                    <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Personal Information</h2>
-                    <p style={{ color:"var(--ash)", fontSize:13, fontWeight:300 }}>Your basic details and target role.</p>
-                  </div>
-                  <button className="ghost-btn" style={{ fontSize:11, padding:"7px 14px", flexShrink:0 }}
-                    onClick={() => setForm({ ...EXAMPLE_FORM })}>
-                    ✦ Fill Example
-                  </button>
-                </div>
+                <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Personal Information</h2>
+                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:24, fontWeight:300 }}>Your basic details and target role.</p>
                 <div style={g2}><F label="Full Name"><input placeholder="Alexandra Chen" value={form.name} onChange={e=>set("name",e.target.value)} /></F><F label="Target Role"><input placeholder="Chief Product Officer" value={form.targetRole} onChange={e=>set("targetRole",e.target.value)} /></F></div>
                 <div style={g2}><F label="Email"><input placeholder="alex@example.com" value={form.email} onChange={e=>set("email",e.target.value)} /></F><F label="Phone"><input placeholder="+1 555 000 1234" value={form.phone} onChange={e=>set("phone",e.target.value)} /></F></div>
                 <div style={g2}><F label="Location"><input placeholder="San Francisco, CA" value={form.location} onChange={e=>set("location",e.target.value)} /></F><F label="Target Industry"><input placeholder="Technology / FinTech" value={form.targetIndustry} onChange={e=>set("targetIndustry",e.target.value)} /></F></div>
@@ -1060,7 +846,7 @@ export default function App() {
                 <TemplateSelector />
               </div>
               <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                <button className="ghost-btn" onClick={()=>go(0)}>← Back</button>
+                <button className="ghost-btn" onClick={()=>go(1)}>← Back</button>
                 <button className="gold-btn" onClick={generateBuild} disabled={loading} style={{ minWidth:210 }}>
                   {loading?<span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>:"✦ Generate Resume"}
                 </button>
@@ -1069,7 +855,7 @@ export default function App() {
           )}
 
           {/* ══ STEP 1 — TAILOR ══ */}
-          {step===1 && mode==="tailor" && (
+          {step===2 && mode==="tailor" && (
             <div>
               <div className="card fade-up d1">
                 <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Upload Your Existing Resume</h2>
@@ -1099,7 +885,7 @@ export default function App() {
                 <F label="Resume Style"><TemplateSelector /></F>
               </div>
               <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                <button className="ghost-btn" onClick={()=>go(0)}>← Back</button>
+                <button className="ghost-btn" onClick={()=>go(1)}>← Back</button>
                 <button className="gold-btn" onClick={generateTailor} disabled={loading} style={{ minWidth:220 }}>
                   {loading?<span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>:"⟳ Tailor My Resume"}
                 </button>
@@ -1108,22 +894,11 @@ export default function App() {
           )}
 
           {/* ══ STEP 1 — LINKEDIN ══ */}
-          {step===1 && mode==="linkedin" && (
+          {step===2 && mode==="linkedin" && (
             <div>
               <div className="card fade-up d1">
                 <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Your LinkedIn Profile</h2>
-                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:20, fontWeight:300 }}>Paste your LinkedIn URL to auto-import, or fill in the fields manually.</p>
-
-                {/* LinkedIn URL import */}
-                <LinkedInImport onImport={(data) => setLiData(d => ({
-                  ...d,
-                  name:       data.name       || d.name,
-                  targetRole: data.targetRole || d.targetRole,
-                  headline:   data.headline   || d.headline,
-                  about:      data.about      || d.about,
-                  experience: data.experience || d.experience,
-                  skills:     data.skills     || d.skills,
-                }))} />
+                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:24, fontWeight:300 }}>Copy and paste your current LinkedIn sections below. Claude will score your profile and give specific, prioritised suggestions.</p>
                 <div style={g2}>
                   <F label="Your Name"><input placeholder="Alexandra Chen" value={liData.name} onChange={e=>setLiData(d=>({...d,name:e.target.value}))} /></F>
                   <F label="Target Role / Industry"><input placeholder="Cybersecurity Engineer · Tech" value={liData.targetRole} onChange={e=>setLiData(d=>({...d,targetRole:e.target.value}))} /></F>
@@ -1134,7 +909,7 @@ export default function App() {
                 <F label="Skills (comma separated)"><input placeholder="Penetration Testing, SIEM, Python, Network Security..." value={liData.skills} onChange={e=>setLiData(d=>({...d,skills:e.target.value}))} /></F>
               </div>
               <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                <button className="ghost-btn" onClick={()=>go(0)}>← Back</button>
+                <button className="ghost-btn" onClick={()=>go(1)}>← Back</button>
                 <button className="gold-btn" onClick={generateLinkedIn} disabled={loading} style={{ minWidth:220 }}>
                   {loading?<span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>:"in  Analyse My Profile"}
                 </button>
@@ -1143,7 +918,7 @@ export default function App() {
           )}
 
           {/* ══ STEP 1 — APPLY MODE ══ */}
-          {step===1 && mode==="apply" && (
+          {step===2 && mode==="apply" && (
             <div>
               {/* Glowing banner */}
               <div className="fade-up" style={{ background:"linear-gradient(135deg,rgba(201,168,76,0.08),rgba(201,168,76,0.04))", border:"1px solid var(--gold-border)", borderRadius:14, padding:"18px 24px", marginBottom:20, display:"flex", alignItems:"center", gap:14 }}>
@@ -1213,7 +988,7 @@ export default function App() {
               </div>
 
               <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                <button className="ghost-btn" onClick={()=>go(0)}>← Back</button>
+                <button className="ghost-btn" onClick={()=>go(1)}>← Back</button>
                 <button className="gold-btn" onClick={generateApply} disabled={loading} style={{ minWidth:240 }}>
                   {loading
                     ? <span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>
@@ -1224,7 +999,7 @@ export default function App() {
           )}
 
           {/* ══ STEP 2 — RESULTS ══ */}
-          {step===2 && (
+          {step===3 && (
             <div>
               {/* Apply Mode Results */}
               {applyResult && (
@@ -1241,10 +1016,7 @@ export default function App() {
                       </div>
                       <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
-                        <button className="ghost-btn" style={{ fontSize:12 }} onClick={() => makeShareLink(applyResult.resume)}>
-                          {shareMsg || "🔗 Share Link"}
-                        </button>
-                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={() => exportPDF(applyResult.resume?.name || "resume")}>⬇ Download PDF</button>
+                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>{setPrintTip(true);setTimeout(()=>window.print(),200);}}>Print / Save PDF</button>
                       </div>
                     </div>
 
@@ -1357,10 +1129,7 @@ export default function App() {
                       <div className="result-actions" style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={downloadTxt}>Download .txt</button>
-                        <button className="ghost-btn" style={{ fontSize:12 }} onClick={() => makeShareLink(result)}>
-                          {shareMsg || "🔗 Share Link"}
-                        </button>
-                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={() => exportPDF(result.name)}>⬇ Download PDF</button>
+                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>{setPrintTip(true);setTimeout(()=>window.print(),200);}}>Print / Save PDF</button>
                       </div>
                     </div>
                     <ATSMeter text={`${result.summary||""} ${result.experience||""} ${result.skills||""}`} />
