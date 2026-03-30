@@ -1,27 +1,64 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 /* ─── Fonts + Global Styles ─── */
-const FontLink = () => (
+const FontLink = () => {
+  useEffect(() => {
+    if (!document.getElementById("html2pdf-script")) {
+      const s = document.createElement("script");
+      s.id = "html2pdf-script";
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+      document.head.appendChild(s);
+    }
+  }, []);
+  return (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Dark theme (default) ── */
     :root {
-      --ink: #0d0d0f; --ink2: #1a1a1f; --ink3: #252530;
+      --ink:  #0d0d0f; --ink2: #1a1a1f; --ink3: #252530;
       --gold: #c9a84c; --gold2: #e8c96d; --gold3: #f0d98a;
       --gold-dim: rgba(201,168,76,0.12); --gold-border: rgba(201,168,76,0.28);
-      --ash: #7a7a88; --ash2: #5a5a68;
+      --ash:  #7a7a88; --ash2: #5a5a68;
       --mist: rgba(255,255,255,0.055); --mist2: rgba(255,255,255,0.025);
+      --text-primary: #e2e2ea; --text-secondary: #7a7a88;
+      --border-subtle: rgba(255,255,255,0.065);
+      --input-bg: rgba(255,255,255,0.055); --input-border: rgba(255,255,255,0.07);
+      --input-placeholder: rgba(255,255,255,0.18);
+      --card-bg: #1a1a1f; --card-hover-shadow: 0 12px 48px rgba(0,0,0,0.35);
+      --header-bg: rgba(13,13,15,0.82);
+      --ghost-border: rgba(255,255,255,0.1); --ghost-hover-border: rgba(255,255,255,0.22);
+      --ghost-hover-bg: rgba(255,255,255,0.055);
+      --mode-card-bg: rgba(255,255,255,0.025);
       --font-display: 'Cormorant Garamond', Georgia, serif;
       --font-body: 'Outfit', 'Segoe UI', sans-serif;
     }
+
+    /* ── Light theme ── */
+    :root.light {
+      --ink:  #f5f3ef; --ink2: #ffffff; --ink3: #ede9e0;
+      --gold: #a8781e; --gold2: #c49030; --gold3: #d4a840;
+      --gold-dim: rgba(168,120,30,0.08); --gold-border: rgba(168,120,30,0.3);
+      --ash:  #6b6560; --ash2: #9c9690;
+      --mist: rgba(0,0,0,0.04); --mist2: rgba(0,0,0,0.02);
+      --text-primary: #1c1a17; --text-secondary: #6b6560;
+      --border-subtle: rgba(0,0,0,0.08);
+      --input-bg: #ffffff; --input-border: rgba(0,0,0,0.12);
+      --input-placeholder: rgba(0,0,0,0.25);
+      --card-bg: #ffffff; --card-hover-shadow: 0 12px 48px rgba(0,0,0,0.1);
+      --header-bg: rgba(245,243,239,0.88);
+      --ghost-border: rgba(0,0,0,0.12); --ghost-hover-border: rgba(0,0,0,0.25);
+      --ghost-hover-bg: rgba(0,0,0,0.04);
+      --mode-card-bg: rgba(0,0,0,0.02);
+    }
+
     html { scroll-behavior: smooth; }
-    body { background: var(--ink); font-family: var(--font-body); color: #e2e2ea; overflow-x: hidden; }
+    body { background: var(--ink); font-family: var(--font-body); color: var(--text-primary); overflow-x: hidden; transition: background 0.3s, color 0.3s; }
 
     /* ── Keyframes ── */
     @keyframes fadeUp    { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
     @keyframes fadeIn    { from{opacity:0} to{opacity:1} }
-    @keyframes slideRight{ from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
-    @keyframes slideLeft { from{opacity:0;transform:translateX(20px)}  to{opacity:1;transform:translateX(0)} }
     @keyframes scaleIn   { from{opacity:0;transform:scale(0.94)} to{opacity:1;transform:scale(1)} }
     @keyframes spin      { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
     @keyframes shimmer   { 0%{background-position:-200% center} 100%{background-position:200% center} }
@@ -29,158 +66,132 @@ const FontLink = () => (
     @keyframes drawLine  { from{stroke-dashoffset:300} to{stroke-dashoffset:0} }
     @keyframes logoFade  { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
     @keyframes particleDrift {
-      0%   { transform: translateY(0px) translateX(0px); opacity:0; }
-      10%  { opacity: 1; }
-      90%  { opacity: 0.6; }
-      100% { transform: translateY(-120px) translateX(var(--dx,20px)); opacity:0; }
+      0%   { transform:translateY(0px) translateX(0px); opacity:0; }
+      10%  { opacity:1; } 90% { opacity:0.6; }
+      100% { transform:translateY(-120px) translateX(var(--dx,20px)); opacity:0; }
     }
-    @keyframes gradientShift {
-      0%  { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100%{ background-position: 0% 50%; }
-    }
-    @keyframes pulseGold {
-      0%,100%{ box-shadow: 0 0 0 0 rgba(201,168,76,0.5); }
-      50%    { box-shadow: 0 0 0 8px rgba(201,168,76,0); }
-    }
-    @keyframes stepComplete {
-      0%  { transform: scale(1); }
-      40% { transform: scale(1.25); }
-      100%{ transform: scale(1); }
-    }
-    @keyframes cardHover {
-      from { transform: translateY(0) scale(1); }
-      to   { transform: translateY(-3px) scale(1.01); }
-    }
+    @keyframes gradientShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+    @keyframes pulseGold { 0%,100%{box-shadow:0 0 0 0 rgba(201,168,76,0.5)} 50%{box-shadow:0 0 0 8px rgba(201,168,76,0)} }
+    @keyframes stepComplete { 0%{transform:scale(1)} 40%{transform:scale(1.25)} 100%{transform:scale(1)} }
 
-    /* ── Utility classes ── */
-    .fade-up   { animation: fadeUp  0.6s cubic-bezier(0.16,1,0.3,1) both; }
-    .fade-in   { animation: fadeIn  0.5s ease both; }
-    .scale-in  { animation: scaleIn 0.5s cubic-bezier(0.16,1,0.3,1) both; }
-    .d1 { animation-delay: 0.06s; } .d2 { animation-delay: 0.13s; }
-    .d3 { animation-delay: 0.20s; } .d4 { animation-delay: 0.27s; }
-    .d5 { animation-delay: 0.34s; }
+    /* ── Utility ── */
+    .fade-up  { animation: fadeUp  0.6s cubic-bezier(0.16,1,0.3,1) both; }
+    .fade-in  { animation: fadeIn  0.5s ease both; }
+    .scale-in { animation: scaleIn 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+    .d1{animation-delay:0.06s} .d2{animation-delay:0.13s} .d3{animation-delay:0.20s} .d4{animation-delay:0.27s} .d5{animation-delay:0.34s}
 
     /* ── Inputs ── */
     input, textarea {
-      background: var(--mist); border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 9px; color: #e2e2ea; font-family: var(--font-body);
+      background: var(--input-bg); border: 1px solid var(--input-border);
+      border-radius: 9px; color: var(--text-primary); font-family: var(--font-body);
       font-size: 14px; font-weight: 300; padding: 11px 14px; width: 100%;
       outline: none; transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
     }
-    input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.18); }
+    input::placeholder, textarea::placeholder { color: var(--input-placeholder); }
     input:focus, textarea:focus {
       border-color: var(--gold-border);
-      background: rgba(201,168,76,0.035);
-      box-shadow: 0 0 0 3px rgba(201,168,76,0.06);
+      background: var(--gold-dim);
+      box-shadow: 0 0 0 3px rgba(201,168,76,0.08);
     }
     textarea { resize: vertical; min-height: 90px; line-height: 1.65; }
 
     /* ── Gold button ── */
     .gold-btn {
-      background: linear-gradient(135deg, #b8922e 0%, #e8c96d 40%, #c9a84c 70%, #b8922e 100%);
+      background: linear-gradient(135deg,#b8922e 0%,#e8c96d 40%,#c9a84c 70%,#b8922e 100%);
       background-size: 250% auto; border: none; border-radius: 9px; color: #0d0d0f;
       cursor: pointer; font-family: var(--font-body); font-size: 13px; font-weight: 600;
       letter-spacing: 0.09em; padding: 13px 30px; text-transform: uppercase;
       transition: background-position 0.6s, transform 0.2s, box-shadow 0.3s;
       position: relative; overflow: hidden;
     }
-    .gold-btn::after {
-      content: ''; position: absolute; inset: 0;
-      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
-      transform: translateX(-100%); transition: transform 0.5s;
-    }
-    .gold-btn:hover { background-position: right center; transform: translateY(-2px); box-shadow: 0 10px 36px rgba(201,168,76,0.3); }
-    .gold-btn:hover::after { transform: translateX(100%); }
-    .gold-btn:active { transform: translateY(0); box-shadow: none; }
-    .gold-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
-    .gold-btn.pulse { animation: pulseGold 2s ease-out infinite; }
+    .gold-btn::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent); transform:translateX(-100%); transition:transform 0.5s; }
+    .gold-btn:hover { background-position:right center; transform:translateY(-2px); box-shadow:0 10px 36px rgba(201,168,76,0.3); }
+    .gold-btn:hover::after { transform:translateX(100%); }
+    .gold-btn:active { transform:translateY(0); box-shadow:none; }
+    .gold-btn:disabled { opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none; }
+    .gold-btn.pulse { animation:pulseGold 2s ease-out infinite; }
 
     /* ── Ghost button ── */
     .ghost-btn {
-      background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 9px;
+      background: transparent; border: 1px solid var(--ghost-border); border-radius: 9px;
       color: var(--ash); cursor: pointer; font-family: var(--font-body); font-size: 13px;
       font-weight: 400; padding: 11px 22px;
       transition: border-color 0.25s, color 0.25s, background 0.25s, transform 0.2s;
     }
-    .ghost-btn:hover { border-color: rgba(255,255,255,0.22); color: #e2e2ea; background: var(--mist); transform: translateY(-1px); }
+    .ghost-btn:hover { border-color: var(--ghost-hover-border); color: var(--text-primary); background: var(--ghost-hover-bg); transform: translateY(-1px); }
 
     /* ── Cards ── */
     .card {
-      background: var(--ink2); border: 1px solid rgba(255,255,255,0.065);
+      background: var(--card-bg); border: 1px solid var(--border-subtle);
       border-radius: 18px; padding: 32px 36px; margin-bottom: 20px;
       position: relative; overflow: hidden;
       transition: border-color 0.35s, box-shadow 0.35s, transform 0.35s;
     }
-    .card::before {
-      content: ''; position: absolute; inset: 0;
-      background: linear-gradient(135deg, rgba(201,168,76,0.025) 0%, transparent 55%);
-      pointer-events: none;
-    }
-    .card:hover {
-      border-color: rgba(201,168,76,0.15);
-      box-shadow: 0 12px 48px rgba(0,0,0,0.35), 0 0 0 1px rgba(201,168,76,0.06);
-      transform: translateY(-2px);
-    }
+    .card::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(201,168,76,0.025) 0%,transparent 55%); pointer-events:none; }
+    .card:hover { border-color:rgba(201,168,76,0.15); box-shadow:var(--card-hover-shadow),0 0 0 1px rgba(201,168,76,0.06); transform:translateY(-2px); }
 
     /* ── Field label ── */
-    label.field-label {
-      display: block; font-size: 10px; font-weight: 500;
-      letter-spacing: 0.13em; text-transform: uppercase; color: var(--ash); margin-bottom: 7px;
-      transition: color 0.2s;
-    }
+    label.field-label { display:block; font-size:10px; font-weight:500; letter-spacing:0.13em; text-transform:uppercase; color:var(--ash); margin-bottom:7px; }
 
     /* ── Mode / Template cards ── */
     .mode-card {
-      border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 24px;
-      cursor: pointer; background: var(--mist2);
-      transition: border-color 0.3s, background 0.3s, transform 0.3s, box-shadow 0.3s;
+      border: 1px solid var(--border-subtle); border-radius: 14px; padding: 24px;
+      cursor: pointer; background: var(--mode-card-bg);
+      transition: border-color 0.28s, background 0.28s, transform 0.32s cubic-bezier(0.22,1,0.36,1), box-shadow 0.32s cubic-bezier(0.22,1,0.36,1);
+      will-change: transform;
     }
-    .mode-card:hover { border-color: var(--gold-border); background: var(--gold-dim); transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
-    .mode-card.active { border-color: var(--gold); background: var(--gold-dim); box-shadow: 0 0 0 1px var(--gold-border), 0 8px 30px rgba(201,168,76,0.12); }
+    .mode-card:hover {
+      border-color: var(--gold-border); background: var(--gold-dim);
+      transform: translateY(-10px) scale(1.03);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.12), 0 20px 40px rgba(0,0,0,0.16), 0 0 0 1px rgba(201,168,76,0.15), 0 28px 32px -12px rgba(201,168,76,0.18);
+    }
+    .mode-card.active { border-color:var(--gold); background:var(--gold-dim); box-shadow:0 0 0 1px var(--gold-border),0 8px 30px rgba(201,168,76,0.12); }
 
     /* ── Drop zone ── */
-    .drop-zone {
-      border: 1.5px dashed rgba(201,168,76,0.28); border-radius: 14px; padding: 40px;
-      text-align: center; cursor: pointer;
-      transition: border-color 0.3s, background 0.3s, transform 0.3s;
-    }
-    .drop-zone:hover, .drop-zone.drag-over { border-color: var(--gold); background: var(--gold-dim); transform: scale(1.01); }
+    .drop-zone { border:1.5px dashed var(--gold-border); border-radius:14px; padding:40px; text-align:center; cursor:pointer; transition:border-color 0.3s,background 0.3s,transform 0.3s; }
+    .drop-zone:hover,.drop-zone.drag-over { border-color:var(--gold); background:var(--gold-dim); transform:scale(1.01); }
 
     /* ── Step dots ── */
-    .step-dot { transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1); }
-    .step-dot.completed { animation: stepComplete 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+    .step-dot { transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1); }
 
     /* ── LinkedIn cards ── */
-    .li-card { background: rgba(10,102,194,0.07); border: 1px solid rgba(10,102,194,0.22); border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; transition: border-color 0.25s, background 0.25s; }
-    .li-card:hover { border-color: rgba(10,102,194,0.4); background: rgba(10,102,194,0.12); }
-    .li-tag { display: inline-block; font-size: 10px; padding: 3px 10px; border-radius: 20px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
-    .tag-high { background: rgba(248,113,113,0.15); color: #f87171; }
-    .tag-med  { background: rgba(251,191,36,0.15);  color: #fbbf24; }
-    .tag-low  { background: rgba(74,222,128,0.15);  color: #4ade80; }
+    .li-card { background:rgba(10,102,194,0.07); border:1px solid rgba(10,102,194,0.22); border-radius:12px; padding:16px 20px; margin-bottom:12px; transition:border-color 0.25s,background 0.25s; }
+    .li-card:hover { border-color:rgba(10,102,194,0.4); background:rgba(10,102,194,0.12); }
+    .li-tag { display:inline-block; font-size:10px; padding:3px 10px; border-radius:20px; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; }
+    .tag-high { background:rgba(248,113,113,0.15); color:#f87171; }
+    .tag-med  { background:rgba(251,191,36,0.15);  color:#fbbf24; }
+    .tag-low  { background:rgba(74,222,128,0.15);  color:#4ade80; }
+
+    /* ── Theme toggle button ── */
+    .theme-toggle {
+      width:36px; height:36px; border-radius:10px; border:1px solid var(--ghost-border);
+      background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center;
+      font-size:16px; transition:all 0.25s; flex-shrink:0;
+    }
+    .theme-toggle:hover { border-color:var(--gold-border); background:var(--gold-dim); }
 
     /* ── Print ── */
     @media print {
-      @page { margin: 0; size: A4; }
-      body * { visibility: hidden !important; }
-      #resume-output, #resume-output * { visibility: visible !important; }
-      #resume-output { position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; margin: 0 !important; padding: 40px 60px !important; box-shadow: none !important; font-size: 13px !important; }
+      @page { margin:0; size:A4; }
+      body * { visibility:hidden !important; }
+      #resume-output, #resume-output * { visibility:visible !important; }
+      #resume-output { position:fixed !important; top:0 !important; left:0 !important; width:100% !important; margin:0 !important; padding:40px 60px !important; box-shadow:none !important; font-size:13px !important; }
     }
 
     /* ── Mobile ── */
-    @media (max-width: 640px) {
-      .card { padding: 20px 18px !important; border-radius: 14px !important; }
-      .mode-card { padding: 16px 14px !important; }
-      .gold-btn { padding: 12px 16px !important; font-size: 12px !important; width: 100% !important; }
-      .ghost-btn { padding: 11px 14px !important; font-size: 12px !important; }
-      .drop-zone { padding: 28px 16px !important; }
-      .li-card { padding: 14px 14px !important; }
-      .hero-h1 { font-size: 38px !important; letter-spacing: -1px !important; }
-      .main-pad { padding: 0 16px 80px !important; }
-      .header-pills { display: none !important; }
+    @media (max-width:640px) {
+      .card { padding:20px 18px !important; border-radius:14px !important; }
+      .mode-card { padding:16px 14px !important; }
+      .gold-btn { padding:12px 16px !important; font-size:12px !important; width:100% !important; }
+      .ghost-btn { padding:11px 14px !important; font-size:12px !important; }
+      .drop-zone { padding:28px 16px !important; }
+      .hero-h1 { font-size:38px !important; letter-spacing:-1px !important; }
+      .main-pad { padding:0 16px 80px !important; }
+      .header-pills { display:none !important; }
     }
   `}</style>
-);
+  );
+};
 
 /* ─── Floating Particles ─── */
 function Particles() {
@@ -529,6 +540,58 @@ function JobRecommendations({ role, skills, location }) {
   );
 }
 
+/* ─── LinkedIn URL Import ─── */
+function LinkedInImport({ onImport }) {
+  const [url,setUrl]         = useState("");
+  const [loading,setLoading] = useState(false);
+  const [msg,setMsg]         = useState("");
+  const doImport = async () => {
+    if (!url.trim()) return;
+    setLoading(true); setMsg("");
+    try {
+      const API = process.env.REACT_APP_API_URL||"";
+      const res = await fetch(`${API}/api/linkedin-import`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:url.trim()})});
+      const data = await res.json();
+      if (!res.ok){setMsg(data.error||"Import failed."); return;}
+      onImport(data);
+      setMsg("✓ Imported — review and edit the fields below.");
+    } catch(e){setMsg("Couldn't reach the server.");}
+    finally{setLoading(false);}
+  };
+  return (
+    <div style={{marginBottom:24,padding:"16px 18px",background:"rgba(10,102,194,0.06)",border:"1px solid rgba(10,102,194,0.2)",borderRadius:12}}>
+      <div style={{fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:"#60a5fa",marginBottom:10}}>Auto-import from LinkedIn URL</div>
+      <div style={{display:"flex",gap:8}}>
+        <input placeholder="https://linkedin.com/in/yourname" value={url} onChange={e=>setUrl(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doImport()} style={{flex:1}} />
+        <button onClick={doImport} disabled={loading||!url.trim()} style={{padding:"10px 18px",borderRadius:9,border:"none",background:"#0a66c2",color:"#fff",fontFamily:"var(--font-body)",fontSize:13,fontWeight:500,cursor:loading||!url.trim()?"not-allowed":"pointer",opacity:loading||!url.trim()?0.5:1,whiteSpace:"nowrap",flexShrink:0}}>
+          {loading?"Importing…":"Import →"}
+        </button>
+      </div>
+      {msg && <div style={{marginTop:8,fontSize:12,color:msg.startsWith("✓")?"#4ade80":"#f87171"}}>{msg}</div>}
+      <div style={{marginTop:6,fontSize:11,color:"var(--ash)"}}>Only public profiles can be imported. If blocked, fill the fields below manually.</div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   EXAMPLE DATA
+══════════════════════════════════════════════ */
+const EXAMPLE_FORM = {
+  name:"Alex Rivera", email:"alex.rivera@email.com", phone:"+1 415 555 0192",
+  location:"San Francisco, CA", linkedin:"linkedin.com/in/alexrivera",
+  targetRole:"Senior Product Manager", targetIndustry:"Technology / SaaS",
+  template:"executive",
+  experiences:[
+    {company:"Acme Tech",role:"Product Manager",startDate:"Jan 2021",endDate:"",current:true,
+     bullets:"Led cross-functional team of 12 to ship payments redesign, increasing conversion by 24%.\nOwned roadmap for core checkout flow serving 2M monthly users.\nDrove 0→1 launch of subscription product generating $1.8M ARR in first year."},
+    {company:"StartupCo",role:"Associate PM",startDate:"Jun 2019",endDate:"Dec 2020",current:false,
+     bullets:"Defined MVP requirements for mobile app, shipped in 10 weeks.\nManaged backlog of 200+ tickets across 3 engineering squads.\nIncreased DAU by 18% through A/B tested onboarding redesign."},
+  ],
+  education:[{school:"UC Berkeley",degree:"BSc",field:"Computer Science",year:"2019"}],
+  skills:"Product Strategy, Roadmapping, A/B Testing, SQL, Figma, Agile / Scrum, Stakeholder Management",
+  certifications:"Pragmatic Marketing Certified",
+};
+
 /* ══════════════════════════════════════════════
    MAIN APP
 ══════════════════════════════════════════════ */
@@ -549,16 +612,68 @@ export default function App() {
   const [jobDescription,setJobDescription] = useState("");
   const [dragOver,setDragOver]             = useState(false);
   const [liData,setLiData]     = useState({name:"",targetRole:"",headline:"",about:"",experience:"",skills:""});
+  const [darkMode,setDarkMode] = useState(true);
+  const [shareMsg,setShareMsg] = useState("");
 
   // Apply Mode state
   const [applyInput,setApplyInput]   = useState({ jobUrl:"", jobText:"", inputMode:"url" });
-  const [applyResume,setApplyResume] = useState(null); // uploaded PDF for apply mode
-  const [applyResult,setApplyResult] = useState(null); // { resume, coverLetter, interviewPrep, jobTitle, company }
-  const [applyTab,setApplyTab]       = useState("resume"); // "resume" | "cover" | "interview"
+  const [applyResume,setApplyResume] = useState(null);
+  const [applyResult,setApplyResult] = useState(null);
+  const [applyTab,setApplyTab]       = useState("resume");
   const applyFileRef = useRef(null);
 
   const fileRef      = useRef(null);
   const containerRef = useRef(null);
+
+  /* ── Theme ── */
+  useEffect(() => {
+    document.documentElement.classList.toggle("light", !darkMode);
+  }, [darkMode]);
+
+  /* ── localStorage auto-save form ── */
+  const LS_KEY = "resumeai_form_v2";
+  useEffect(() => {
+    try { const s=localStorage.getItem(LS_KEY); if(s) setForm(f=>({...f,...JSON.parse(s)})); } catch(e){}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(form)); } catch(e){}
+  }, [form]);
+
+  /* ── Share link: encode result into URL ── */
+  const makeShareLink = (data) => {
+    try {
+      const enc = btoa(encodeURIComponent(JSON.stringify(data)));
+      const url = `${window.location.origin}${window.location.pathname}?resume=${enc}`;
+      navigator.clipboard.writeText(url).then(()=>{setShareMsg("Link copied!");setTimeout(()=>setShareMsg(""),2500);});
+    } catch(e){setShareMsg("Couldn't copy");}
+  };
+
+  /* ── Restore shared resume from URL ── */
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const enc = p.get("resume");
+      if (enc) {
+        const data = JSON.parse(decodeURIComponent(atob(enc)));
+        setResult(data); setStep(3);
+        window.history.replaceState({},"",window.location.pathname);
+      }
+    } catch(e){}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ── PDF export via html2pdf ── */
+  const exportPDF = (name="resume") => {
+    const el = document.getElementById("resume-output");
+    if (!el || !window.html2pdf) { window.print(); return; }
+    window.html2pdf().set({
+      margin:[10,10,10,10], filename:`${(name||"resume").replace(/\s+/g,"_")}_resume.pdf`,
+      image:{type:"jpeg",quality:0.98},
+      html2canvas:{scale:2,useCORS:true},
+      jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},
+    }).from(el).save();
+  };
 
   const set    = (k,v) => setForm(f=>({...f,[k]:v}));
   const setExp = (i,k,v) => { const a=[...form.experiences]; a[i]={...a[i],[k]:v}; set("experiences",a); };
@@ -677,30 +792,36 @@ export default function App() {
           backgroundImage:`url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }} />
 
         {/* ══ HEADER ══ */}
-        <header style={{ position:"sticky", top:0, zIndex:100, borderBottom:"1px solid rgba(255,255,255,0.055)", background:"rgba(13,13,15,0.82)", backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)", padding:"0 40px" }}>
+        <header style={{ position:"sticky", top:0, zIndex:100, borderBottom:"1px solid var(--border-subtle)", background:"var(--header-bg)", backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)", padding:"0 40px" }}>
           <div style={{ maxWidth:880, margin:"0 auto", display:"flex", alignItems:"center", height:66 }}>
-            {/* Logo — clickable, returns to homepage */}
-            <div onClick={resetAll} style={{ display:"flex", alignItems:"center", gap:11, cursor:"pointer", textDecoration:"none" }}
-              title="Back to home"
-              onMouseEnter={e=>e.currentTarget.style.opacity="0.8"}
-              onMouseLeave={e=>e.currentTarget.style.opacity="1"}
-            >
+            <div onClick={resetAll} style={{ display:"flex", alignItems:"center", gap:11, cursor:"pointer" }}
+              onMouseEnter={e=>e.currentTarget.style.opacity="0.8"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
               <LogoMark size={36} />
               <div>
-                <div style={{ fontFamily:"var(--font-display)", fontSize:20, fontWeight:300, letterSpacing:"0.06em", color:"#e2e2ea", lineHeight:1, animation:"logoFade 0.7s 0.2s both" }}>
+                <div style={{ fontFamily:"var(--font-display)", fontSize:20, fontWeight:300, letterSpacing:"0.06em", color:"var(--text-primary)", lineHeight:1 }}>
                   Résumé<span style={{ color:"var(--gold)", fontWeight:400 }}>AI</span>
                 </div>
-                <div style={{ fontSize:8, letterSpacing:"0.22em", textTransform:"uppercase", color:"var(--ash2)", marginTop:1, animation:"logoFade 0.7s 0.5s both" }}>Powered by Claude</div>
+                <div style={{ fontSize:8, letterSpacing:"0.22em", textTransform:"uppercase", color:"var(--ash)", marginTop:1 }}>Powered by Claude</div>
               </div>
             </div>
-            {/* Feature pills */}
-            <div style={{ marginLeft:"auto", display:"flex", gap:6, flexShrink:0 }} className="header-pills">
-              {["Build","PDF Tailor","LinkedIn","ATS Engine"].map((f,i)=>(
-                <span key={f} style={{ fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", padding:"5px 11px", borderRadius:7, border:"1px solid rgba(255,255,255,0.065)", color:"var(--ash2)", transition:"all 0.25s", animation:`fadeIn 0.5s ${0.2+i*0.08}s both`, cursor:"default" }}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--gold-border)";e.currentTarget.style.color="var(--gold)";}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.065)";e.currentTarget.style.color="var(--ash2)";}}
-                >{f}</span>
-              ))}
+            <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+              {step===2 && mode==="build" && (
+                <div style={{ fontSize:10, color:"var(--ash)", display:"flex", alignItems:"center", gap:5 }}>
+                  <span style={{ width:5, height:5, borderRadius:"50%", background:"#4ade80", display:"inline-block" }} />
+                  Saved
+                </div>
+              )}
+              <div className="header-pills" style={{ display:"flex", gap:6 }}>
+                {["Build","Tailor","LinkedIn","Apply"].map((f,i)=>(
+                  <span key={f} style={{ fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", padding:"5px 11px", borderRadius:7, border:"1px solid var(--ghost-border)", color:"var(--ash)", transition:"all 0.25s", cursor:"default" }}
+                    onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--gold-border)";e.currentTarget.style.color="var(--gold)";}}
+                    onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--ghost-border)";e.currentTarget.style.color="var(--ash)";}}
+                  >{f}</span>
+                ))}
+              </div>
+              <button className="theme-toggle" onClick={()=>setDarkMode(d=>!d)} title="Toggle light/dark mode">
+                {darkMode ? "☀️" : "🌙"}
+              </button>
             </div>
           </div>
         </header>
@@ -792,8 +913,15 @@ export default function App() {
           {step===2 && mode==="build" && (
             <div>
               <div className="card fade-up d1">
-                <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Personal Information</h2>
-                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:24, fontWeight:300 }}>Your basic details and target role.</p>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20, flexWrap:"wrap", gap:10 }}>
+                  <div>
+                    <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Personal Information</h2>
+                    <p style={{ color:"var(--ash)", fontSize:13, fontWeight:300 }}>Your basic details and target role.</p>
+                  </div>
+                  <button className="ghost-btn" style={{ fontSize:11, padding:"7px 14px" }} onClick={()=>setForm({...EXAMPLE_FORM})}>
+                    ✦ Fill Example
+                  </button>
+                </div>
                 <div style={g2}><F label="Full Name"><input placeholder="Alexandra Chen" value={form.name} onChange={e=>set("name",e.target.value)} /></F><F label="Target Role"><input placeholder="Chief Product Officer" value={form.targetRole} onChange={e=>set("targetRole",e.target.value)} /></F></div>
                 <div style={g2}><F label="Email"><input placeholder="alex@example.com" value={form.email} onChange={e=>set("email",e.target.value)} /></F><F label="Phone"><input placeholder="+1 555 000 1234" value={form.phone} onChange={e=>set("phone",e.target.value)} /></F></div>
                 <div style={g2}><F label="Location"><input placeholder="San Francisco, CA" value={form.location} onChange={e=>set("location",e.target.value)} /></F><F label="Target Industry"><input placeholder="Technology / FinTech" value={form.targetIndustry} onChange={e=>set("targetIndustry",e.target.value)} /></F></div>
@@ -898,7 +1026,8 @@ export default function App() {
             <div>
               <div className="card fade-up d1">
                 <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Your LinkedIn Profile</h2>
-                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:24, fontWeight:300 }}>Copy and paste your current LinkedIn sections below. Claude will score your profile and give specific, prioritised suggestions.</p>
+                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:20, fontWeight:300 }}>Paste your LinkedIn URL to auto-import, or fill in the fields manually.</p>
+                <LinkedInImport onImport={data=>setLiData(d=>({...d,...Object.fromEntries(Object.entries(data).filter(([,v])=>v))}))} />
                 <div style={g2}>
                   <F label="Your Name"><input placeholder="Alexandra Chen" value={liData.name} onChange={e=>setLiData(d=>({...d,name:e.target.value}))} /></F>
                   <F label="Target Role / Industry"><input placeholder="Cybersecurity Engineer · Tech" value={liData.targetRole} onChange={e=>setLiData(d=>({...d,targetRole:e.target.value}))} /></F>
@@ -1016,7 +1145,8 @@ export default function App() {
                       </div>
                       <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
-                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>window.print()}>⬇ Download PDF</button>
+                        <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>makeShareLink(applyResult.resume)}>{shareMsg||"🔗 Share"}</button>
+                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>exportPDF(applyResult.resume?.name)}>⬇ Download PDF</button>
                       </div>
                     </div>
 
@@ -1129,7 +1259,8 @@ export default function App() {
                       <div className="result-actions" style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={downloadTxt}>Download .txt</button>
-                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>window.print()}>⬇ Download PDF</button>
+                        <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>makeShareLink(result)}>{shareMsg||"🔗 Share"}</button>
+                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>exportPDF(result.name)}>⬇ Download PDF</button>
                       </div>
                     </div>
                     <ATSMeter text={`${result.summary||""} ${result.experience||""} ${result.skills||""}`} />
