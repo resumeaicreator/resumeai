@@ -1,7 +1,16 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 /* ─── Fonts + Global Styles ─── */
-const FontLink = () => (
+const FontLink = () => {
+  useEffect(() => {
+    if (!document.getElementById("html2pdf-script")) {
+      const s = document.createElement("script");
+      s.id  = "html2pdf-script";
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+      document.head.appendChild(s);
+    }
+  }, []);
+  return (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -180,7 +189,8 @@ const FontLink = () => (
       .header-pills { display: none !important; }
     }
   `}</style>
-);
+  );
+};
 
 /* ─── Floating Particles ─── */
 function Particles() {
@@ -529,6 +539,75 @@ function JobRecommendations({ role, skills, location }) {
   );
 }
 
+/* ─── LinkedIn URL Import ─── */
+function LinkedInImport({ onImport }) {
+  const [url, setUrl]       = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg]       = useState("");
+
+  const doImport = async () => {
+    if (!url.trim()) return;
+    setLoading(true); setMsg("");
+    try {
+      const API = process.env.REACT_APP_API_URL || "";
+      const res = await fetch(`${API}/api/linkedin-import`, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ url: url.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setMsg(data.error || "Import failed."); return; }
+      onImport(data);
+      setMsg("✓ Profile imported — review and edit below.");
+    } catch(e) {
+      setMsg("Couldn't reach the server.");
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{ marginBottom:24, padding:"16px 18px", background:"rgba(10,102,194,0.06)", border:"1px solid rgba(10,102,194,0.2)", borderRadius:12 }}>
+      <div style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"#60a5fa", marginBottom:10 }}>Auto-import from LinkedIn</div>
+      <div style={{ display:"flex", gap:8 }}>
+        <input
+          placeholder="https://linkedin.com/in/yourname"
+          value={url} onChange={e=>setUrl(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&doImport()}
+          style={{ flex:1 }}
+        />
+        <button
+          onClick={doImport} disabled={loading || !url.trim()}
+          style={{ padding:"10px 18px", borderRadius:9, border:"none", background:"#0a66c2", color:"#fff",
+            fontFamily:"var(--font-body)", fontSize:13, fontWeight:500, cursor:"pointer",
+            opacity: loading||!url.trim() ? 0.5 : 1, whiteSpace:"nowrap", flexShrink:0 }}>
+          {loading ? "Importing…" : "Import →"}
+        </button>
+      </div>
+      {msg && <div style={{ marginTop:8, fontSize:12, color: msg.startsWith("✓") ? "#4ade80" : "#f87171" }}>{msg}</div>}
+      <div style={{ marginTop:8, fontSize:11, color:"rgba(255,255,255,0.2)" }}>
+        Note: Only public profiles can be imported. If blocked, fill in the fields below manually.
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   EXAMPLE DATA — "Fill Example" button
+══════════════════════════════════════════════ */
+const EXAMPLE_FORM = {
+  name:"Alex Rivera", email:"alex.rivera@email.com", phone:"+1 415 555 0192",
+  location:"San Francisco, CA", linkedin:"linkedin.com/in/alexrivera",
+  targetRole:"Senior Product Manager", targetIndustry:"Technology / SaaS",
+  template:"executive",
+  experiences:[
+    { company:"Acme Tech", role:"Product Manager", startDate:"Jan 2021", endDate:"", current:true,
+      bullets:"Led cross-functional team of 12 to ship payments redesign, increasing conversion by 24%.\nOwned roadmap for core checkout flow serving 2M monthly users.\nDrove 0→1 launch of subscription product generating $1.8M ARR in first year." },
+    { company:"StartupCo", role:"Associate PM", startDate:"Jun 2019", endDate:"Dec 2020", current:false,
+      bullets:"Defined MVP requirements for mobile app, shipped in 10 weeks.\nManaged backlog of 200+ tickets across 3 engineering squads.\nIncreased DAU by 18% through A/B tested onboarding redesign." },
+  ],
+  education:[{ school:"UC Berkeley", degree:"BSc", field:"Computer Science", year:"2019" }],
+  skills:"Product Strategy, Roadmapping, A/B Testing, SQL, Figma, Agile / Scrum, Stakeholder Management",
+  certifications:"Pragmatic Marketing Certified",
+};
+
 /* ══════════════════════════════════════════════
    MAIN APP
 ══════════════════════════════════════════════ */
@@ -549,9 +628,6 @@ export default function App() {
   const [jobDescription,setJobDescription] = useState("");
   const [dragOver,setDragOver]             = useState(false);
   const [liData,setLiData]     = useState({name:"",targetRole:"",headline:"",about:"",experience:"",skills:""});
-  const [printTip,setPrintTip] = useState(false);
-
-  // Apply Mode state
   const [applyInput,setApplyInput]   = useState({ jobUrl:"", jobText:"", inputMode:"url" });
   const [applyResume,setApplyResume] = useState(null); // uploaded PDF for apply mode
   const [applyResult,setApplyResult] = useState(null); // { resume, coverLetter, interviewPrep, jobTitle, company }
@@ -561,6 +637,64 @@ export default function App() {
   const fileRef      = useRef(null);
   const containerRef = useRef(null);
 
+  /* ── localStorage auto-save ── */
+  const LS_KEY = "resumeai_form_v1";
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setForm(f => ({ ...f, ...parsed }));
+      }
+    } catch(e) {}
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(form)); } catch(e) {}
+  }, [form]);
+
+  /* ── Share link ── */
+  const [shareMsg, setShareMsg] = useState("");
+  const makeShareLink = (data) => {
+    try {
+      const encoded = btoa(encodeURIComponent(JSON.stringify(data)));
+      const url = `${window.location.origin}${window.location.pathname}?resume=${encoded}`;
+      navigator.clipboard.writeText(url).then(() => {
+        setShareMsg("Link copied!");
+        setTimeout(() => setShareMsg(""), 2500);
+      });
+    } catch(e) { setShareMsg("Couldn't copy link"); }
+  };
+
+  /* ── Check URL for shared resume on load ── */
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const encoded = params.get("resume");
+      if (encoded) {
+        const data = JSON.parse(decodeURIComponent(atob(encoded)));
+        setResult(data);
+        go(2);
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    } catch(e) {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ── PDF export via html2pdf ── */
+  const exportPDF = (filename = "resume") => {
+    const el = document.getElementById("resume-output");
+    if (!el) { window.print(); return; }
+    const w = window.html2pdf;
+    if (!w) { window.print(); return; }
+    w().set({
+      margin: [10,10,10,10],
+      filename: `${filename.replace(/\s+/g,"_")}_resume.pdf`,
+      image: { type:"jpeg", quality:0.98 },
+      html2canvas: { scale:2, useCORS:true },
+      jsPDF: { unit:"mm", format:"a4", orientation:"portrait" },
+    }).from(el).save();
+  };
+
   const set    = (k,v) => setForm(f=>({...f,[k]:v}));
   const setExp = (i,k,v) => { const a=[...form.experiences]; a[i]={...a[i],[k]:v}; set("experiences",a); };
   const setEdu = (i,k,v) => { const a=[...form.education];   a[i]={...a[i],[k]:v}; set("education",a);   };
@@ -568,7 +702,7 @@ export default function App() {
   const rmExp  = i  => set("experiences",form.experiences.filter((_,j)=>j!==i));
   const addEdu = () => set("education",[...form.education,blankEdu()]);
   const go     = n  => { setStep(n); setTimeout(()=>containerRef.current?.scrollTo({top:0,behavior:"smooth"}),50); };
-  const resetAll = () => { setResult(null);setLiResult(null);setApplyResult(null);setUploadedPdf(null);setApplyResume(null);setJobDescription("");setMode("");setPrintTip(false);setApplyInput({jobUrl:"",jobText:"",inputMode:"url"});go(0); };
+  const resetAll = () => { setResult(null);setLiResult(null);setApplyResult(null);setUploadedPdf(null);setApplyResume(null);setJobDescription("");setMode("");setApplyInput({jobUrl:"",jobText:"",inputMode:"url"});go(0); };
 
   const handleFile = file => {
     if (!file||file.type!=="application/pdf"){ setErr("Please upload a PDF file."); return; }
@@ -694,14 +828,22 @@ export default function App() {
                 <div style={{ fontSize:8, letterSpacing:"0.22em", textTransform:"uppercase", color:"var(--ash2)", marginTop:1, animation:"logoFade 0.7s 0.5s both" }}>Powered by Claude</div>
               </div>
             </div>
-            {/* Feature pills */}
-            <div style={{ marginLeft:"auto", display:"flex", gap:6, flexShrink:0 }} className="header-pills">
+            {/* Feature pills + autosave indicator */}
+            <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+              {step===1 && mode==="build" && (
+                <div style={{ fontSize:10, color:"var(--ash2)", letterSpacing:"0.06em", display:"flex", alignItems:"center", gap:5 }}>
+                  <span style={{ width:5, height:5, borderRadius:"50%", background:"#4ade80", display:"inline-block" }} />
+                  Progress saved
+                </div>
+              )}
+              <div className="header-pills" style={{ display:"flex", gap:6 }}>
               {["Build","PDF Tailor","LinkedIn","ATS Engine"].map((f,i)=>(
                 <span key={f} style={{ fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", padding:"5px 11px", borderRadius:7, border:"1px solid rgba(255,255,255,0.065)", color:"var(--ash2)", transition:"all 0.25s", animation:`fadeIn 0.5s ${0.2+i*0.08}s both`, cursor:"default" }}
                   onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--gold-border)";e.currentTarget.style.color="var(--gold)";}}
                   onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.065)";e.currentTarget.style.color="var(--ash2)";}}
                 >{f}</span>
               ))}
+              </div>
             </div>
           </div>
         </header>
@@ -814,41 +956,27 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Why better than competitors */}
+              {/* Feature highlights — no competitor names */}
               <div style={{ marginTop:48 }}>
                 <div style={{ textAlign:"center", marginBottom:28 }}>
-                  <div style={{ fontSize:10, letterSpacing:"0.15em", textTransform:"uppercase", color:"var(--ash)", marginBottom:10 }}>vs. the competition</div>
-                  <h2 style={{ fontFamily:"var(--font-display)", fontSize:32, fontWeight:300 }}>Why <em style={{ color:"var(--gold)" }}>RésuméAI</em> wins</h2>
+                  <div style={{ fontSize:10, letterSpacing:"0.15em", textTransform:"uppercase", color:"var(--ash)", marginBottom:10 }}>Everything included</div>
+                  <h2 style={{ fontFamily:"var(--font-display)", fontSize:32, fontWeight:300 }}>All the tools. <em style={{ color:"var(--gold)" }}>Zero paywalls.</em></h2>
                 </div>
-                <div style={{ overflowX:"auto" }}>
-                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
-                    <thead>
-                      <tr>
-                        {["Feature","Zety","Kickresume","Enhancv","RésuméAI"].map((h,i)=>(
-                          <th key={i} style={{ padding:"10px 14px", textAlign:i===0?"left":"center", fontSize:10, letterSpacing:"0.1em", textTransform:"uppercase", color:i===4?"var(--gold)":"var(--ash)", borderBottom:"1px solid rgba(255,255,255,0.08)", whiteSpace:"nowrap" }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        ["Apply Mode (full loop)",    "✗","✗","✗","✓"],
-                        ["PDF resume tailoring",      "✗","✗","✗","✓"],
-                        ["LinkedIn optimizer",        "✗","✗","✗","✓"],
-                        ["No account needed",         "✗","✗","✗","✓"],
-                        ["Free PDF download",         "✗","limited","✗ watermark","✓"],
-                        ["Interview prep",            "paid","paid","✗","✓"],
-                        ["Job fit score",             "paid","✗","paid","✓"],
-                      ].map((row,i)=>(
-                        <tr key={i} style={{ borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
-                          {row.map((cell,j)=>(
-                            <td key={j} style={{ padding:"11px 14px", textAlign:j===0?"left":"center", color: j===4 ? (cell==="✓"?"#4ade80":"var(--ash)") : (cell==="✓"?"#4ade80":cell==="✗"?"rgba(255,255,255,0.2)":"var(--ash)"), fontWeight:j===4&&cell==="✓"?500:400, background:j===4?"rgba(201,168,76,0.04)":"transparent" }}>
-                              {cell}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:14 }}>
+                  {[
+                    { icon:"⚡", title:"Apply Mode",        desc:"Full resume + cover letter + interview prep from one job URL." },
+                    { icon:"📄", title:"PDF Tailoring",     desc:"Upload any resume and rewrite it for any role." },
+                    { icon:"🔗", title:"LinkedIn Optimizer",desc:"AI audit of your profile with prioritised fixes." },
+                    { icon:"📊", title:"ATS Scoring",       desc:"Know your keyword match before you apply." },
+                    { icon:"🎯", title:"Interview Prep",    desc:"6 role-specific questions with coaching guidance." },
+                    { icon:"🆓", title:"Always Free",       desc:"No account, no credit card, no watermarks ever." },
+                  ].map((f,i)=>(
+                    <div key={i} className="card fade-up" style={{ animationDelay:`${i*0.06}s`, padding:"22px 24px", marginBottom:0 }}>
+                      <div style={{ fontSize:24, marginBottom:10 }}>{f.icon}</div>
+                      <div style={{ fontWeight:500, fontSize:14, marginBottom:6 }}>{f.title}</div>
+                      <div style={{ fontSize:12, color:"var(--ash)", lineHeight:1.6 }}>{f.desc}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -870,8 +998,16 @@ export default function App() {
           {step===1 && mode==="build" && (
             <div>
               <div className="card fade-up d1">
-                <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Personal Information</h2>
-                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:24, fontWeight:300 }}>Your basic details and target role.</p>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20, flexWrap:"wrap", gap:10 }}>
+                  <div>
+                    <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Personal Information</h2>
+                    <p style={{ color:"var(--ash)", fontSize:13, fontWeight:300 }}>Your basic details and target role.</p>
+                  </div>
+                  <button className="ghost-btn" style={{ fontSize:11, padding:"7px 14px", flexShrink:0 }}
+                    onClick={() => setForm({ ...EXAMPLE_FORM })}>
+                    ✦ Fill Example
+                  </button>
+                </div>
                 <div style={g2}><F label="Full Name"><input placeholder="Alexandra Chen" value={form.name} onChange={e=>set("name",e.target.value)} /></F><F label="Target Role"><input placeholder="Chief Product Officer" value={form.targetRole} onChange={e=>set("targetRole",e.target.value)} /></F></div>
                 <div style={g2}><F label="Email"><input placeholder="alex@example.com" value={form.email} onChange={e=>set("email",e.target.value)} /></F><F label="Phone"><input placeholder="+1 555 000 1234" value={form.phone} onChange={e=>set("phone",e.target.value)} /></F></div>
                 <div style={g2}><F label="Location"><input placeholder="San Francisco, CA" value={form.location} onChange={e=>set("location",e.target.value)} /></F><F label="Target Industry"><input placeholder="Technology / FinTech" value={form.targetIndustry} onChange={e=>set("targetIndustry",e.target.value)} /></F></div>
@@ -976,7 +1112,18 @@ export default function App() {
             <div>
               <div className="card fade-up d1">
                 <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Your LinkedIn Profile</h2>
-                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:24, fontWeight:300 }}>Copy and paste your current LinkedIn sections below. Claude will score your profile and give specific, prioritised suggestions.</p>
+                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:20, fontWeight:300 }}>Paste your LinkedIn URL to auto-import, or fill in the fields manually.</p>
+
+                {/* LinkedIn URL import */}
+                <LinkedInImport onImport={(data) => setLiData(d => ({
+                  ...d,
+                  name:       data.name       || d.name,
+                  targetRole: data.targetRole || d.targetRole,
+                  headline:   data.headline   || d.headline,
+                  about:      data.about      || d.about,
+                  experience: data.experience || d.experience,
+                  skills:     data.skills     || d.skills,
+                }))} />
                 <div style={g2}>
                   <F label="Your Name"><input placeholder="Alexandra Chen" value={liData.name} onChange={e=>setLiData(d=>({...d,name:e.target.value}))} /></F>
                   <F label="Target Role / Industry"><input placeholder="Cybersecurity Engineer · Tech" value={liData.targetRole} onChange={e=>setLiData(d=>({...d,targetRole:e.target.value}))} /></F>
@@ -1094,7 +1241,10 @@ export default function App() {
                       </div>
                       <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
-                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>{setPrintTip(true);setTimeout(()=>window.print(),200);}}>Print / Save PDF</button>
+                        <button className="ghost-btn" style={{ fontSize:12 }} onClick={() => makeShareLink(applyResult.resume)}>
+                          {shareMsg || "🔗 Share Link"}
+                        </button>
+                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={() => exportPDF(applyResult.resume?.name || "resume")}>⬇ Download PDF</button>
                       </div>
                     </div>
 
@@ -1140,7 +1290,6 @@ export default function App() {
                   {applyTab==="resume" && applyResult.resume && (
                     <div className="scale-in">
                       <ATSMeter text={`${applyResult.resume.summary||""} ${applyResult.resume.experience||""} ${applyResult.resume.skills||""}`} />
-                      {printTip && <div className="fade-in" style={{ margin:"12px 0",padding:"13px 18px",background:"rgba(201,168,76,0.07)",border:"1px solid var(--gold-border)",borderRadius:11,fontSize:12,color:"#ccc",lineHeight:1.65 }}><strong style={{ color:"var(--gold)" }}>Print tip:</strong> In Chrome's print dialog → <em>More settings</em> → uncheck <strong>Headers and footers</strong>.</div>}
                       <div style={{ borderRadius:18,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.65)",marginTop:16 }}>
                         <Preview data={applyResult.resume} template={form.template} />
                       </div>
@@ -1208,16 +1357,14 @@ export default function App() {
                       <div className="result-actions" style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={downloadTxt}>Download .txt</button>
-                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>{setPrintTip(true);setTimeout(()=>window.print(),200);}}>Print / Save PDF</button>
+                        <button className="ghost-btn" style={{ fontSize:12 }} onClick={() => makeShareLink(result)}>
+                          {shareMsg || "🔗 Share Link"}
+                        </button>
+                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={() => exportPDF(result.name)}>⬇ Download PDF</button>
                       </div>
                     </div>
                     <ATSMeter text={`${result.summary||""} ${result.experience||""} ${result.skills||""}`} />
                   </div>
-                  {printTip && (
-                    <div className="fade-in" style={{ marginBottom:14,padding:"13px 18px",background:"rgba(201,168,76,0.07)",border:"1px solid var(--gold-border)",borderRadius:11,fontSize:12,color:"#ccc",lineHeight:1.65 }}>
-                      <strong style={{ color:"var(--gold)" }}>Print tip:</strong> In Chrome's print dialog → <em>More settings</em> → uncheck <strong>Headers and footers</strong> → set <strong>Destination</strong> to <em>Save as PDF</em>.
-                    </div>
-                  )}
                   <div className="fade-up" style={{ borderRadius:18,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.65)", marginBottom:32 }}>
                     <Preview data={result} template={form.template} />
                   </div>
