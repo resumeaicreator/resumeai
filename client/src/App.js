@@ -242,21 +242,77 @@ function LogoMark({ size = 36 }) {
 
 /* ─── ATS Meter ─── */
 const ATS_WORDS = ["led","managed","developed","increased","reduced","achieved","collaborated","implemented","delivered","optimized","launched","spearheaded","drove","built","designed","scaled","streamlined","negotiated","mentored","generated"];
+
+const ATS_TIPS = {
+  high: [
+    "Strong action verbs detected. Make sure every bullet starts with one.",
+    "Good keyword density. Consider adding industry-specific certifications.",
+    "Your resume scores well — tailor the summary to each specific job posting for best results.",
+  ],
+  mid: [
+    "Add more measurable results — numbers like percentages, dollar amounts, or team sizes boost ATS scores.",
+    "Try starting more bullet points with strong verbs like: Led, Drove, Scaled, Delivered, Launched.",
+    "Mirror exact language from the job description — ATS systems match keywords literally.",
+    "Add a Skills section with specific tools and technologies relevant to your target role.",
+  ],
+  low: [
+    "Your resume needs more action verbs. Replace passive phrases with: Led, Built, Managed, Delivered.",
+    "Add quantified achievements — e.g. 'Increased sales by 30%' beats 'Responsible for sales'.",
+    "Include a dedicated Skills section listing technical tools, software, and relevant keywords.",
+    "Rewrite your summary to include your job title and 2-3 keywords from the job you're applying for.",
+    "Avoid paragraphs — ATS systems prefer bullet points for experience sections.",
+  ],
+};
+
 function ATSMeter({ text }) {
+  const [expanded, setExpanded] = useState(false);
   const lower = (text||"").toLowerCase();
-  const hits  = ATS_WORDS.filter(w => lower.includes(w));
-  const score = Math.min(98, 28 + Math.round((hits.length/ATS_WORDS.length)*70));
-  const color = score>=70?"#4ade80":score>=50?"#fbbf24":"#f87171";
+  const hits   = ATS_WORDS.filter(w => lower.includes(w));
+  const score  = Math.min(98, 28 + Math.round((hits.length/ATS_WORDS.length)*70));
+  const color  = score>=70?"#4ade80":score>=50?"#fbbf24":"#f87171";
+  const level  = score>=70?"high":score>=50?"mid":"low";
+  const tips   = ATS_TIPS[level];
+  const missing = ATS_WORDS.filter(w => !lower.includes(w)).slice(0,6);
+
   return (
-    <div style={{ marginTop:20, padding:"18px 20px", background:"rgba(0,0,0,0.28)", borderRadius:12, border:"1px solid rgba(255,255,255,0.05)" }}>
+    <div style={{ marginTop:20, padding:"18px 20px", background:"rgba(0,0,0,0.18)", borderRadius:12, border:"1px solid rgba(255,255,255,0.05)" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:10 }}>
         <span style={{ fontSize:10, fontWeight:500, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--ash)" }}>ATS Compatibility</span>
         <span style={{ fontFamily:"var(--font-display)", fontSize:28, fontWeight:300, color }}>{score}<span style={{ fontSize:13, color:"var(--ash)" }}>/100</span></span>
       </div>
-      <div style={{ background:"rgba(255,255,255,0.05)", borderRadius:999, height:4, overflow:"hidden" }}>
+      <div style={{ background:"rgba(255,255,255,0.05)", borderRadius:999, height:4, overflow:"hidden", marginBottom:10 }}>
         <div style={{ width:`${score}%`, height:"100%", background:`linear-gradient(90deg,${color}66,${color})`, borderRadius:999, transition:"width 1.4s cubic-bezier(0.16,1,0.3,1)" }} />
       </div>
-      {hits.length>0 && <p style={{ fontSize:11, color:"rgba(255,255,255,0.25)", marginTop:8 }}>Detected: {hits.slice(0,5).join(" · ")}</p>}
+      {hits.length>0 && <p style={{ fontSize:11, color:"rgba(255,255,255,0.25)", marginBottom:10 }}>Detected: {hits.slice(0,5).join(" · ")}</p>}
+
+      {/* Expandable tips */}
+      <button onClick={()=>setExpanded(e=>!e)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:"var(--gold)", fontFamily:"var(--font-body)", letterSpacing:"0.06em", padding:0, display:"flex", alignItems:"center", gap:5 }}>
+        {expanded ? "▲ Hide tips" : "▼ How to improve your score"}
+      </button>
+
+      {expanded && (
+        <div style={{ marginTop:14 }} className="fade-in">
+          <div style={{ fontSize:11, letterSpacing:"0.1em", textTransform:"uppercase", color:"var(--ash)", marginBottom:10 }}>
+            {score>=70 ? "✓ Looking good — fine-tuning tips" : score>=50 ? "⚠ Room to improve" : "✗ Needs work — key fixes"}
+          </div>
+          {tips.map((tip,i)=>(
+            <div key={i} style={{ display:"flex", gap:10, marginBottom:10, padding:"10px 14px", background:"rgba(255,255,255,0.03)", borderRadius:9, borderLeft:`2.5px solid ${color}` }}>
+              <span style={{ color, flexShrink:0, fontSize:13 }}>→</span>
+              <span style={{ fontSize:13, color:"var(--text-primary)", lineHeight:1.6 }}>{tip}</span>
+            </div>
+          ))}
+          {missing.length>0 && (
+            <div style={{ marginTop:10 }}>
+              <div style={{ fontSize:11, color:"var(--ash)", marginBottom:6 }}>Try adding these power words:</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                {missing.map((w,i)=>(
+                  <span key={i} style={{ fontSize:11, padding:"3px 10px", borderRadius:8, background:"var(--gold-dim)", border:"1px solid var(--gold-border)", color:"var(--gold)", textTransform:"capitalize" }}>{w}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1243,11 +1299,25 @@ export default function App() {
                 </div>
               )}
               <div className="header-pills" style={{ display:"flex", gap:6 }}>
-                {["Build","Tailor","LinkedIn","Apply"].map((f,i)=>(
-                  <span key={f} style={{ fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", padding:"5px 11px", borderRadius:7, border:"1px solid var(--ghost-border)", color:"var(--ash)", transition:"all 0.25s", cursor:"default" }}
+                {[
+                  {label:"Build",    mode:"build"},
+                  {label:"Tailor",   mode:"tailor"},
+                  {label:"LinkedIn", mode:"linkedin"},
+                  {label:"Apply",    mode:"apply"},
+                ].map((f,i)=>(
+                  <button key={f.label} onClick={()=>{
+                    if (!user) { setPage("login"); return; }
+                    if (page !== "app") setPage("app");
+                    setErr("");
+                    setResult(null);
+                    setLiResult(null);
+                    setApplyResult(null);
+                    setMode(f.mode);
+                    go(2);
+                  }} style={{ fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", padding:"5px 11px", borderRadius:7, border:"1px solid var(--ghost-border)", color:"var(--ash)", transition:"all 0.25s", cursor:"pointer", background:"transparent", fontFamily:"var(--font-body)" }}
                     onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--gold-border)";e.currentTarget.style.color="var(--gold)";}}
                     onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--ghost-border)";e.currentTarget.style.color="var(--ash)";}}
-                  >{f}</span>
+                  >{f.label}</button>
                 ))}
               </div>
               <button className="theme-toggle" onClick={()=>setDarkMode(d=>!d)} title="Toggle light/dark mode">
