@@ -22,7 +22,7 @@ const FontLink = () => {
       --gold-dim: rgba(201,168,76,0.12); --gold-border: rgba(201,168,76,0.28);
       --ash:  #7a7a88; --ash2: #5a5a68;
       --mist: rgba(255,255,255,0.055); --mist2: rgba(255,255,255,0.025);
-      --text-primary: #e2e2ea; --text-secondary: #7a7a88;
+      --text-primary: #e2e2ea; --text-secondary: #5a5a68;
       --border-subtle: rgba(255,255,255,0.065);
       --input-bg: rgba(255,255,255,0.055); --input-border: rgba(255,255,255,0.07);
       --input-placeholder: rgba(255,255,255,0.18);
@@ -222,16 +222,14 @@ function Particles() {
 /* ─── Animated SVG Logo Mark ─── */
 function LogoMark({ size = 36 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width={size} height={size} viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style={{display:"block",flexShrink:0}}>
       <rect width="36" height="36" rx="9" fill="url(#logoGrad)" />
-      {/* R shape */}
-      <path d="M9 9h7a5 5 0 0 1 0 10h-7V9z M16 19l5 8" stroke="#0d0d0f" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
-        style={{ strokeDasharray:300, strokeDashoffset:300, animation:"drawLine 1s 0.3s cubic-bezier(0.16,1,0.3,1) forwards" }} />
-      {/* AI text */}
-      <text x="20" y="16" fontSize="7" fontWeight="700" fill="#0d0d0f" fontFamily="Outfit,sans-serif"
-        style={{ animation:"logoFade 0.6s 0.8s both" }}>AI</text>
-      {/* Gold accent line */}
-      <line x1="9" y1="30" x2="27" y2="30" stroke="rgba(0,0,0,0.25)" strokeWidth="1.5" strokeLinecap="round" />
+      {/* C */}
+      <path d="M20 11.5a6 6 0 1 0 0 13" stroke="#0d0d0f" strokeWidth="2.2" strokeLinecap="round" fill="none"
+        style={{strokeDasharray:40,strokeDashoffset:40,animation:"drawLine 0.8s 0.2s cubic-bezier(0.16,1,0.3,1) forwards"}} />
+      {/* R */}
+      <path d="M23 13h3a2.5 2.5 0 0 1 0 5h-3V13z M26 18l3 5.5" stroke="#0d0d0f" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"
+        style={{strokeDasharray:40,strokeDashoffset:40,animation:"drawLine 0.8s 0.5s cubic-bezier(0.16,1,0.3,1) forwards"}} />
       <defs>
         <linearGradient id="logoGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#e8c96d" />
@@ -325,7 +323,7 @@ function LinkedInResults({ data }) {
             <span className={`li-tag ${pri[s.priority]||"tag-med"}`}>{s.priority}</span>
           </div>
           <div style={{ fontSize:13, color:"var(--ash)", marginBottom:10, lineHeight:1.65 }}>{s.issue}</div>
-          <div style={{ fontSize:13, color:"#e2e2ea", background:"rgba(255,255,255,0.035)", borderRadius:9, padding:"11px 15px", borderLeft:"2.5px solid var(--gold)", lineHeight:1.65 }}>
+          <div style={{ fontSize:13, color:"var(--text-primary)", background:"rgba(255,255,255,0.035)", borderRadius:9, padding:"11px 15px", borderLeft:"2.5px solid var(--gold)", lineHeight:1.65 }}>
             <span style={{ fontSize:9, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--gold)", display:"block", marginBottom:4 }}>Suggestion</span>
             {s.suggestion}
           </div>
@@ -468,7 +466,7 @@ function JobRecommendations({ role, skills, location }) {
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(160px, 1fr))", gap:10 }}>
               {JOB_BOARDS.map(b => (
                 <a key={b.name} href={b.url(roleClean, location)} target="_blank" rel="noopener noreferrer"
-                  style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", borderRadius:10, border:"1px solid rgba(255,255,255,0.08)", background:"var(--mist2)", textDecoration:"none", transition:"all 0.25s", color:"#e2e2ea" }}
+                  style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", borderRadius:10, border:"1px solid rgba(255,255,255,0.08)", background:"var(--mist2)", textDecoration:"none", transition:"all 0.25s", color:"var(--text-primary)" }}
                   onMouseEnter={e=>{e.currentTarget.style.borderColor=b.color+"66";e.currentTarget.style.background=b.color+"12";}}
                   onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.08)";e.currentTarget.style.background="var(--mist2)";}}
                 >
@@ -497,7 +495,7 @@ function JobRecommendations({ role, skills, location }) {
               {skillList.slice(0,3).map((skill,i) => (
                 <a key={"s"+i} href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(skill)}&location=${encodeURIComponent(location||"")}`} target="_blank" rel="noopener noreferrer"
                   style={{ fontSize:12, padding:"6px 14px", borderRadius:20, border:"1px solid rgba(255,255,255,0.1)", color:"var(--ash)", textDecoration:"none", background:"var(--mist2)", transition:"all 0.2s" }}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.2)";e.currentTarget.style.color="#e2e2ea";}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.2)";e.currentTarget.style.color="var(--text-primary)";}}
                   onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.1)";e.currentTarget.style.color="var(--ash)";}}
                 >{skill} jobs ↗</a>
               ))}
@@ -513,7 +511,7 @@ function JobRecommendations({ role, skills, location }) {
                 {jobs.suggestions.map((job,i) => (
                   <div key={i} className="li-card fade-up" style={{ animationDelay:`${i*0.07}s`, borderColor:"rgba(201,168,76,0.15)" }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
-                      <div style={{ fontWeight:500, fontSize:14, color:"#e2e2ea" }}>{job.title}</div>
+                      <div style={{ fontWeight:500, fontSize:14, color:"var(--text-primary)" }}>{job.title}</div>
                       <span style={{ fontSize:10, padding:"2px 8px", borderRadius:10, background:"var(--gold-dim)", color:"var(--gold)", whiteSpace:"nowrap", marginLeft:8 }}>{job.match}% match</span>
                     </div>
                     <div style={{ fontSize:12, color:"var(--ash)", marginBottom:10, lineHeight:1.5 }}>{job.reason}</div>
@@ -573,6 +571,325 @@ function LinkedInImport({ onImport }) {
   );
 }
 
+/* ─── Auth Pages ─── */
+function AuthPage({ mode, onSuccess, switchMode }) {
+  const [email,setEmail]     = useState("");
+  const [password,setPassword] = useState("");
+  const [name,setName]       = useState("");
+  const [loading,setLoading] = useState(false);
+  const [err,setErr]         = useState("");
+  const API = process.env.REACT_APP_API_URL||"";
+
+  const submit = async () => {
+    if (!email||!password) { setErr("Email and password required."); return; }
+    setLoading(true); setErr("");
+    try {
+      const endpoint = mode==="register" ? "/api/auth/register" : "/api/auth/login";
+      const body = mode==="register" ? {email,password,name} : {email,password};
+      const res = await fetch(`${API}${endpoint}`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify(body)});
+      const data = await res.json();
+      if (!res.ok) { setErr(data.error||"Something went wrong."); return; }
+      onSuccess(data.user);
+    } catch(e) { setErr("Network error. Please try again."); }
+    finally { setLoading(false); }
+  };
+
+  const googleLogin = () => { window.location.href = `${API}/api/auth/google`; };
+
+  return (
+    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+      <div style={{width:"100%",maxWidth:400}}>
+        <div style={{textAlign:"center",marginBottom:36}}>
+          <div style={{fontFamily:"var(--font-display)",fontSize:32,fontWeight:300,marginBottom:8}}>
+            {mode==="register" ? "Create account" : "Welcome back"}
+          </div>
+          <div style={{fontSize:13,color:"var(--ash)"}}>
+            {mode==="register" ? "$10/month after free trial. Cancel anytime." : "Sign in to your Crafted Resume account."}
+          </div>
+        </div>
+
+        <div className="card" style={{padding:"32px 28px"}}>
+          {/* Google OAuth */}
+          <button onClick={googleLogin} style={{width:"100%",padding:"11px 16px",borderRadius:9,border:"1px solid var(--ghost-border)",background:"var(--mode-card-bg)",color:"var(--text-primary)",fontFamily:"var(--font-body)",fontSize:14,fontWeight:400,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:20,transition:"all 0.2s"}}
+            onMouseEnter={e=>e.currentTarget.style.borderColor="var(--gold-border)"}
+            onMouseLeave={e=>e.currentTarget.style.borderColor="var(--ghost-border)"}
+          >
+            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.32-8.16 2.32-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+            Continue with Google
+          </button>
+
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+            <div style={{flex:1,height:1,background:"var(--border-subtle)"}} />
+            <span style={{fontSize:11,color:"var(--ash)",letterSpacing:"0.08em"}}>OR</span>
+            <div style={{flex:1,height:1,background:"var(--border-subtle)"}} />
+          </div>
+
+          {mode==="register" && (
+            <div style={{marginBottom:14}}>
+              <label className="field-label">Full Name</label>
+              <input placeholder="Alex Rivera" value={name} onChange={e=>setName(e.target.value)} />
+            </div>
+          )}
+          <div style={{marginBottom:14}}>
+            <label className="field-label">Email</label>
+            <input type="email" placeholder="you@email.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} />
+          </div>
+          <div style={{marginBottom:20}}>
+            <label className="field-label">Password {mode==="register"&&<span style={{fontWeight:300,textTransform:"none",letterSpacing:0}}>(min 8 characters)</span>}</label>
+            <input type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} />
+          </div>
+
+          {err && <div style={{marginBottom:14,padding:"10px 14px",background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:9,fontSize:13,color:"#f87171"}}>{err}</div>}
+
+          <button className="gold-btn" onClick={submit} disabled={loading} style={{width:"100%"}}>
+            {loading ? "Please wait…" : mode==="register" ? "Create Account →" : "Sign In →"}
+          </button>
+
+          <div style={{textAlign:"center",marginTop:18,fontSize:13,color:"var(--ash)"}}>
+            {mode==="register"
+              ? <>Already have an account? <button onClick={()=>switchMode("login")} style={{background:"none",border:"none",color:"var(--gold)",cursor:"pointer",fontSize:13,fontFamily:"var(--font-body)"}}>Sign in</button></>
+              : <>Need an account? <button onClick={()=>switchMode("register")} style={{background:"none",border:"none",color:"var(--gold)",cursor:"pointer",fontSize:13,fontFamily:"var(--font-body)"}}>Register</button></>
+            }
+          </div>
+          {mode==="login" && (
+            <div style={{textAlign:"center",marginTop:10}}>
+              <button onClick={()=>switchMode("forgot")} style={{background:"none",border:"none",color:"var(--ash)",cursor:"pointer",fontSize:12,fontFamily:"var(--font-body)"}}>Forgot password?</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SubscribePage({ user, onSubscribed }) {
+  const [loading,setLoading] = useState(false);
+  const [err,setErr]         = useState("");
+  const API = process.env.REACT_APP_API_URL||"";
+
+  const checkout = async () => {
+    setLoading(true); setErr("");
+    try {
+      const res = await fetch(`${API}/api/auth/billing/checkout`,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"}});
+      const data = await res.json();
+      if (!res.ok){setErr(data.error||"Something went wrong."); return;}
+      window.location.href = data.url;  // Redirect to Stripe hosted checkout
+    } catch(e){ setErr("Network error. Please try again."); }
+    finally{ setLoading(false); }
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+      <div style={{width:"100%",maxWidth:440,textAlign:"center"}}>
+        <div style={{fontFamily:"var(--font-display)",fontSize:40,fontWeight:300,marginBottom:10}}>
+          Unlock <em style={{color:"var(--gold)"}}>Crafted Resume</em>
+        </div>
+        <p style={{color:"var(--ash)",fontSize:15,marginBottom:36,lineHeight:1.7}}>
+          Full access to all tools — Apply Mode, PDF tailoring, LinkedIn optimizer, ATS scoring, and more.
+        </p>
+        <div className="card" style={{padding:"32px 28px",marginBottom:16}}>
+          <div style={{fontFamily:"var(--font-display)",fontSize:52,fontWeight:300,marginBottom:4}}>
+            $10<span style={{fontSize:18,color:"var(--ash)"}}>/month</span>
+          </div>
+          <div style={{fontSize:13,color:"var(--ash)",marginBottom:28}}>Cancel anytime. No contracts.</div>
+          {[
+            "Unlimited resume generations",
+            "Apply Mode — full package from any job URL",
+            "PDF tailoring for any role",
+            "LinkedIn profile optimizer",
+            "ATS scoring + job fit analysis",
+            "PDF export + share links",
+          ].map((f,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,textAlign:"left"}}>
+              <span style={{color:"#4ade80",flexShrink:0}}>✓</span>
+              <span style={{fontSize:14}}>{f}</span>
+            </div>
+          ))}
+          {err && <div style={{margin:"14px 0",padding:"10px 14px",background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:9,fontSize:13,color:"#f87171"}}>{err}</div>}
+          <button className="gold-btn pulse" onClick={checkout} disabled={loading} style={{width:"100%",marginTop:20,fontSize:14,padding:"14px"}}>
+            {loading ? "Redirecting to Stripe…" : "Subscribe — $10/month →"}
+          </button>
+          <div style={{marginTop:12,fontSize:11,color:"var(--ash)"}}>
+            Secured by Stripe. We never see your card details.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AccountPage({ user, onLogout, onBack }) {
+  const [loading,setLoading] = useState(false);
+  const API = process.env.REACT_APP_API_URL||"";
+
+  const openPortal = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/auth/billing/portal`,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"}});
+      const data = await res.json();
+      if (res.ok) window.location.href = data.url;
+    } catch(e){}
+    finally { setLoading(false); }
+  };
+
+  const logout = async () => {
+    await fetch(`${API}/api/auth/logout`,{method:"POST",credentials:"include"});
+    onLogout();
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+      <div style={{width:"100%",maxWidth:420}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:28}}>
+          <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={onBack}>← Back</button>
+          <div style={{fontFamily:"var(--font-display)",fontSize:32,fontWeight:300}}>Account</div>
+          <div style={{width:80}} />
+        </div>
+        <div className="card" style={{padding:"28px 24px"}}>
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--ash)",marginBottom:4}}>Signed in as</div>
+            <div style={{fontSize:15,fontWeight:500}}>{user?.name}</div>
+            <div style={{fontSize:13,color:"var(--ash)"}}>{user?.email}</div>
+          </div>
+          <div style={{height:1,background:"var(--border-subtle)",margin:"16px 0"}} />
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--ash)",marginBottom:6}}>Subscription</div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{width:8,height:8,borderRadius:"50%",background:user?.subscriptionStatus==="active"?"#4ade80":"#f87171",display:"inline-block"}} />
+              <span style={{fontSize:14,fontWeight:500,color:user?.subscriptionStatus==="active"?"#4ade80":"#f87171"}}>
+                {user?.subscriptionStatus==="active" ? "Active — $10/month" : user?.subscriptionStatus==="past_due" ? "Payment issue" : "No active subscription"}
+              </span>
+            </div>
+          </div>
+          <button className="ghost-btn" onClick={openPortal} disabled={loading} style={{width:"100%",marginBottom:10}}>
+            {loading ? "Opening…" : "Manage Billing / Cancel →"}
+          </button>
+          <button className="ghost-btn" onClick={logout} style={{width:"100%",color:"#f87171",borderColor:"rgba(248,113,113,0.2)"}}>
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ─── Forgot Password Page ─── */
+function ForgotPasswordPage({ switchMode }) {
+  const [email,setEmail]     = useState("");
+  const [loading,setLoading] = useState(false);
+  const [done,setDone]       = useState(false);
+  const [err,setErr]         = useState("");
+  const API = process.env.REACT_APP_API_URL||"";
+  const submit = async () => {
+    if (!email) { setErr("Email required."); return; }
+    setLoading(true); setErr("");
+    try {
+      await fetch(`${API}/api/auth/forgot-password`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});
+      setDone(true);
+    } catch { setErr("Network error. Please try again."); }
+    finally { setLoading(false); }
+  };
+  return (
+    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+      <div style={{width:"100%",maxWidth:400}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontFamily:"var(--font-display)",fontSize:30,fontWeight:300,marginBottom:8}}>Reset your password</div>
+          <div style={{fontSize:13,color:"var(--ash)"}}>Enter your email and we'll send a reset link.</div>
+        </div>
+        <div className="card" style={{padding:"32px 28px"}}>
+          {done ? (
+            <div style={{textAlign:"center"}}>
+              <div style={{fontSize:32,marginBottom:12}}>📬</div>
+              <div style={{fontWeight:500,marginBottom:8}}>Check your email</div>
+              <div style={{fontSize:13,color:"var(--ash)",marginBottom:20}}>If that address is registered, a reset link is on its way.</div>
+              <button className="ghost-btn" style={{width:"100%"}} onClick={()=>switchMode("login")}>Back to Sign In</button>
+            </div>
+          ) : (
+            <>
+              <div style={{marginBottom:16}}>
+                <label className="field-label">Email</label>
+                <input type="email" placeholder="you@email.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} />
+              </div>
+              {err && <div style={{marginBottom:14,padding:"10px 14px",background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:9,fontSize:13,color:"#f87171"}}>{err}</div>}
+              <button className="gold-btn" onClick={submit} disabled={loading} style={{width:"100%",marginBottom:14}}>
+                {loading ? "Sending…" : "Send Reset Link →"}
+              </button>
+              <button className="ghost-btn" style={{width:"100%"}} onClick={()=>switchMode("login")}>← Back to Sign In</button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Reset Password Page ─── */
+function ResetPasswordPage({ token, onDone }) {
+  const [password,setPassword]   = useState("");
+  const [password2,setPassword2] = useState("");
+  const [loading,setLoading]     = useState(false);
+  const [done,setDone]           = useState(false);
+  const [err,setErr]             = useState("");
+  const API = process.env.REACT_APP_API_URL||"";
+  const submit = async () => {
+    if (password.length < 8) { setErr("Password must be at least 8 characters."); return; }
+    if (password !== password2) { setErr("Passwords do not match."); return; }
+    setLoading(true); setErr("");
+    try {
+      const res = await fetch(`${API}/api/auth/reset-password`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,password})});
+      const data = await res.json();
+      if (!res.ok) { setErr(data.error||"Something went wrong."); return; }
+      setDone(true);
+    } catch { setErr("Network error. Please try again."); }
+    finally { setLoading(false); }
+  };
+  return (
+    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+      <div style={{width:"100%",maxWidth:400}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontFamily:"var(--font-display)",fontSize:30,fontWeight:300,marginBottom:8}}>New password</div>
+        </div>
+        <div className="card" style={{padding:"32px 28px"}}>
+          {done ? (
+            <div style={{textAlign:"center"}}>
+              <div style={{fontSize:32,marginBottom:12}}>✓</div>
+              <div style={{fontWeight:500,marginBottom:8}}>Password updated</div>
+              <div style={{fontSize:13,color:"var(--ash)",marginBottom:20}}>You can now sign in with your new password.</div>
+              <button className="gold-btn" style={{width:"100%"}} onClick={onDone}>Sign In →</button>
+            </div>
+          ) : (
+            <>
+              <div style={{marginBottom:14}}>
+                <label className="field-label">New Password</label>
+                <input type="password" placeholder="Min 8 characters" value={password} onChange={e=>setPassword(e.target.value)} />
+              </div>
+              <div style={{marginBottom:20}}>
+                <label className="field-label">Confirm Password</label>
+                <input type="password" placeholder="Repeat password" value={password2} onChange={e=>setPassword2(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} />
+              </div>
+              {err && <div style={{marginBottom:14,padding:"10px 14px",background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:9,fontSize:13,color:"#f87171"}}>{err}</div>}
+              <button className="gold-btn" onClick={submit} disabled={loading} style={{width:"100%"}}>
+                {loading ? "Updating…" : "Set New Password →"}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Email Verified Banner ─── */
+function VerifyBanner({ onClose }) {
+  return (
+    <div className="fade-in" style={{position:"fixed",top:80,left:"50%",transform:"translateX(-50%)",zIndex:999,padding:"14px 24px",background:"rgba(74,222,128,0.12)",border:"1px solid rgba(74,222,128,0.3)",borderRadius:12,fontSize:13,color:"#4ade80",display:"flex",alignItems:"center",gap:12,boxShadow:"0 8px 32px rgba(0,0,0,0.3)"}}>
+      <span style={{fontSize:18}}>✓</span>
+      <span>Email verified — welcome to Crafted Resume!</span>
+      <button onClick={onClose} style={{background:"none",border:"none",color:"#4ade80",cursor:"pointer",fontSize:16,lineHeight:1}}>×</button>
+    </div>
+  );
+}
 /* ══════════════════════════════════════════════
    EXAMPLE DATA
 ══════════════════════════════════════════════ */
@@ -614,6 +931,11 @@ export default function App() {
   const [liData,setLiData]     = useState({name:"",targetRole:"",headline:"",about:"",experience:"",skills:""});
   const [darkMode,setDarkMode] = useState(true);
   const [shareMsg,setShareMsg] = useState("");
+  const [user,setUser]         = useState(null);   // null = not loaded, false = logged out
+  const [authReady,setAuthReady] = useState(false);
+  const [page,setPage]         = useState("app");  // "app"|"login"|"register"|"subscribe"|"account"|"forgot"|"reset"
+  const [resetToken,setResetToken] = useState("");
+  const [showVerifyBanner,setShowVerifyBanner] = useState(false);
 
   // Apply Mode state
   const [applyInput,setApplyInput]   = useState({ jobUrl:"", jobText:"", inputMode:"url" });
@@ -629,6 +951,16 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.toggle("light", !darkMode);
   }, [darkMode]);
+
+  /* ── Bootstrap: check if user is already logged in ── */
+  useEffect(() => {
+    const API = process.env.REACT_APP_API_URL || "";
+    fetch(`${API}/api/auth/me`, { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { setUser(data?.user || false); setAuthReady(true); })
+      .catch(() => { setUser(false); setAuthReady(true); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ── localStorage auto-save form ── */
   const LS_KEY = "resumeai_form_v2";
@@ -649,15 +981,32 @@ export default function App() {
     } catch(e){setShareMsg("Couldn't copy");}
   };
 
-  /* ── Restore shared resume from URL ── */
+  /* ── Restore shared resume / handle email links from URL ── */
   useEffect(() => {
     try {
       const p = new URLSearchParams(window.location.search);
+      // Shared resume link
       const enc = p.get("resume");
       if (enc) {
         const data = JSON.parse(decodeURIComponent(atob(enc)));
         setResult(data); setStep(3);
         window.history.replaceState({},"",window.location.pathname);
+        return;
+      }
+      // Email verified redirect
+      if (p.get("verified") === "true") {
+        setShowVerifyBanner(true);
+        setPage("login");
+        window.history.replaceState({},"",window.location.pathname);
+        return;
+      }
+      // Password reset link
+      const resetTok = p.get("token");
+      if (window.location.pathname.includes("reset-password") && resetTok) {
+        setResetToken(resetTok);
+        setPage("reset");
+        window.history.replaceState({},"",window.location.pathname);
+        return;
       }
     } catch(e){}
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -697,15 +1046,17 @@ export default function App() {
     return setInterval(()=>{ mi=(mi+1)%msgs.length; setLoadMsg(msgs[mi]); },2200);
   };
 
-  const callAPI = async (endpoint, body, onSuccess) => {
+  const callAPI = async (endpoint, body) => {
     const API = process.env.REACT_APP_API_URL||"";
-    const res = await fetch(`${API}${endpoint}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const res = await fetch(`${API}${endpoint}`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify(body)});
+    if (res.status===401) { setUser(false); setPage("login"); throw new Error("Please log in to continue."); }
+    if (res.status===402) { setPage("subscribe"); throw new Error("Active subscription required."); }
     if (!res.ok){ const d=await res.json().catch(()=>({})); throw new Error(d.error||"Server error"); }
     return res.json();
   };
 
   const generateBuild = async () => {
-    const iv=startLoad(["Analysing your career story…","Crafting compelling bullets…","Optimising for ATS…","Applying finishing polish…"]);
+    const iv=startLoad(["Analysing your details…","Writing your bullet points…","Optimising for ATS…","Adding the finishing touches…"]);
     setResult(null);
     try { setResult(await callAPI("/api/generate",{name:form.name,email:form.email,phone:form.phone,location:form.location,linkedin:form.linkedin,targetRole:form.targetRole,targetIndustry:form.targetIndustry,experiences:form.experiences,education:form.education,skills:form.skills,certifications:form.certifications})); go(3); }
     catch(e){ setErr(e.message||"Generation failed."); }
@@ -715,7 +1066,7 @@ export default function App() {
   const generateTailor = async () => {
     if (!uploadedPdf){ setErr("Please upload your resume PDF first."); return; }
     if (!jobDescription.trim()){ setErr("Please describe the job you're targeting."); return; }
-    const iv=startLoad(["Reading your resume…","Understanding the role…","Tailoring your experience…","Polishing the result…"]);
+    const iv=startLoad(["Reading your resume…","Matching it to the role…","Rewriting your experience…","Polishing the result…"]);
     setResult(null);
     try { setResult(await callAPI("/api/tailor",{pdfBase64:uploadedPdf.base64,jobDescription,template:form.template})); go(3); }
     catch(e){ setErr(e.message||"Tailoring failed."); }
@@ -724,7 +1075,7 @@ export default function App() {
 
   const generateLinkedIn = async () => {
     if (!liData.name.trim()){ setErr("Please enter your name at minimum."); return; }
-    const iv=startLoad(["Reviewing your profile…","Identifying gaps…","Crafting suggestions…","Finalising report…"]);
+    const iv=startLoad(["Reading your profile…","Spotting what to improve…","Writing your suggestions…","Putting it all together…"]);
     setLiResult(null);
     try { setLiResult(await callAPI("/api/linkedin",liData)); go(3); }
     catch(e){ setErr(e.message||"LinkedIn analysis failed."); }
@@ -740,8 +1091,8 @@ export default function App() {
 
     const iv=startLoad([
       "Reading the job posting…",
-      "Analysing requirements…",
-      "Tailoring your resume…",
+      "Matching your background to the role…",
+      "Rewriting your resume…",
       "Writing your cover letter…",
       "Preparing interview questions…",
       "Putting it all together…",
@@ -783,6 +1134,20 @@ export default function App() {
   return (
     <>
       <FontLink />
+      {/* ── Route to auth/subscribe/account pages ── */}
+      {!authReady && (
+        <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <span style={{width:20,height:20,border:"2px solid rgba(201,168,76,0.3)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block"}} />
+        </div>
+      )}
+      {authReady && page==="login"    && <AuthPage mode="login"    onSuccess={u=>{setUser(u);setPage(u.subscriptionStatus==="active"?"app":"subscribe");}} switchMode={m=>setPage(m==="login"?"login":"register")} />}
+      {authReady && page==="register" && <AuthPage mode="register" onSuccess={u=>{setUser(u);setPage("subscribe");}} switchMode={m=>setPage(m==="login"?"login":"register")} />}
+      {authReady && page==="forgot"    && <ForgotPasswordPage switchMode={m=>setPage(m)} />}
+      {authReady && page==="reset"     && <ResetPasswordPage token={resetToken} onDone={()=>setPage("login")} />}
+      {authReady && page==="subscribe" && <SubscribePage user={user} onSubscribed={()=>setPage("app")} />}
+      {authReady && page==="account"   && <AccountPage user={user} onBack={()=>setPage("app")} onLogout={()=>{setUser(false);setPage("login");}} />}
+      {showVerifyBanner && <VerifyBanner onClose={()=>setShowVerifyBanner(false)} />}
+      {authReady && page==="app" && (
       <div style={{ minHeight:"100vh", background:"var(--ink)", position:"relative", overflowX:"hidden" }}>
         <HeroGlow />
         <Particles />
@@ -799,9 +1164,9 @@ export default function App() {
               <LogoMark size={36} />
               <div>
                 <div style={{ fontFamily:"var(--font-display)", fontSize:20, fontWeight:300, letterSpacing:"0.06em", color:"var(--text-primary)", lineHeight:1 }}>
-                  Résumé<span style={{ color:"var(--gold)", fontWeight:400 }}>AI</span>
+                  Crafted<span style={{ color:"var(--gold)", fontWeight:400 }}>Resume</span>
                 </div>
-                <div style={{ fontSize:8, letterSpacing:"0.22em", textTransform:"uppercase", color:"var(--ash)", marginTop:1 }}>Powered by Claude</div>
+                
               </div>
             </div>
             <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
@@ -822,6 +1187,15 @@ export default function App() {
               <button className="theme-toggle" onClick={()=>setDarkMode(d=>!d)} title="Toggle light/dark mode">
                 {darkMode ? "☀️" : "🌙"}
               </button>
+              {user ? (
+                <button className="ghost-btn" style={{fontSize:11,padding:"6px 12px"}} onClick={()=>setPage("account")}>
+                  {user.name?.split(" ")[0] || "Account"} ↗
+                </button>
+              ) : (
+                <button className="gold-btn" style={{fontSize:11,padding:"7px 16px"}} onClick={()=>setPage("login")}>
+                  Sign In
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -832,10 +1206,7 @@ export default function App() {
           {/* ══ LANDING (step 0) — hero only ══ */}
           {step===0 && (
             <div style={{ textAlign:"center", padding:"120px 0 100px", maxWidth:620, margin:"0 auto" }}>
-              <div className="fade-in" style={{ display:"inline-flex", alignItems:"center", gap:8, fontSize:10, letterSpacing:"0.2em", textTransform:"uppercase", color:"var(--gold)", border:"1px solid var(--gold-border)", borderRadius:20, padding:"6px 18px", marginBottom:28 }}>
-                <span style={{ width:5, height:5, borderRadius:"50%", background:"var(--gold)", display:"inline-block" }} />
-                Powered by Claude AI
-              </div>
+              
               <h1 className="hero-h1 fade-up" style={{ fontFamily:"var(--font-display)", fontSize:68, fontWeight:300, letterSpacing:"-2.5px", lineHeight:1.0, marginBottom:22, animationDelay:"0.1s" }}>
                 From resume to<br />
                 <em style={{ background:"linear-gradient(135deg,#c9a84c,#f0d98a,#c9a84c)", backgroundSize:"200% auto", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text", animation:"gradientShift 4s ease infinite" }}>
@@ -846,12 +1217,12 @@ export default function App() {
                 AI-powered resume tools. Tailored cover letters. Interview prep.<br />All from a single job posting.
               </p>
               <div className="fade-up" style={{ animationDelay:"0.28s" }}>
-                <button className="gold-btn pulse" onClick={()=>go(1)} style={{ fontSize:15, padding:"16px 48px", letterSpacing:"0.07em" }}>
+                <button className="gold-btn pulse" onClick={()=>{ if(!user){setPage("register");return;} if(user.subscriptionStatus!=="active"){setPage("subscribe");return;} go(1); }} style={{ fontSize:15, padding:"16px 48px", letterSpacing:"0.07em" }}>
                   Get Started →
                 </button>
               </div>
               <div className="fade-in" style={{ marginTop:44, display:"flex", alignItems:"center", justifyContent:"center", gap:28, flexWrap:"wrap", animationDelay:"0.42s" }}>
-                {["No account required","No paywall","No watermarks"].map((t,i)=>(
+                {["Cancel anytime","No watermarks","Secure payments"].map((t,i)=>(
                   <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--ash)" }}>
                     <span style={{ color:"#4ade80" }}>✓</span> {t}
                   </div>
@@ -864,10 +1235,26 @@ export default function App() {
           {step===1 && !mode && (
             <div className="scale-in">
               <div style={{ textAlign:"center", padding:"52px 0 36px" }}>
-                <h2 style={{ fontFamily:"var(--font-display)", fontSize:40, fontWeight:300, letterSpacing:"-1px", marginBottom:10 }}>
-                  What do you need?
-                </h2>
-                <p style={{ color:"var(--ash)", fontSize:15, fontWeight:300 }}>Pick a tool to get started.</p>
+                {(() => {
+                  const firstName = user?.name?.split(" ")[0] || "there";
+                  const greetings = [
+                    `Good to see you, ${firstName}. What are we working on?`,
+                    `Hey ${firstName} — let's get you hired. What do you need?`,
+                    `Welcome back, ${firstName}. What's the move today?`,
+                    `Ready when you are, ${firstName}. Pick a tool.`,
+                    `Let's get to work, ${firstName}. What do you need?`,
+                    `${firstName}, your next opportunity starts here. What's first?`,
+                  ];
+                  const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+                  return (
+                    <>
+                      <h2 style={{ fontFamily:"var(--font-display)", fontSize:40, fontWeight:300, letterSpacing:"-1px", marginBottom:10 }}>
+                        {greeting}
+                      </h2>
+                      <p style={{ color:"var(--ash)", fontSize:15, fontWeight:300 }}>Pick a tool to get started.</p>
+                    </>
+                  );
+                })()}
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))", gap:16, marginBottom:20 }}>
                 {[
@@ -894,9 +1281,9 @@ export default function App() {
                     {m.hot && (
                       <div style={{ position:"absolute", top:14, right:14, fontSize:8, padding:"2px 8px", borderRadius:8, background:"linear-gradient(135deg,#c9a84c,#e8c96d)", color:"#0d0d0f", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase" }}>New</div>
                     )}
-                    <div style={{ color:"var(--ash)", marginBottom:16, transition:"color 0.3s" }}>{m.icon}</div>
-                    <div style={{ fontWeight:500, fontSize:16, marginBottom:8, color:"#e2e2ea" }}>{m.title}</div>
-                    <div style={{ fontSize:13, color:"var(--ash)", fontWeight:300, lineHeight:1.6 }}>{m.desc}</div>
+                    <div style={{ color:"var(--text-secondary)", marginBottom:16, transition:"color 0.3s" }}>{m.icon}</div>
+                    <div style={{ fontWeight:500, fontSize:16, marginBottom:8, color:"var(--text-primary)" }}>{m.title}</div>
+                    <div style={{ fontSize:13, color:"var(--text-secondary)", fontWeight:300, lineHeight:1.6 }}>{m.desc}</div>
                   </div>
                 ))}
               </div>
@@ -949,7 +1336,7 @@ export default function App() {
                     </F>
                   </div>
                   <F label="Responsibilities & Achievements"><textarea placeholder="Led team of 12, reduced costs by 30%..." value={exp.bullets} onChange={e=>setExp(i,"bullets",e.target.value)} style={{ minHeight:100 }} /></F>
-                  <p style={{ fontSize:11,color:"rgba(255,255,255,0.18)",marginTop:-8 }}>Claude will refine these into polished, metric-driven bullets.</p>
+                  
                 </div>
               ))}
               <button className="ghost-btn" onClick={addExp} style={{ width:"100%",padding:15,marginBottom:20,textAlign:"center",borderStyle:"dashed",borderRadius:12 }}>+ Add Another Position</button>
@@ -1139,7 +1526,7 @@ export default function App() {
                       <div>
                         <div style={{ fontFamily:"var(--font-display)", fontSize:26, fontWeight:300, color:"var(--gold)", marginBottom:4 }}>⚡ Apply Package Ready</div>
                         <div style={{ fontSize:13,color:"var(--ash)",fontWeight:300 }}>
-                          {applyResult.company && <span style={{ color:"#e2e2ea",fontWeight:500 }}>{applyResult.company}</span>}
+                          {applyResult.company && <span style={{ color:"var(--text-primary)",fontWeight:500 }}>{applyResult.company}</span>}
                           {applyResult.jobTitle && <span style={{ color:"var(--ash)" }}> · {applyResult.jobTitle}</span>}
                         </div>
                       </div>
@@ -1182,7 +1569,7 @@ export default function App() {
                         flex:1, padding:"10px 8px", borderRadius:9, border:"none", cursor:"pointer",
                         fontFamily:"var(--font-body)", fontSize:13, fontWeight:500, transition:"all 0.25s",
                         background: applyTab===t.id ? "var(--ink2)" : "transparent",
-                        color:      applyTab===t.id ? "#e2e2ea" : "var(--ash)",
+                        color:      applyTab===t.id ? "var(--text-primary)" : "var(--ash)",
                         boxShadow:  applyTab===t.id ? "0 2px 8px rgba(0,0,0,0.3)" : "none",
                       }}>{t.label}</button>
                     ))}
@@ -1291,6 +1678,7 @@ export default function App() {
           )}
         </div>
       </div>
+      )}
     </>
   );
 }

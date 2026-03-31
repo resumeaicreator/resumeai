@@ -1,40 +1,75 @@
 /**
- * ═══════════════════════════════════════════════════════════════════
- *  ResuméAI — Secure Backend  (Node.js + Express)
- *  File: server.js
+ * Crafted Resume — Secure Backend (server.js)
  *
- *  SETUP:
- *    1. npm install express cors helmet express-rate-limit dotenv
- *    2. Create a .env file (see .env.example below)
- *    3. node server.js   (or: npx nodemon server.js for dev)
- * ═══════════════════════════════════════════════════════════════════
+ * INSTALL:
+ *   npm install express cors helmet express-rate-limit dotenv
+ *             cookie-parser passport passport-google-oauth20
+ *             bcrypt jsonwebtoken pg stripe morgan nodemailer
  */
 
 require("dotenv").config();
-const express    = require("express");
-const cors       = require("cors");
-const helmet     = require("helmet");
-const rateLimit  = require("express-rate-limit");
+const express      = require("express");
+const cors         = require("cors");
+const helmet       = require("helmet");
+const rateLimit    = require("express-rate-limit");
+const cookieParser = require("cookie-parser");
+const passport     = require("passport");
+const morgan       = require("morgan");
+const fs           = require("fs");
+const path         = require("path");
 
-const app  = express();
-const PORT = process.env.PORT || 3001;
+const { router: authRouter, requireAuth, requirePaid, handleStripeWebhook } = require("./auth");
 
-// ─────────────────────────────────────────────
-//  ✦ YOUR API KEY — set in .env, NEVER hardcode
-//    ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxxxxxx
-// ─────────────────────────────────────────────
+const app     = express();
+const PORT    = process.env.PORT || 3001;
+const IS_PROD = process.env.NODE_ENV === "production";
+
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 if (!ANTHROPIC_API_KEY) {
-  console.error("\n❌  ANTHROPIC_API_KEY is not set in .env — server cannot start.\n");
+  console.error("\n❌  ANTHROPIC_API_KEY is not set in .env\n");
   process.exit(1);
 }
 
-// ═══════════════════════════════════════════
-//  ✦ YOUR RESUME PROMPT — edit this section
-//    to control how Claude writes resumes.
-//    The {PLACEHOLDERS} are filled at runtime
-//    from the user's form data.
-// ═══════════════════════════════════════════
+// ─── Logging ─────────────────────────────────────────────────────────
+if (IS_PROD) {
+  const logDir = path.join(__dirname, "logs");
+  if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
+  const logStream = fs.createWriteStream(path.join(logDir, "access.log"), { flags: "a" });
+  app.use(morgan("combined", { stream: logStream }));
+} else {
+  app.use(morgan("dev"));
+}
+
+// !! Stripe webhook MUST be mounted before express.json() !!
+// Stripe requires raw body for signature verification.
+app.post("/api/webhook/stripe", express.raw({ type: "application/json" }), handleStripeWebhook);
+
+// ─── Middleware ──────────────────────────────────────────────────────
+app.use(helmet());
+app.use(express.json({ limit: "10mb" }));
+app.use(cookieParser());
+app.use(passport.initialize());
+
+app.use(cors({
+  origin:         process.env.FRONTEND_URL || "http://localhost:3000",
+  methods:        ["GET", "POST"],
+  allowedHeaders: ["Content-Type"],
+  credentials:    true,   // required for cookies
+}));
+
+// ─── General rate limit ──────────────────────────────────────────────
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests — please wait 15 minutes before trying again." },
+});
+
+// ─── Auth routes (no subscription needed) ───────────────────────────
+app.use("/api/auth", authRouter);
+
+// ─── Resume prompts ──────────────────────────────────────────────────
 function buildResumePrompt({ name, email, phone, location, linkedin, targetRole, targetIndustry, expBlob, eduBlob, skills, certifications }) {
   return `You are an elite executive resume writer with 20 years of experience placing C-suite and senior professionals at Fortune 500 companies.
 
@@ -79,26 +114,6 @@ Return ONLY a raw JSON object — absolutely no markdown fences, no preamble, no
 }`;
 }
 
-// ─── Security middleware ─────────────────────
-app.use(helmet());                    // Sets secure HTTP headers
-app.use(express.json({ limit: "10mb" }));  // Increased for PDF base64 uploads
-
-// CORS — restrict to your frontend domain in production
-app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
-  methods: ["POST"],
-  allowedHeaders: ["Content-Type"],   // Note: NO x-api-key header here — key lives in .env
-}));
-
-// Rate limiting — prevents abuse / runaway API costs
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,   // 15 minutes
-  max: 10,                     // max 10 resume generations per IP per 15 min
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many requests — please wait 15 minutes before trying again." },
-});
-
 // ─── Input validation helper ─────────────────
 function sanitize(str, maxLen = 2000) {
   if (typeof str !== "string") return "";
@@ -117,7 +132,7 @@ function validateBody(body) {
 }
 
 // ─── Generate endpoint ───────────────────────
-app.post("/api/generate", limiter, async (req, res) => {
+app.post("/api/generate", limiter, requireAuth, requirePaid, async (req, res) => {
   try {
     // 1. Validate
     const errors = validateBody(req.body);
@@ -220,7 +235,7 @@ app.post("/api/generate", limiter, async (req, res) => {
 });
 
 // ─── Tailor endpoint (PDF upload + job description) ──
-app.post("/api/tailor", limiter, async (req, res) => {
+app.post("/api/tailor", limiter, requireAuth, requirePaid, async (req, res) => {
   try {
     const { pdfBase64, jobDescription, template } = req.body;
     if (!pdfBase64)       return res.status(400).json({ error: "PDF is required." });
@@ -309,7 +324,7 @@ Return ONLY a raw JSON object with no markdown, no preamble:
 });
 
 // ─── LinkedIn optimizer endpoint ──────────────
-app.post("/api/linkedin", limiter, async (req, res) => {
+app.post("/api/linkedin", limiter, requireAuth, requirePaid, async (req, res) => {
   try {
     const { name, targetRole, headline, about, experience, skills } = req.body;
     if (!name?.trim()) return res.status(400).json({ error: "Name is required." });
@@ -424,7 +439,7 @@ Provide 4-6 suggestions total. Be specific — generic advice is not helpful.`;
 });
 
 // ─── Job recommendations endpoint ─────────────
-app.post("/api/jobs", limiter, async (req, res) => {
+app.post("/api/jobs", limiter, requireAuth, requirePaid, async (req, res) => {
   try {
     const role     = sanitize(req.body.role || "", 200);
     const skills   = (req.body.skills || []).slice(0, 8).map(s => sanitize(s, 60));
@@ -493,7 +508,7 @@ Match is a percentage 0-100 of how well this fits their profile. Keep reasons co
 });
 
 // ─── Apply Mode endpoint ───────────────────────
-app.post("/api/apply", limiter, async (req, res) => {
+app.post("/api/apply", limiter, requireAuth, requirePaid, async (req, res) => {
   try {
     const { jobUrl, jobText, pdfBase64, template } = req.body;
     if (!pdfBase64) return res.status(400).json({ error:"Resume PDF is required." });
@@ -620,13 +635,110 @@ Return ONLY a raw JSON object, no markdown:
   }
 });
 
-// ─── Health check ─────────────────────────────
-app.get("/api/health", (_, res) => res.json({ status: "ok" }));
+// ─── LinkedIn profile import endpoint ─────────
+// Accepts a LinkedIn profile URL, fetches the public page, extracts text,
+// and asks Claude to parse it into structured form fields.
+app.post("/api/linkedin-import", limiter, requireAuth, requirePaid, async (req, res) => {
+  try {
+    const url = sanitize(req.body.url || "", 300);
+    if (!url || !url.includes("linkedin.com/in/")) {
+      return res.status(400).json({ error: "Please provide a valid LinkedIn profile URL (linkedin.com/in/...)." });
+    }
 
-// Frontend is hosted separately on Netlify — no static files needed here
+    // Fetch the public LinkedIn page
+    let pageText = "";
+    try {
+      const r = await fetch(url, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (r.ok) {
+        const html = await r.text();
+        pageText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 8000);
+      }
+    } catch(e) {
+      console.log("LinkedIn fetch failed:", e.message);
+    }
+
+    if (!pageText || pageText.length < 100) {
+      return res.status(422).json({
+        error: "Couldn't read that LinkedIn page — it may be private or blocked. Try pasting your profile text manually instead."
+      });
+    }
+
+    const IMPORT_PROMPT = `You are a resume data extractor. Extract structured information from this LinkedIn profile page text.
+
+PAGE TEXT:
+${pageText}
+
+Extract whatever you can find. Return ONLY a raw JSON object, no markdown:
+{
+  "name": "Full name",
+  "targetRole": "Most recent job title or target role",
+  "headline": "LinkedIn headline if present",
+  "about": "About/summary section text",
+  "experience": "All work experience formatted as: Role at Company (Start–End)\\n– bullet\\n– bullet\\n\\nRole at Company...",
+  "skills": "comma-separated list of skills",
+  "education": "Degree, Field, School (Year)"
+}
+If a field is not found, return an empty string for it.`;
+
+    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1200,
+        messages: [{ role: "user", content: IMPORT_PROMPT }],
+      }),
+    });
+
+    if (!anthropicRes.ok) return res.status(502).json({ error: "AI service error — please try again." });
+
+    const aiData  = await anthropicRes.json();
+    const rawText = (aiData.content || []).map(b => b.text || "").join("");
+    const cleaned = rawText.replace(/```json|```/g, "").trim();
+
+    let data;
+    try { data = JSON.parse(cleaned); }
+    catch { return res.status(502).json({ error: "Couldn't parse profile data — try pasting manually." }); }
+
+    return res.json({
+      name:       String(data.name       || ""),
+      targetRole: String(data.targetRole || ""),
+      headline:   String(data.headline   || ""),
+      about:      String(data.about      || ""),
+      experience: String(data.experience || ""),
+      skills:     String(data.skills     || ""),
+      education:  String(data.education  || ""),
+    });
+
+  } catch(err) {
+    console.error("LinkedIn import error:", err);
+    return res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// ─── Health check ─────────────────────────────────────────────────────
+app.get("/api/health", (_, res) => res.json({
+  status: "ok",
+  env:    process.env.NODE_ENV || "development",
+  time:   new Date().toISOString(),
+}));
+
+// ─── 404 handler ──────────────────────────────────────────────────────
+app.use((req, res) => res.status(404).json({ error: "Not found." }));
+
+// ─── Global error handler ─────────────────────────────────────────────
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "Internal server error." });
+});
 
 app.listen(PORT, () => {
-  console.log(`\n✦  ResuméAI backend running on http://localhost:${PORT}`);
-  console.log(`   API key loaded: ${ANTHROPIC_API_KEY.slice(0,18)}…`);
-  console.log(`   CORS origin:    ${process.env.FRONTEND_URL || "http://localhost:3000"}\n`);
+  console.log(`\n✦  Crafted Resume backend running`);
+  console.log(`   Port:        ${PORT}`);
+  console.log(`   Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(`   CORS origin: ${process.env.FRONTEND_URL || "http://localhost:3000"}`);
+  console.log(`   Logging:     ${IS_PROD ? "file (logs/access.log)" : "console"}\n`);
 });

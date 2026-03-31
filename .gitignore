@@ -1,2 +1,24 @@
+# Secrets — NEVER commit
 .env
+.env.*
+.env.local
+.env.production
+
+# Dependencies
 node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Build output
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
