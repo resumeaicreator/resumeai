@@ -189,7 +189,7 @@ router.post("/register", registerLimiter, async (req, res) => {
     const verifyExp   = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
     await db.query("UPDATE users SET verify_token=$1, verify_token_exp=$2 WHERE id=$3", [verifyToken, verifyExp, userId]);
 
-    const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verifyToken}`;
+    const verifyUrl = `${process.env.FRONTEND_URL}/?verify=${verifyToken}`;
     await sendMail({
       to: email.toLowerCase(),
       subject: "Verify your Crafted Resume email",
@@ -206,17 +206,17 @@ router.post("/register", registerLimiter, async (req, res) => {
 // VERIFY EMAIL
 router.get("/verify-email", async (req, res) => {
   const { token } = req.query;
-  if (!token) return res.redirect(`${process.env.FRONTEND_URL}/login?error=invalid_token`);
+  if (!token) return res.redirect(`${process.env.FRONTEND_URL}/?error=invalid_token`);
   try {
     const { rows } = await db.query(
       "UPDATE users SET email_verified=TRUE, verify_token=NULL, verify_token_exp=NULL WHERE verify_token=$1 AND verify_token_exp > NOW() RETURNING id",
       [token]
     );
-    if (!rows.length) return res.redirect(`${process.env.FRONTEND_URL}/login?error=token_expired`);
-    res.redirect(`${process.env.FRONTEND_URL}/login?verified=true`);
+    if (!rows.length) return res.redirect(`${process.env.FRONTEND_URL}/?error=token_expired`);
+    res.redirect(`${process.env.FRONTEND_URL}/?verified=true`);
   } catch(e) {
     console.error("Verify email error:", e);
-    res.redirect(`${process.env.FRONTEND_URL}/login?error=server`);
+    res.redirect(`${process.env.FRONTEND_URL}/?error=server`);
   }
 });
 
@@ -231,7 +231,7 @@ router.post("/forgot-password", async (req, res) => {
       const token  = crypto.randomBytes(32).toString("hex");
       const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
       await db.query("UPDATE users SET reset_token=$1, reset_token_exp=$2 WHERE id=$3", [token, expiry, rows[0].id]);
-      const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+      const resetUrl = `${process.env.FRONTEND_URL}/?token=${token}`;
       await sendMail({
         to: email.toLowerCase(),
         subject: "Reset your Crafted Resume password",

@@ -1000,9 +1000,9 @@ export default function App() {
         window.history.replaceState({},"",window.location.pathname);
         return;
       }
-      // Password reset link
+      // Password reset link — check for token param regardless of pathname
       const resetTok = p.get("token");
-      if (window.location.pathname.includes("reset-password") && resetTok) {
+      if (resetTok) {
         setResetToken(resetTok);
         setPage("reset");
         window.history.replaceState({},"",window.location.pathname);
