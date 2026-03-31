@@ -609,6 +609,72 @@ function JobRecommendations({ role, skills, location }) {
 }
 
 /* ─── LinkedIn URL Import ─── */
+/* ─── Shared Resume Page ─── */
+function SharedResumePage({ data }) {
+  const [exported, setExported] = useState(false);
+
+  const exportPDF = () => {
+    const el = document.getElementById("resume-output");
+    if (!el || !window.html2pdf) { window.print(); return; }
+    window.html2pdf().set({
+      margin:[10,10,10,10],
+      filename:`${(data.name||"resume").replace(/\s+/g,"_")}_resume.pdf`,
+      image:{type:"jpeg",quality:0.98},
+      html2canvas:{scale:2,useCORS:true},
+      jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},
+    }).from(el).save();
+    setExported(true);
+  };
+
+  const cfg = {
+    executive:{ accent:"#1a1a2e", sub:"#8a8a96", font:"'Cormorant Garamond',Georgia,serif", body:"'Outfit',sans-serif" },
+    modern:   { accent:"#0f4c81", sub:"#555",    font:"'Outfit',sans-serif",                body:"'Outfit',sans-serif" },
+    minimal:  { accent:"#2c2c2c", sub:"#777",    font:"Georgia,serif",                      body:"Georgia,serif"       },
+  };
+  const c = cfg.executive;
+
+  return (
+    <div style={{minHeight:"100vh", background:"var(--ink)", padding:"0"}}>
+      {/* Minimal header */}
+      <div style={{background:"var(--header-bg)", backdropFilter:"blur(24px)", borderBottom:"1px solid var(--border-subtle)", padding:"0 40px", display:"flex", alignItems:"center", justifyContent:"space-between", height:60}}>
+        <div style={{fontFamily:"var(--font-display)", fontSize:18, fontWeight:300, color:"var(--text-primary)"}}>
+          Crafted<span style={{color:"var(--gold)", fontWeight:400}}>Resume</span>
+        </div>
+        <div style={{display:"flex", gap:10, alignItems:"center"}}>
+          <span style={{fontSize:12, color:"var(--ash)"}}>Resume shared with you</span>
+          <button className="gold-btn" style={{fontSize:12, padding:"8px 20px"}} onClick={exportPDF}>
+            ⬇ Download PDF
+          </button>
+        </div>
+      </div>
+
+      {/* Resume preview only */}
+      <div style={{maxWidth:860, margin:"40px auto", padding:"0 20px 80px", borderRadius:18, overflow:"hidden", boxShadow:"0 40px 100px rgba(0,0,0,0.65)"}}>
+        <div id="resume-output" style={{background:"#fff", color:"#1a1a2e", fontFamily:c.body, padding:"52px 60px", lineHeight:1.65, fontSize:13.5}}>
+          <div style={{marginBottom:28}}>
+            <h1 style={{fontFamily:c.font, fontSize:36, fontWeight:300, letterSpacing:"-0.5px", color:c.accent, marginBottom:4}}>{data.name}</h1>
+            <div style={{fontFamily:c.font, fontSize:16, fontStyle:"italic", color:c.sub, marginBottom:10}}>{data.targetRole}</div>
+            <div style={{display:"flex", flexWrap:"wrap", gap:16, fontSize:12, color:"#666", borderTop:`1.5px solid ${c.accent}`, paddingTop:10}}>
+              {[data.email,data.phone,data.location,data.linkedin].filter(Boolean).map((v,i)=><span key={i}>{v}</span>)}
+            </div>
+          </div>
+          {data.summary        && <div style={{marginBottom:22}}><h2 style={{fontSize:10,fontWeight:600,letterSpacing:"0.15em",textTransform:"uppercase",color:c.accent,borderBottom:`1px solid ${c.accent}22`,paddingBottom:6,marginBottom:12}}>Profile</h2><p style={{color:"#333",fontStyle:"italic"}}>{data.summary}</p></div>}
+          {data.experience     && <div style={{marginBottom:22}}><h2 style={{fontSize:10,fontWeight:600,letterSpacing:"0.15em",textTransform:"uppercase",color:c.accent,borderBottom:`1px solid ${c.accent}22`,paddingBottom:6,marginBottom:12}}>Experience</h2><div dangerouslySetInnerHTML={{__html:data.experience.replace(/\n/g,"<br/>").replace(/•/g,`<span style='color:${c.accent}'>•</span>`)}} style={{color:"#333"}} /></div>}
+          {data.education      && <div style={{marginBottom:22}}><h2 style={{fontSize:10,fontWeight:600,letterSpacing:"0.15em",textTransform:"uppercase",color:c.accent,borderBottom:`1px solid ${c.accent}22`,paddingBottom:6,marginBottom:12}}>Education</h2><div dangerouslySetInnerHTML={{__html:data.education.replace(/\n/g,"<br/>")}} style={{color:"#333"}} /></div>}
+          {data.skills         && <div style={{marginBottom:22}}><h2 style={{fontSize:10,fontWeight:600,letterSpacing:"0.15em",textTransform:"uppercase",color:c.accent,borderBottom:`1px solid ${c.accent}22`,paddingBottom:6,marginBottom:12}}>Skills</h2><div style={{color:"#333"}}>{data.skills}</div></div>}
+          {data.certifications && <div style={{marginBottom:22}}><h2 style={{fontSize:10,fontWeight:600,letterSpacing:"0.15em",textTransform:"uppercase",color:c.accent,borderBottom:`1px solid ${c.accent}22`,paddingBottom:6,marginBottom:12}}>Certifications</h2><div style={{color:"#333"}}>{data.certifications}</div></div>}
+        </div>
+      </div>
+
+      {/* Bottom CTA */}
+      <div style={{textAlign:"center", paddingBottom:60}}>
+        <p style={{fontSize:13, color:"var(--ash)", marginBottom:16}}>Create your own AI-crafted resume</p>
+        <a href="https://craftedresume.io" style={{display:"inline-block"}} className="gold-btn">Try Crafted Resume Free →</a>
+      </div>
+    </div>
+  );
+}
+
 function LinkedInImport({ onImport }) {
   const [url,setUrl]         = useState("");
   const [loading,setLoading] = useState(false);
@@ -1033,9 +1099,10 @@ export default function App() {
   const [shareMsg,setShareMsg] = useState("");
   const [user,setUser]         = useState(null);   // null = not loaded, false = logged out
   const [authReady,setAuthReady] = useState(false);
-  const [page,setPage]         = useState("app");  // "app"|"login"|"register"|"subscribe"|"account"|"forgot"|"reset"
+  const [page,setPage]         = useState("app");
   const [resetToken,setResetToken] = useState("");
   const [showVerifyBanner,setShowVerifyBanner] = useState(false);
+  const [sharedResume,setSharedResume] = useState(null);
 
   // Apply Mode state
   const [applyInput,setApplyInput]   = useState({ jobUrl:"", jobText:"", inputMode:"url" });
@@ -1121,12 +1188,13 @@ export default function App() {
         return;
       }
 
-      // Shared resume link
+      // Shared resume link — show clean view, no auth required
       const enc = p.get("resume");
       if (enc) {
         const data = JSON.parse(decodeURIComponent(atob(enc)));
-        setResult(data); setStep(3);
+        setSharedResume(data);
         window.history.replaceState({}, "", window.location.pathname);
+        setAuthReady(true);
         return;
       }
       // Email verified redirect
@@ -1296,6 +1364,9 @@ export default function App() {
   return (
     <>
       <FontLink />
+      {/* Shared resume — clean standalone view, no auth needed */}
+      {sharedResume && <SharedResumePage data={sharedResume} />}
+      {!sharedResume && (
       {/* ── Route to auth/subscribe/account pages ── */}
       {!authReady && (
         <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -1854,6 +1925,7 @@ export default function App() {
           )}
         </div>
       </div>
+      )}
       )}
     </>
   );
