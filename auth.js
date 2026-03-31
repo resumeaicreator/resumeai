@@ -15,25 +15,32 @@ const Stripe         = require("stripe");
 const rateLimit      = require("express-rate-limit");
 
 const router   = require("express").Router();
-const nodemailer = require("nodemailer");
 
-// ─── Email transporter ───────────────────────────────────────────────
-const mailer = nodemailer.createTransport({
-  host:   process.env.SMTP_HOST   || "smtp.gmail.com",
-  port:   Number(process.env.SMTP_PORT || 587),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-
+// ─── Email via Resend API ────────────────────────────────────────────
 async function sendMail({ to, subject, html }) {
-  if (!process.env.SMTP_USER) {
-    console.log(`[DEV] Email to ${to}: ${subject}`);
-    return; // Skip sending in dev if not configured
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.log(`[DEV] Email skipped (no RESEND_API_KEY): ${subject} → ${to}`);
+    return;
   }
-  await mailer.sendMail({ from: `"Crafted Resume" <${process.env.SMTP_USER}>`, to, subject, html });
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      from: process.env.EMAIL_FROM || "Crafted Resume <noreply@craftedresume.io>",
+      to,
+      subject,
+      html,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.error("Resend error:", err);
+    throw new Error(`Email failed: ${err.message || res.status}`);
+  }
 }
 
 const REQUIRED = [

@@ -4,7 +4,7 @@
  * INSTALL:
  *   npm install express cors helmet express-rate-limit dotenv
  *             cookie-parser passport passport-google-oauth20
- *             bcrypt jsonwebtoken pg stripe morgan nodemailer
+ *             bcrypt jsonwebtoken pg stripe morgan
  */
 
 require("dotenv").config();
