@@ -107,12 +107,18 @@ function signRefresh(id) { return jwt.sign({ sub: id, type: "refresh" }, process
 function hashToken(t)    { return crypto.createHash("sha256").update(t).digest("hex"); }
 
 function setAuthCookies(res, access, refresh) {
-  res.cookie("access_token",  access,  { httpOnly:true, sameSite:"strict", secure:IS_PROD, maxAge: 15*60*1000 });
-  res.cookie("refresh_token", refresh, { httpOnly:true, sameSite:"strict", secure:IS_PROD, path:"/api/auth/refresh", maxAge: 30*24*60*60*1000 });
+  const cookieOpts = {
+    httpOnly: true,
+    secure:   IS_PROD,
+    sameSite: IS_PROD ? "none" : "lax",  // "none" required for cross-domain in production
+  };
+  res.cookie("access_token",  access,  { ...cookieOpts, maxAge: 15*60*1000 });
+  res.cookie("refresh_token", refresh, { ...cookieOpts, path:"/api/auth/refresh", maxAge: 30*24*60*60*1000 });
 }
 function clearAuthCookies(res) {
-  res.clearCookie("access_token");
-  res.clearCookie("refresh_token", { path:"/api/auth/refresh" });
+  const opts = { httpOnly:true, secure:IS_PROD, sameSite: IS_PROD ? "none" : "lax" };
+  res.clearCookie("access_token", opts);
+  res.clearCookie("refresh_token", { ...opts, path:"/api/auth/refresh" });
 }
 
 async function storeRefreshToken(userId, token) {
@@ -157,16 +163,23 @@ async function requirePaid(req, res, next) {
     const { rows } = await db.query("SELECT subscription_status, email FROM users WHERE id=$1", [req.userId]);
     if (!rows.length) return res.status(401).json({ error: "User not found." });
 
-    // ── Admin bypass ──────────────────────────────────────────────
+    // ── Admin bypass (case-insensitive) ──────────────────────────────
     const ADMIN_EMAILS = ["rockyshores99@gmail.com"];
-    if (ADMIN_EMAILS.includes(rows[0].email)) return next();
-    // ─────────────────────────────────────────────────────────────
+    if (ADMIN_EMAILS.includes(rows[0].email.toLowerCase())) {
+      console.log(`Admin access granted: ${rows[0].email}`);
+      return next();
+    }
+    // ─────────────────────────────────────────────────────────────────
 
     if (rows[0].subscription_status !== "active") {
+      console.log(`Subscription required for: ${rows[0].email} (status: ${rows[0].subscription_status})`);
       return res.status(402).json({ error: "Active subscription required.", code: "SUBSCRIPTION_REQUIRED" });
     }
     next();
-  } catch(e) { return res.status(500).json({ error: "Internal server error." }); }
+  } catch(e) {
+    console.error("requirePaid error:", e);
+    return res.status(500).json({ error: "Internal server error." });
+  }
 }
 
 const loginLimiter    = rateLimit({ windowMs:15*60*1000, max:10, standardHeaders:true, legacyHeaders:false, message:{ error:"Too many login attempts." } });
