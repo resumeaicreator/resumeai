@@ -733,6 +733,85 @@ If a field is not found, return an empty string for it.`;
   }
 });
 
+// ─── Fix ATS Score endpoint ───────────────────────────────────────────
+app.post("/api/fix-ats", limiter, requireAuth, requirePaid, async (req, res) => {
+  try {
+    const { resume, missingWords, tips } = req.body;
+    if (!resume) return res.status(400).json({ error: "Resume data is required." });
+
+    const prompt = `You are an expert ATS resume optimizer. Improve the following resume to boost its ATS compatibility score.
+
+CURRENT RESUME:
+Name: ${sanitize(resume.name||"", 120)}
+Target Role: ${sanitize(resume.targetRole||"", 200)}
+Summary: ${sanitize(resume.summary||"", 1000)}
+Experience: ${sanitize(resume.experience||"", 3000)}
+Skills: ${sanitize(resume.skills||"", 1000)}
+
+MISSING POWER WORDS TO INCORPORATE: ${(missingWords||[]).join(", ")}
+
+IMPROVEMENT TIPS:
+${(tips||[]).map((t,i) => `${i+1}. ${t}`).join("\n")}
+
+INSTRUCTIONS:
+1. Rewrite the summary to naturally include more ATS keywords relevant to the target role.
+2. Strengthen experience bullets — start each with a strong action verb from the missing words list where natural.
+3. Add quantified results wherever implied (e.g. "improved performance" → "improved performance by 35%").
+4. Expand the skills section with relevant keywords.
+5. Keep all facts true — do not invent experience. Improve language and emphasis only.
+6. Maintain the same format and structure.
+
+Return ONLY a raw JSON object, no markdown:
+{
+  "name": "${sanitize(resume.name||"", 120)}",
+  "email": "${sanitize(resume.email||"", 120)}",
+  "phone": "${sanitize(resume.phone||"", 40)}",
+  "location": "${sanitize(resume.location||"", 120)}",
+  "linkedin": "${sanitize(resume.linkedin||"", 200)}",
+  "targetRole": "${sanitize(resume.targetRole||"", 200)}",
+  "summary": "improved summary",
+  "experience": "improved experience with stronger bullets",
+  "education": "${sanitize(resume.education||"", 500)}",
+  "skills": "expanded skills list",
+  "certifications": "${sanitize(resume.certifications||"", 300)}"
+}`;
+
+    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type":"application/json", "x-api-key":ANTHROPIC_API_KEY, "anthropic-version":"2023-06-01" },
+      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:2000, messages:[{ role:"user", content:prompt }] }),
+    });
+
+    if (!anthropicRes.ok) return res.status(502).json({ error:"AI service error — please try again." });
+
+    const aiData  = await anthropicRes.json();
+    const rawText = (aiData.content||[]).map(b=>b.text||"").join("");
+    const cleaned = rawText.replace(/```json|```/g,"").trim();
+
+    let fixed;
+    try { fixed = JSON.parse(cleaned); }
+    catch { return res.status(502).json({ error:"AI returned malformed data — please try again." }); }
+
+    return res.json({
+      name:           String(fixed.name           || resume.name           || ""),
+      email:          String(fixed.email          || resume.email          || ""),
+      phone:          String(fixed.phone          || resume.phone          || ""),
+      location:       String(fixed.location       || resume.location       || ""),
+      linkedin:       String(fixed.linkedin       || resume.linkedin       || ""),
+      targetRole:     String(fixed.targetRole     || resume.targetRole     || ""),
+      summary:        String(fixed.summary        || ""),
+      experience:     String(fixed.experience     || ""),
+      education:      String(fixed.education      || resume.education      || ""),
+      skills:         String(fixed.skills         || ""),
+      certifications: String(fixed.certifications || resume.certifications || ""),
+    });
+
+  } catch(err) {
+    console.error("Fix ATS error:", err);
+    return res.status(500).json({ error:"Internal server error." });
+  }
+});
+
 // ─── Health check ─────────────────────────────────────────────────────
 app.get("/api/health", (_, res) => res.json({
   status: "ok",

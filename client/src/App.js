@@ -264,9 +264,10 @@ const ATS_TIPS = {
   ],
 };
 
-function ATSMeter({ text }) {
+function ATSMeter({ text, onFix }) {
   const [expanded, setExpanded] = useState(false);
-  const lower = (text||"").toLowerCase();
+  const [fixing, setFixing]     = useState(false);
+  const lower  = (text||"").toLowerCase();
   const hits   = ATS_WORDS.filter(w => lower.includes(w));
   const score  = Math.min(98, 28 + Math.round((hits.length/ATS_WORDS.length)*70));
   const color  = score>=70?"#4ade80":score>=50?"#fbbf24":"#f87171";
@@ -274,18 +275,31 @@ function ATSMeter({ text }) {
   const tips   = ATS_TIPS[level];
   const missing = ATS_WORDS.filter(w => !lower.includes(w)).slice(0,6);
 
+  const handleFix = async () => {
+    if (!onFix) return;
+    setFixing(true);
+    await onFix(missing, tips);
+    setFixing(false);
+  };
+
   return (
     <div style={{ marginTop:20, padding:"18px 20px", background:"rgba(0,0,0,0.18)", borderRadius:12, border:"1px solid rgba(255,255,255,0.05)" }}>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:10 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10, flexWrap:"wrap", gap:8 }}>
         <span style={{ fontSize:10, fontWeight:500, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--ash)" }}>ATS Compatibility</span>
-        <span style={{ fontFamily:"var(--font-display)", fontSize:28, fontWeight:300, color }}>{score}<span style={{ fontSize:13, color:"var(--ash)" }}>/100</span></span>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          {onFix && score < 98 && (
+            <button onClick={handleFix} disabled={fixing} className="gold-btn" style={{ fontSize:11, padding:"5px 14px" }}>
+              {fixing ? <span style={{display:"flex",alignItems:"center",gap:6}}><span style={{width:10,height:10,border:"2px solid rgba(0,0,0,0.25)",borderTopColor:"#0d0d0f",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block"}} />Fixing…</span> : "✦ Fix My Score"}
+            </button>
+          )}
+          <span style={{ fontFamily:"var(--font-display)", fontSize:28, fontWeight:300, color }}>{score}<span style={{ fontSize:13, color:"var(--ash)" }}>/100</span></span>
+        </div>
       </div>
       <div style={{ background:"rgba(255,255,255,0.05)", borderRadius:999, height:4, overflow:"hidden", marginBottom:10 }}>
         <div style={{ width:`${score}%`, height:"100%", background:`linear-gradient(90deg,${color}66,${color})`, borderRadius:999, transition:"width 1.4s cubic-bezier(0.16,1,0.3,1)" }} />
       </div>
       {hits.length>0 && <p style={{ fontSize:11, color:"rgba(255,255,255,0.25)", marginBottom:10 }}>Detected: {hits.slice(0,5).join(" · ")}</p>}
 
-      {/* Expandable tips */}
       <button onClick={()=>setExpanded(e=>!e)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:"var(--gold)", fontFamily:"var(--font-body)", letterSpacing:"0.06em", padding:0, display:"flex", alignItems:"center", gap:5 }}>
         {expanded ? "▲ Hide tips" : "▼ How to improve your score"}
       </button>
@@ -297,7 +311,7 @@ function ATSMeter({ text }) {
           </div>
           {tips.map((tip,i)=>(
             <div key={i} style={{ display:"flex", gap:10, marginBottom:10, padding:"10px 14px", background:"rgba(255,255,255,0.03)", borderRadius:9, borderLeft:`2.5px solid ${color}` }}>
-              <span style={{ color, flexShrink:0, fontSize:13 }}>→</span>
+              <span style={{ color, flexShrink:0, fontSize:13 }}>{"→"}</span>
               <span style={{ fontSize:13, color:"var(--text-primary)", lineHeight:1.6 }}>{tip}</span>
             </div>
           ))}
@@ -1168,10 +1182,19 @@ export default function App() {
     return setInterval(()=>{ mi=(mi+1)%msgs.length; setLoadMsg(msgs[mi]); },2200);
   };
 
-  const callAPI = async (endpoint, body) => {
+  const callAPI = async (endpoint, body, isRetry = false) => {
     const API = process.env.REACT_APP_API_URL||"";
     const res = await fetch(`${API}${endpoint}`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify(body)});
-    if (res.status===401) { setUser(false); setPage("login"); throw new Error("Please log in to continue."); }
+    if (res.status===401) {
+      // Try refreshing the token once before logging out
+      if (!isRetry) {
+        try {
+          const refresh = await fetch(`${API}/api/auth/refresh`, {method:"POST", credentials:"include"});
+          if (refresh.ok) return callAPI(endpoint, body, true);
+        } catch(e) {}
+      }
+      setUser(false); setPage("login"); throw new Error("Please log in to continue.");
+    }
     if (res.status===402) { setPage("subscribe"); throw new Error("Active subscription required."); }
     if (!res.ok){ const d=await res.json().catch(()=>({})); throw new Error(d.error||"Server error"); }
     return res.json();
@@ -1238,6 +1261,23 @@ export default function App() {
     if (!result) return;
     const t=`${result.name}\n${result.email} | ${result.phone} | ${result.location}\n${result.linkedin}\n\n${"═".repeat(60)}\n${(result.targetRole||"").toUpperCase()}\n${"═".repeat(60)}\n\nPROFILE\n${result.summary}\n\nEXPERIENCE\n${result.experience}\n\nEDUCATION\n${result.education}\n\nSKILLS\n${result.skills}`;
     Object.assign(document.createElement("a"),{href:URL.createObjectURL(new Blob([t],{type:"text/plain"})),download:`${(result.name||"resume").replace(/\s/g,"_")}_resume.txt`}).click();
+  };
+
+  const fixATS = async (missingWords, tips) => {
+    setErr("");
+    try {
+      const current = result || applyResult?.resume;
+      if (!current) return;
+      const fixed = await callAPI("/api/fix-ats", {
+        resume: current,
+        missingWords,
+        tips,
+      });
+      if (result) setResult(fixed);
+      else if (applyResult) setApplyResult(r => ({ ...r, resume: fixed }));
+    } catch(e) {
+      setErr(e.message || "ATS fix failed. Please try again.");
+    }
   };
 
   const g2 = { display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))", gap:14 };
@@ -1714,7 +1754,7 @@ export default function App() {
                   {/* Tab: Resume */}
                   {applyTab==="resume" && applyResult.resume && (
                     <div className="scale-in">
-                      <ATSMeter text={`${applyResult.resume.summary||""} ${applyResult.resume.experience||""} ${applyResult.resume.skills||""}`} />
+                      <ATSMeter text={`${applyResult.resume.summary||""} ${applyResult.resume.experience||""} ${applyResult.resume.skills||""}`} onFix={fixATS} />
                       <div style={{ borderRadius:18,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.65)",marginTop:16 }}>
                         <Preview data={applyResult.resume} template={form.template} />
                       </div>
@@ -1786,7 +1826,7 @@ export default function App() {
                         <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>exportPDF(result.name)}>⬇ Download PDF</button>
                       </div>
                     </div>
-                    <ATSMeter text={`${result.summary||""} ${result.experience||""} ${result.skills||""}`} />
+                    <ATSMeter text={`${result.summary||""} ${result.experience||""} ${result.skills||""}`} onFix={fixATS} />
                   </div>
                   <div className="fade-up" style={{ borderRadius:18,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.65)", marginBottom:32 }}>
                     <Preview data={result} template={form.template} />
