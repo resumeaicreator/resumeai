@@ -604,7 +604,7 @@ function AuthPage({ mode, onSuccess, switchMode }) {
             {mode==="register" ? "Create account" : "Welcome back"}
           </div>
           <div style={{fontSize:13,color:"var(--ash)"}}>
-            {mode==="register" ? "$10/month after free trial. Cancel anytime." : "Sign in to your Crafted Resume account."}
+            {mode==="register" ? "$10/month. Cancel anytime." : "Sign in to your Crafted Resume account."}
           </div>
         </div>
 
@@ -662,7 +662,7 @@ function AuthPage({ mode, onSuccess, switchMode }) {
   );
 }
 
-function SubscribePage({ user, onSubscribed }) {
+function SubscribePage({ user, onSubscribed, onLogout }) {
   const [loading,setLoading] = useState(false);
   const [err,setErr]         = useState("");
   const API = process.env.REACT_APP_API_URL||"";
@@ -673,14 +673,25 @@ function SubscribePage({ user, onSubscribed }) {
       const res = await fetch(`${API}/api/auth/billing/checkout`,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"}});
       const data = await res.json();
       if (!res.ok){setErr(data.error||"Something went wrong."); return;}
-      window.location.href = data.url;  // Redirect to Stripe hosted checkout
+      window.location.href = data.url;
     } catch(e){ setErr("Network error. Please try again."); }
     finally{ setLoading(false); }
+  };
+
+  const logout = async () => {
+    await fetch(`${API}/api/auth/logout`,{method:"POST",credentials:"include"});
+    onLogout();
   };
 
   return (
     <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
       <div style={{width:"100%",maxWidth:440,textAlign:"center"}}>
+        {/* Top bar with sign out */}
+        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:24}}>
+          <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px",color:"#f87171",borderColor:"rgba(248,113,113,0.2)"}} onClick={logout}>
+            Sign Out
+          </button>
+        </div>
         <div style={{fontFamily:"var(--font-display)",fontSize:40,fontWeight:300,marginBottom:10}}>
           Unlock <em style={{color:"var(--gold)"}}>Crafted Resume</em>
         </div>
@@ -954,6 +965,13 @@ export default function App() {
 
   /* ── Bootstrap: check if user is already logged in ── */
   useEffect(() => {
+    // If a reset token or verify token is in the URL, skip bootstrap
+    // and let the URL param effect handle the page
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("token") || p.get("_at")) {
+      setAuthReady(true);
+      return;
+    }
     const API = process.env.REACT_APP_API_URL || "";
     fetch(`${API}/api/auth/me`, { credentials: "include" })
       .then(r => r.ok ? r.json() : null)
@@ -1171,9 +1189,9 @@ export default function App() {
       )}
       {authReady && page==="login"    && <AuthPage mode="login"    onSuccess={u=>{setUser(u);setPage(u.subscriptionStatus==="active"?"app":"subscribe");}} switchMode={m=>setPage(m)} />}
       {authReady && page==="register" && <AuthPage mode="register" onSuccess={u=>{setUser(u);setPage("subscribe");}} switchMode={m=>setPage(m)} />}
-      {authReady && page==="forgot"    && <ForgotPasswordPage switchMode={m=>setPage(m)} />}
-      {authReady && page==="reset"     && <ResetPasswordPage token={resetToken} onDone={()=>setPage("login")} />}
-      {authReady && page==="subscribe" && <SubscribePage user={user} onSubscribed={()=>setPage("app")} />}
+      {page==="forgot"    && <ForgotPasswordPage switchMode={m=>setPage(m)} />}
+      {page==="reset"     && <ResetPasswordPage token={resetToken} onDone={()=>setPage("login")} />}
+      {authReady && page==="subscribe" && <SubscribePage user={user} onSubscribed={()=>setPage("app")} onLogout={()=>{setUser(false);setPage("login");}} />}
       {authReady && page==="account"   && <AccountPage user={user} onBack={()=>setPage("app")} onLogout={()=>{setUser(false);setPage("login");}} />}
       {showVerifyBanner && <VerifyBanner onClose={()=>setShowVerifyBanner(false)} />}
       {authReady && page==="app" && (
