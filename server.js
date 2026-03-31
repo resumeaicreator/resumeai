@@ -50,11 +50,25 @@ app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 app.use(passport.initialize());
 
+// ─── CORS ────────────────────────────────────────────────────────────
+const allowedOrigins = [
+  process.env.FRONTEND_URL,                          // e.g. https://craftedresume.io
+  process.env.FRONTEND_URL?.replace("://", "://www."), // e.g. https://www.craftedresume.io
+  "http://localhost:3000",
+  "http://localhost:3001",
+].filter(Boolean);
+
 app.use(cors({
-  origin:         process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: (origin, cb) => {
+    // Allow requests with no origin (e.g. mobile apps, curl, Postman)
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    console.warn(`CORS blocked origin: ${origin}`);
+    return cb(new Error(`Origin ${origin} not allowed by CORS`));
+  },
   methods:        ["GET", "POST"],
   allowedHeaders: ["Content-Type"],
-  credentials:    true,   // required for cookies
+  credentials:    true,
 }));
 
 // ─── General rate limit ──────────────────────────────────────────────
