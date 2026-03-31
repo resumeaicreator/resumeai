@@ -989,7 +989,6 @@ export default function App() {
       // Google OAuth cross-domain token exchange
       const at = p.get("_at");
       const rt = p.get("_rt");
-      const dest = p.get("_dest") || "/";
       if (at && rt) {
         window.history.replaceState({}, "", window.location.pathname);
         const API = process.env.REACT_APP_API_URL || "";
