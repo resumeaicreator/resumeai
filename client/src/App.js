@@ -796,9 +796,28 @@ function ForgotPasswordPage({ switchMode }) {
     if (!email) { setErr("Email required."); return; }
     setLoading(true); setErr("");
     try {
-      await fetch(`${API}/api/auth/forgot-password`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});
-      setDone(true);
-    } catch { setErr("Network error. Please try again."); }
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      const res = await fetch(`${API}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (res.ok) {
+        setDone(true);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setErr(data.error || "Something went wrong. Please try again.");
+      }
+    } catch(e) {
+      if (e.name === "AbortError") {
+        setErr("Request timed out — the server may be waking up. Please try again in 30 seconds.");
+      } else {
+        setErr("Network error. Please try again.");
+      }
+    }
     finally { setLoading(false); }
   };
   return (
