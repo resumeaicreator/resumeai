@@ -985,30 +985,60 @@ export default function App() {
   useEffect(() => {
     try {
       const p = new URLSearchParams(window.location.search);
+
+      // Google OAuth cross-domain token exchange
+      const at = p.get("_at");
+      const rt = p.get("_rt");
+      const dest = p.get("_dest") || "/";
+      if (at && rt) {
+        window.history.replaceState({}, "", window.location.pathname);
+        const API = process.env.REACT_APP_API_URL || "";
+        fetch(`${API}/api/auth/exchange`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ accessToken: at, refreshToken: rt }),
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data?.user) {
+              setUser(data.user);
+              setAuthReady(true);
+              setPage(data.user.subscriptionStatus === "active" ? "app" : "subscribe");
+            } else {
+              setUser(false);
+              setAuthReady(true);
+              setPage("login");
+            }
+          })
+          .catch(() => { setUser(false); setAuthReady(true); setPage("login"); });
+        return;
+      }
+
       // Shared resume link
       const enc = p.get("resume");
       if (enc) {
         const data = JSON.parse(decodeURIComponent(atob(enc)));
         setResult(data); setStep(3);
-        window.history.replaceState({},"",window.location.pathname);
+        window.history.replaceState({}, "", window.location.pathname);
         return;
       }
       // Email verified redirect
       if (p.get("verified") === "true") {
         setShowVerifyBanner(true);
         setPage("login");
-        window.history.replaceState({},"",window.location.pathname);
+        window.history.replaceState({}, "", window.location.pathname);
         return;
       }
-      // Password reset link — check for token param regardless of pathname
+      // Password reset link
       const resetTok = p.get("token");
       if (resetTok) {
         setResetToken(resetTok);
         setPage("reset");
-        window.history.replaceState({},"",window.location.pathname);
+        window.history.replaceState({}, "", window.location.pathname);
         return;
       }
-    } catch(e){}
+    } catch(e) {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

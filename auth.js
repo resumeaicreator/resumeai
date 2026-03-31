@@ -345,17 +345,58 @@ passport.use(new GoogleStrategy(
 
 router.get("/google", passport.authenticate("google", { scope:["profile","email"], session:false }));
 router.get("/google/callback",
-  passport.authenticate("google", { session:false, failureRedirect:`${process.env.FRONTEND_URL}/login?error=google_failed` }),
+  passport.authenticate("google", { session:false, failureRedirect:`${process.env.FRONTEND_URL}/?error=google_failed` }),
   async (req, res) => {
     try {
-      const u = req.user;
-      const access = signAccess(u.id), refresh = signRefresh(u.id);
+      const u       = req.user;
+      const access  = signAccess(u.id);
+      const refresh = signRefresh(u.id);
       await storeRefreshToken(u.id, refresh);
-      setAuthCookies(res, access, refresh);
-      res.redirect(process.env.FRONTEND_URL + (u.subscription_status==="active" ? "/" : "/subscribe"));
-    } catch { res.redirect(`${process.env.FRONTEND_URL}/login?error=server`); }
+
+      // Cookies can't cross domains (onrender.com → craftedresume.io)
+      // so pass tokens as short-lived URL params — frontend exchanges them for cookies
+      const dest = u.subscription_status === "active" ? "/" : "/subscribe";
+      const params = new URLSearchParams({
+        _at: access,
+        _rt: refresh,
+        _dest: dest,
+      });
+      res.redirect(`${process.env.FRONTEND_URL}/?${params.toString()}`);
+    } catch(e) {
+      console.error("Google callback error:", e);
+      res.redirect(`${process.env.FRONTEND_URL}/?error=server`);
+    }
   }
 );
+
+// TOKEN EXCHANGE — used after Google OAuth cross-domain redirect
+// Frontend posts the tokens it got from URL params, backend sets them as httpOnly cookies
+router.post("/exchange", async (req, res) => {
+  const { accessToken, refreshToken } = req.body;
+  if (!accessToken || !refreshToken) return res.status(400).json({ error: "Tokens required." });
+  try {
+    // Verify both tokens are valid before setting cookies
+    const ap = jwt.verify(accessToken,  process.env.JWT_SECRET);
+    const rp = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    if (ap.type !== "access" || rp.type !== "refresh") throw new Error("Invalid token type");
+    if (ap.sub !== rp.sub) throw new Error("Token mismatch");
+
+    // Confirm user exists
+    const { rows } = await db.query(
+      "SELECT id, email, name, subscription_status FROM users WHERE id=$1", [ap.sub]
+    );
+    if (!rows.length) return res.status(401).json({ error: "User not found." });
+
+    setAuthCookies(res, accessToken, refreshToken);
+    const u = rows[0];
+    return res.json({
+      user: { id:u.id, email:u.email, name:u.name, subscriptionStatus:u.subscription_status }
+    });
+  } catch(e) {
+    console.error("Exchange error:", e.message);
+    return res.status(401).json({ error: "Invalid tokens." });
+  }
+});
 
 // STRIPE CHECKOUT
 router.post("/billing/checkout", requireAuth, async (req, res) => {
