@@ -1103,6 +1103,7 @@ export default function App() {
   const [resetToken,setResetToken] = useState("");
   const [showVerifyBanner,setShowVerifyBanner] = useState(false);
   const [sharedResume,setSharedResume] = useState(null);
+  const [isShared,setIsShared] = useState(false);
 
   // Apply Mode state
   const [applyInput,setApplyInput]   = useState({ jobUrl:"", jobText:"", inputMode:"url" });
@@ -1188,11 +1189,13 @@ export default function App() {
         return;
       }
 
-      // Shared resume link — show clean view, no auth required
+      // Shared resume link — load into app as normal result, mark as shared
       const enc = p.get("resume");
       if (enc) {
         const data = JSON.parse(decodeURIComponent(atob(enc)));
-        setSharedResume(data);
+        setResult(data);
+        setStep(3);
+        setIsShared(true);
         window.history.replaceState({}, "", window.location.pathname);
         setAuthReady(true);
         return;
@@ -1364,9 +1367,6 @@ export default function App() {
   return (
     <>
       <FontLink />
-      {/* Shared resume — clean standalone view, no auth needed */}
-      {sharedResume && <SharedResumePage data={sharedResume} />}
-      {!sharedResume && (
       {/* ── Route to auth/subscribe/account pages ── */}
       {!authReady && (
         <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -1540,8 +1540,8 @@ export default function App() {
             </div>
           )}
 
-          {/* Steps indicator — only show on form + results */}
-          {step > 1 && <Steps current={step-1} />}
+          {/* Steps indicator — only show on form + results, not shared view */}
+          {step > 1 && !isShared && <Steps current={step-1} />}
 
           {/* ══ STEP 1 — BUILD ══ */}
           {step===2 && mode==="build" && (
@@ -1884,25 +1884,27 @@ export default function App() {
               {/* Regular resume result */}
               {result && (
                 <>
-                  <div className="card scale-in" style={{ borderColor:"rgba(74,222,128,0.2)", background:"rgba(74,222,128,0.035)", marginBottom:24 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:14 }}>
-                      <div>
-                        <div style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, color:"#4ade80", marginBottom:4 }}>✓ Resume Complete</div>
-                        <div style={{ fontSize:13,color:"var(--ash)",fontWeight:300 }}>Your AI-crafted resume is ready. Review below, then download or print.</div>
+                  {!isShared && (
+                    <div className="card scale-in" style={{ borderColor:"rgba(74,222,128,0.2)", background:"rgba(74,222,128,0.035)", marginBottom:24 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:14 }}>
+                        <div>
+                          <div style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, color:"#4ade80", marginBottom:4 }}>✓ Resume Complete</div>
+                          <div style={{ fontSize:13,color:"var(--ash)",fontWeight:300 }}>Your AI-crafted resume is ready. Review below, then download or print.</div>
+                        </div>
+                        <div className="result-actions" style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                          <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
+                          <button className="ghost-btn" style={{ fontSize:12 }} onClick={downloadTxt}>Download .txt</button>
+                          <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>makeShareLink(result)}>{shareMsg||"🔗 Share"}</button>
+                          <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>exportPDF(result.name)}>⬇ Download PDF</button>
+                        </div>
                       </div>
-                      <div className="result-actions" style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                        <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
-                        <button className="ghost-btn" style={{ fontSize:12 }} onClick={downloadTxt}>Download .txt</button>
-                        <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>makeShareLink(result)}>{shareMsg||"🔗 Share"}</button>
-                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>exportPDF(result.name)}>⬇ Download PDF</button>
-                      </div>
+                      <ATSMeter text={`${result.summary||""} ${result.experience||""} ${result.skills||""}`} onFix={fixATS} />
                     </div>
-                    <ATSMeter text={`${result.summary||""} ${result.experience||""} ${result.skills||""}`} onFix={fixATS} />
-                  </div>
+                  )}
                   <div className="fade-up" style={{ borderRadius:18,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.65)", marginBottom:32 }}>
                     <Preview data={result} template={form.template} />
                   </div>
-                  <JobRecommendations role={result.targetRole} skills={result.skills} location={form.location} />
+                  {!isShared && <JobRecommendations role={result.targetRole} skills={result.skills} location={form.location} />}
                 </>
               )}
 
@@ -1925,8 +1927,6 @@ export default function App() {
           )}
         </div>
       </div>
-      )}
-      )}
     </>
   );
 }
