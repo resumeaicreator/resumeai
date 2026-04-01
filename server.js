@@ -522,7 +522,7 @@ Match is a percentage 0-100 of how well this fits their profile. Keep reasons co
 });
 
 // ─── Apply Mode endpoint ───────────────────────
-app.post("/api/apply", limiter, requireAuth, requirePaid, async (req, res) => {
+app.post("/api/apply", limiter, requireAuth, async (req, res) => {
   try {
     const { jobUrl, jobText, pdfBase64, template } = req.body;
     if (!pdfBase64) return res.status(400).json({ error:"Resume PDF is required." });

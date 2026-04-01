@@ -2036,8 +2036,14 @@ export default function App() {
                       </div>
                       <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                         <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
-                        <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>makeShareLink(applyResult.resume)}>{shareMsg||"🔗 Share"}</button>
-                        <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>exportPDF(applyResult.resume?.name)}>⬇ Download PDF</button>
+                        {user?.subscriptionStatus==="active" ? (
+                          <>
+                            <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>makeShareLink(applyResult.resume)}>{shareMsg||"🔗 Share"}</button>
+                            <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>exportPDF(applyResult.resume?.name)}>⬇ Download PDF</button>
+                          </>
+                        ) : (
+                          <button className="gold-btn pulse" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>setPage("subscribe")}>✦ Upgrade for Full Access</button>
+                        )}
                       </div>
                     </div>
 
