@@ -452,11 +452,11 @@ function LockedPreview({ data, template, onUpgrade }) {
   return (
     <div style={{ position:"relative", borderRadius:18, overflow:"hidden" }}>
       {/* Show top portion clearly */}
-      <div style={{ maxHeight:420, overflow:"hidden" }}>
+      <div style={{ maxHeight:580, overflow:"hidden" }}>
         <Preview data={data} template={template} />
       </div>
       {/* Blur fade over the bottom */}
-      <div style={{ position:"absolute", bottom:0, left:0, right:0, height:280, background:"linear-gradient(to bottom, transparent, var(--ink) 80%)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-end", paddingBottom:32, gap:12 }}>
+      <div style={{ position:"absolute", bottom:0, left:0, right:0, height:200, background:"linear-gradient(to bottom, transparent, var(--ink) 70%)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-end", paddingBottom:32, gap:12 }}>
         <div style={{ fontSize:14, color:"var(--text-primary)", fontWeight:500 }}>Your resume is ready — upgrade to view and download</div>
         <div style={{ fontSize:12, color:"var(--ash)", marginBottom:4 }}>PDF export · Share link · ATS fixer · Full preview</div>
         <button className="gold-btn pulse" style={{ fontSize:13, padding:"11px 28px" }} onClick={onUpgrade}>
@@ -867,7 +867,7 @@ function AuthPage({ mode, onSuccess, switchMode }) {
   );
 }
 
-function SubscribePage({ user, onSubscribed, onLogout }) {
+function SubscribePage({ user, onSubscribed, onLogout, onBack }) {
   const [loading,setLoading] = useState(false);
   const [err,setErr]         = useState("");
   const API = process.env.REACT_APP_API_URL||"";
@@ -891,8 +891,12 @@ function SubscribePage({ user, onSubscribed, onLogout }) {
   return (
     <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
       <div style={{width:"100%",maxWidth:440,textAlign:"center"}}>
-        {/* Top bar with sign out */}
-        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:24}}>
+        {/* Top bar with back + sign out */}
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:24}}>
+          {onBack
+            ? <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={onBack}>← Back</button>
+            : <div />
+          }
           <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px",color:"#f87171",borderColor:"rgba(248,113,113,0.2)"}} onClick={logout}>
             Sign Out
           </button>
@@ -1445,7 +1449,7 @@ export default function App() {
       {authReady && page==="register" && <AuthPage mode="register" onSuccess={u=>{setUser(u);setPage("app");}} switchMode={m=>setPage(m)} />}
       {page==="forgot"    && <ForgotPasswordPage switchMode={m=>setPage(m)} />}
       {page==="reset"     && <ResetPasswordPage token={resetToken} onDone={()=>setPage("login")} />}
-      {authReady && page==="subscribe" && <SubscribePage user={user} onSubscribed={()=>setPage("app")} onLogout={()=>{setUser(false);setPage("login");}} />}
+      {authReady && page==="subscribe" && <SubscribePage user={user} onSubscribed={()=>setPage("app")} onBack={()=>setPage("app")} onLogout={()=>{setUser(false);setPage("login");}} />}
       {authReady && page==="account"   && <AccountPage user={user} onBack={()=>setPage("app")} onLogout={()=>{setUser(false);setPage("login");}} />}
       {showVerifyBanner && <VerifyBanner onClose={()=>setShowVerifyBanner(false)} />}
       {authReady && page==="app" && (
@@ -1994,7 +1998,18 @@ export default function App() {
                   {isPaid && !isShared && (
                     <ResumeChat resume={result} onUpdate={updated=>setResult(updated)} />
                   )}
-                  {!isShared && <JobRecommendations role={result.targetRole} skills={result.skills} location={form.location} />}
+                  {!isShared && (() => {
+                    const isPaidJobs = user?.subscriptionStatus === "active";
+                    return isPaidJobs
+                      ? <JobRecommendations role={result.targetRole} skills={result.skills} location={form.location} />
+                      : (
+                        <div style={{marginTop:24,padding:"20px 24px",borderRadius:14,border:"1px solid var(--gold-border)",background:"var(--gold-dim)",textAlign:"center"}}>
+                          <div style={{fontSize:14,fontWeight:500,marginBottom:8}}>✦ Job Recommendations</div>
+                          <div style={{fontSize:13,color:"var(--ash)",marginBottom:16}}>Get matched to live job postings based on your resume — premium feature.</div>
+                          <button className="gold-btn" style={{fontSize:12,padding:"8px 20px"}} onClick={()=>setPage("subscribe")}>Unlock with Premium →</button>
+                        </div>
+                      );
+                  })()}
                 </>
                 );
               })()}
