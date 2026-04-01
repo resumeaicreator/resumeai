@@ -802,7 +802,10 @@ function AuthPage({ mode, onSuccess, switchMode, onBack }) {
   const googleLogin = () => { window.location.href = `${API}/api/auth/google`; };
 
   return (
-    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+    <div style={{minHeight:"100vh",background:"var(--ink)",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+      {onBack && (
+        <button className="ghost-btn" style={{position:"absolute",top:24,left:24,fontSize:12,padding:"7px 14px",zIndex:10}} onClick={onBack}>← Back</button>
+      )}
       <div style={{width:"100%",maxWidth:400}}>
         <div style={{textAlign:"center",marginBottom:36}}>
           <div style={{fontFamily:"var(--font-display)",fontSize:32,fontWeight:300,marginBottom:8}}>
@@ -988,6 +991,7 @@ function AccountPage({ user, onLogout, onBack }) {
             Sign Out
           </button>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -2077,61 +2081,108 @@ export default function App() {
                   </div>
 
                   {/* Tab: Resume */}
-                  {applyTab==="resume" && applyResult.resume && (
-                    <div className="scale-in">
-                      <ATSMeter text={`${applyResult.resume.summary||""} ${applyResult.resume.experience||""} ${applyResult.resume.skills||""}`} onFix={fixATS} />
-                      <div style={{ borderRadius:18,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.65)",marginTop:16 }}>
-                        <Preview data={applyResult.resume} template={form.template} />
+                  {applyTab==="resume" && applyResult.resume && (() => {
+                    const isPaidApply = user?.subscriptionStatus === "active";
+                    return (
+                      <div className="scale-in">
+                        <ATSMeter text={`${applyResult.resume.summary||""} ${applyResult.resume.experience||""} ${applyResult.resume.skills||""}`} onFix={isPaidApply ? fixATS : null} onUpgrade={()=>setPage("subscribe")} />
+                        <div style={{ marginTop:16 }}>
+                          {isPaidApply
+                            ? <div style={{ borderRadius:18,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.65)" }}><Preview data={applyResult.resume} template={form.template} /></div>
+                            : <LockedPreview data={applyResult.resume} template={form.template} onUpgrade={()=>setPage("subscribe")} />
+                          }
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Tab: Cover Letter */}
-                  {applyTab==="cover" && applyResult.coverLetter && (
-                    <div className="card scale-in" style={{ background:"#fff", color:"#1a1a2e" }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24, flexWrap:"wrap", gap:10 }}>
-                        <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:22, fontWeight:300, color:"#1a1a2e" }}>Cover Letter</div>
-                        <button onClick={()=>{
-                          const blob=new Blob([applyResult.coverLetter],{type:"text/plain"});
-                          Object.assign(document.createElement("a"),{href:URL.createObjectURL(blob),download:"cover_letter.txt"}).click();
-                        }} style={{ fontSize:12,padding:"8px 16px",borderRadius:8,border:"1px solid #ddd",background:"transparent",cursor:"pointer",fontFamily:"var(--font-body)",color:"#555",transition:"all 0.2s" }}
-                          onMouseEnter={e=>{e.currentTarget.style.background="#f5f5f5";}}
-                          onMouseLeave={e=>{e.currentTarget.style.background="transparent";}}
-                        >Download .txt</button>
+                  {applyTab==="cover" && (() => {
+                    const isPaidApply = user?.subscriptionStatus === "active";
+                    return isPaidApply ? (
+                      <div className="card scale-in" style={{ background:"#fff", color:"#1a1a2e" }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24, flexWrap:"wrap", gap:10 }}>
+                          <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:22, fontWeight:300, color:"#1a1a2e" }}>Cover Letter</div>
+                          <button onClick={()=>{
+                            const blob=new Blob([applyResult.coverLetter],{type:"text/plain"});
+                            Object.assign(document.createElement("a"),{href:URL.createObjectURL(blob),download:"cover_letter.txt"}).click();
+                          }} style={{ fontSize:12,padding:"8px 16px",borderRadius:8,border:"1px solid #ddd",background:"transparent",cursor:"pointer",fontFamily:"var(--font-body)",color:"#555",transition:"all 0.2s" }}
+                            onMouseEnter={e=>{e.currentTarget.style.background="#f5f5f5";}}
+                            onMouseLeave={e=>{e.currentTarget.style.background="transparent";}}
+                          >Download .txt</button>
+                        </div>
+                        <div style={{ fontFamily:"'Outfit',sans-serif", fontSize:14, lineHeight:1.8, color:"#333", whiteSpace:"pre-wrap" }}>
+                          {applyResult.coverLetter}
+                        </div>
                       </div>
-                      <div style={{ fontFamily:"'Outfit',sans-serif", fontSize:14, lineHeight:1.8, color:"#333", whiteSpace:"pre-wrap" }}>
-                        {applyResult.coverLetter}
+                    ) : (
+                      <div className="card scale-in" style={{ background:"#fff", color:"#1a1a2e", position:"relative", overflow:"hidden" }}>
+                        <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:22, fontWeight:300, color:"#1a1a2e", marginBottom:16 }}>Cover Letter</div>
+                        {/* Show first ~3 lines blurred out */}
+                        <div style={{ filter:"blur(5px)", userSelect:"none", pointerEvents:"none", fontFamily:"'Outfit',sans-serif", fontSize:14, lineHeight:1.8, color:"#333", whiteSpace:"pre-wrap", maxHeight:120, overflow:"hidden" }}>
+                          {applyResult.coverLetter?.slice(0, 300)}
+                        </div>
+                        <div style={{ position:"absolute", inset:0, background:"linear-gradient(to bottom, transparent 30%, rgba(255,255,255,0.97) 65%)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-end", paddingBottom:32, gap:10 }}>
+                          <div style={{ fontSize:14, fontWeight:500, color:"#1a1a2e" }}>🔒 Cover letter is a premium feature</div>
+                          <div style={{ fontSize:12, color:"#666", marginBottom:4 }}>Upgrade to read, download and send your cover letter</div>
+                          <button className="gold-btn" style={{ fontSize:13, padding:"10px 28px" }} onClick={()=>setPage("subscribe")}>Unlock with Premium →</button>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Tab: Interview Prep */}
-                  {applyTab==="interview" && applyResult.interviewPrep && (
-                    <div className="scale-in">
-                      <div style={{ marginBottom:16, padding:"14px 18px", background:"rgba(201,168,76,0.06)", border:"1px solid var(--gold-border)", borderRadius:11, fontSize:13, color:"var(--ash)", lineHeight:1.6 }}>
-                        <strong style={{ color:"var(--gold)" }}>🎯 Prep tip:</strong> These questions are tailored specifically to this job and your background. Practise answering out loud — aim for 2 minutes per answer using the STAR method (Situation, Task, Action, Result).
-                      </div>
-                      {(applyResult.interviewPrep||[]).map((item,i)=>(
-                        <div key={i} className="card fade-up" style={{ animationDelay:`${i*0.06}s`, marginBottom:14 }}>
-                          <div style={{ display:"flex", gap:12, alignItems:"flex-start", marginBottom:10 }}>
-                            <div style={{ width:28,height:28,borderRadius:8,background:"var(--gold-dim)",border:"1px solid var(--gold-border)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,color:"var(--gold)",flexShrink:0 }}>{i+1}</div>
-                            <div style={{ fontWeight:500,fontSize:15,lineHeight:1.4 }}>{item.question}</div>
-                          </div>
-                          <div style={{ marginLeft:40 }}>
-                            <div style={{ fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",color:"var(--gold)",marginBottom:6 }}>How to answer</div>
-                            <div style={{ fontSize:13,color:"var(--ash)",lineHeight:1.7 }}>{item.guidance}</div>
-                            {item.keyPoints && (
-                              <div style={{ marginTop:10, display:"flex", flexWrap:"wrap", gap:6 }}>
-                                {item.keyPoints.map((kp,j)=>(
-                                  <span key={j} style={{ fontSize:11,padding:"3px 10px",borderRadius:8,background:"var(--mist)",border:"1px solid rgba(255,255,255,0.08)",color:"var(--ash)" }}>{kp}</span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                  {applyTab==="interview" && (() => {
+                    const isPaidApply = user?.subscriptionStatus === "active";
+                    return isPaidApply ? (
+                      <div className="scale-in">
+                        <div style={{ marginBottom:16, padding:"14px 18px", background:"rgba(201,168,76,0.06)", border:"1px solid var(--gold-border)", borderRadius:11, fontSize:13, color:"var(--ash)", lineHeight:1.6 }}>
+                          <strong style={{ color:"var(--gold)" }}>🎯 Prep tip:</strong> These questions are tailored specifically to this job and your background. Practise answering out loud — aim for 2 minutes per answer using the STAR method.
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        {(applyResult.interviewPrep||[]).map((item,i)=>(
+                          <div key={i} className="card fade-up" style={{ animationDelay:`${i*0.06}s`, marginBottom:14 }}>
+                            <div style={{ display:"flex", gap:12, alignItems:"flex-start", marginBottom:10 }}>
+                              <div style={{ width:28,height:28,borderRadius:8,background:"var(--gold-dim)",border:"1px solid var(--gold-border)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,color:"var(--gold)",flexShrink:0 }}>{i+1}</div>
+                              <div style={{ fontWeight:500,fontSize:15,lineHeight:1.4 }}>{item.question}</div>
+                            </div>
+                            <div style={{ marginLeft:40 }}>
+                              <div style={{ fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",color:"var(--gold)",marginBottom:6 }}>How to answer</div>
+                              <div style={{ fontSize:13,color:"var(--ash)",lineHeight:1.7 }}>{item.guidance}</div>
+                              {item.keyPoints && (
+                                <div style={{ marginTop:10, display:"flex", flexWrap:"wrap", gap:6 }}>
+                                  {item.keyPoints.map((kp,j)=>(
+                                    <span key={j} style={{ fontSize:11,padding:"3px 10px",borderRadius:8,background:"var(--mist)",border:"1px solid rgba(255,255,255,0.08)",color:"var(--ash)" }}>{kp}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="scale-in">
+                        {/* Show first question as tease */}
+                        {applyResult.interviewPrep?.slice(0,1).map((item,i)=>(
+                          <div key={i} className="card" style={{ marginBottom:14, opacity:0.6 }}>
+                            <div style={{ display:"flex", gap:12, alignItems:"flex-start", marginBottom:10 }}>
+                              <div style={{ width:28,height:28,borderRadius:8,background:"var(--gold-dim)",border:"1px solid var(--gold-border)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,color:"var(--gold)",flexShrink:0 }}>1</div>
+                              <div style={{ fontWeight:500,fontSize:15,lineHeight:1.4 }}>{item.question}</div>
+                            </div>
+                            <div style={{ marginLeft:40, filter:"blur(4px)", userSelect:"none" }}>
+                              <div style={{ fontSize:13,color:"var(--ash)",lineHeight:1.7 }}>{item.guidance}</div>
+                            </div>
+                          </div>
+                        ))}
+                        {/* Locked overlay for rest */}
+                        <div style={{ padding:"32px 24px", textAlign:"center", border:"1px solid var(--gold-border)", borderRadius:14, background:"var(--gold-dim)" }}>
+                          <div style={{ fontSize:18, marginBottom:12 }}>🎯</div>
+                          <div style={{ fontSize:15, fontWeight:500, marginBottom:8 }}>{(applyResult.interviewPrep?.length||0)} interview questions ready</div>
+                          <div style={{ fontSize:13, color:"var(--ash)", marginBottom:20 }}>Tailored to this exact role and your background. Unlock to see all questions with detailed guidance.</div>
+                          <button className="gold-btn pulse" style={{ fontSize:13, padding:"11px 28px" }} onClick={()=>setPage("subscribe")}>Unlock Interview Prep →</button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
