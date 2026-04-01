@@ -421,11 +421,35 @@ router.post("/exchange", async (req, res) => {
 // STRIPE CHECKOUT
 router.post("/billing/checkout", requireAuth, async (req, res) => {
   try {
-    const { rows } = await db.query("SELECT stripe_customer_id,subscription_status FROM users WHERE id=$1", [req.userId]);
+    const { rows } = await db.query("SELECT id, email, name, stripe_customer_id, subscription_status FROM users WHERE id=$1", [req.userId]);
     if (!rows.length) return res.status(404).json({ error: "User not found." });
     if (rows[0].subscription_status === "active") return res.status(400).json({ error: "Already subscribed." });
+
+    let customerId = rows[0].stripe_customer_id;
+
+    // Verify the customer exists in Stripe (test customers don't exist in live mode)
+    if (customerId) {
+      try {
+        await stripe.customers.retrieve(customerId);
+      } catch(e) {
+        // Customer not found in this mode — create a new one
+        console.log(`Customer ${customerId} not found, creating new one`);
+        customerId = null;
+      }
+    }
+
+    // Create new customer if needed
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: rows[0].email,
+        name:  rows[0].name,
+      });
+      customerId = customer.id;
+      await db.query("UPDATE users SET stripe_customer_id=$1 WHERE id=$2", [customerId, rows[0].id]);
+    }
+
     const session = await stripe.checkout.sessions.create({
-      customer: rows[0].stripe_customer_id,
+      customer: customerId,
       payment_method_types: ["card"],
       mode: "subscription",
       line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
