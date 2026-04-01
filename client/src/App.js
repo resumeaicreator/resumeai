@@ -61,6 +61,7 @@ const FontLink = () => {
     @keyframes fadeIn    { from{opacity:0} to{opacity:1} }
     @keyframes scaleIn   { from{opacity:0;transform:scale(0.94)} to{opacity:1;transform:scale(1)} }
     @keyframes spin      { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+    @keyframes bounce    { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
     @keyframes shimmer   { 0%{background-position:-200% center} 100%{background-position:200% center} }
     @keyframes breathe   { 0%,100%{box-shadow:0 0 0 0 rgba(201,168,76,0)} 50%{box-shadow:0 0 28px 4px rgba(201,168,76,0.18)} }
     @keyframes drawLine  { from{stroke-dashoffset:300} to{stroke-dashoffset:0} }
@@ -264,7 +265,7 @@ const ATS_TIPS = {
   ],
 };
 
-function ATSMeter({ text, onFix }) {
+function ATSMeter({ text, onFix, onUpgrade }) {
   const [expanded, setExpanded] = useState(false);
   const [fixing, setFixing]     = useState(false);
   const lower  = (text||"").toLowerCase();
@@ -290,6 +291,11 @@ function ATSMeter({ text, onFix }) {
           {onFix && score < 98 && (
             <button onClick={handleFix} disabled={fixing} className="gold-btn" style={{ fontSize:11, padding:"5px 14px" }}>
               {fixing ? <span style={{display:"flex",alignItems:"center",gap:6}}><span style={{width:10,height:10,border:"2px solid rgba(0,0,0,0.25)",borderTopColor:"#0d0d0f",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block"}} />Fixing…</span> : "✦ Fix My Score"}
+            </button>
+          )}
+          {!onFix && onUpgrade && score < 98 && (
+            <button onClick={onUpgrade} className="ghost-btn" style={{ fontSize:11, padding:"5px 14px", borderColor:"var(--gold-border)", color:"var(--gold)" }}>
+              🔒 Fix My Score
             </button>
           )}
           <span style={{ fontFamily:"var(--font-display)", fontSize:28, fontWeight:300, color }}>{score}<span style={{ fontSize:13, color:"var(--ash)" }}>/100</span></span>
@@ -331,7 +337,152 @@ function ATSMeter({ text, onFix }) {
   );
 }
 
-/* ─── Resume Preview (print-ready) ─── */
+/* ─── Resume Chat ─── */
+function ResumeChat({ resume, onUpdate }) {
+  const [messages, setMessages] = useState([
+    { role:"assistant", content:"Hi! I can help you refine your resume. Try asking me to change the tone, improve a section, add metrics, or switch up the style." }
+  ]);
+  const [input, setInput]     = useState("");
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen]       = useState(false);
+  const bottomRef             = useRef(null);
+  const API = process.env.REACT_APP_API_URL||"";
+
+  useEffect(()=>{ bottomRef.current?.scrollIntoView({behavior:"smooth"}); },[messages]);
+
+  const send = async () => {
+    const msg = input.trim();
+    if (!msg || loading) return;
+    setInput("");
+    const newMessages = [...messages, { role:"user", content:msg }];
+    setMessages(newMessages);
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/resume-chat`, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        credentials:"include",
+        body: JSON.stringify({ message:msg, resume, history: newMessages.slice(-6) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error||"Something went wrong.");
+      setMessages(m=>[...m, { role:"assistant", content:data.reply }]);
+      if (data.updatedResume) onUpdate(data.updatedResume);
+    } catch(e) {
+      setMessages(m=>[...m, { role:"assistant", content:`Sorry, something went wrong: ${e.message}` }]);
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{ marginTop:24 }}>
+      <button onClick={()=>setOpen(o=>!o)} className="ghost-btn" style={{ fontSize:12, display:"flex", alignItems:"center", gap:8, borderColor:"var(--gold-border)", color:"var(--gold)" }}>
+        <span style={{ fontSize:16 }}>✦</span>
+        {open ? "Close AI Assistant" : "✦ Edit with AI Assistant"}
+      </button>
+
+      {open && (
+        <div className="fade-in" style={{ marginTop:16, border:"1px solid var(--gold-border)", borderRadius:14, overflow:"hidden", background:"var(--ink2)" }}>
+          {/* Header */}
+          <div style={{ padding:"12px 16px", borderBottom:"1px solid var(--border-subtle)", display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ fontSize:14, color:"var(--gold)" }}>✦</span>
+            <span style={{ fontSize:13, fontWeight:500, color:"var(--text-primary)" }}>Resume AI Assistant</span>
+            <span style={{ fontSize:11, color:"var(--ash)", marginLeft:"auto" }}>Premium</span>
+          </div>
+
+          {/* Messages */}
+          <div style={{ height:280, overflowY:"auto", padding:"16px", display:"flex", flexDirection:"column", gap:12 }}>
+            {messages.map((m,i)=>(
+              <div key={i} style={{ display:"flex", justifyContent: m.role==="user"?"flex-end":"flex-start" }}>
+                <div style={{
+                  maxWidth:"80%", padding:"10px 14px", borderRadius:12,
+                  background: m.role==="user" ? "var(--gold)" : "var(--ink3)",
+                  color: m.role==="user" ? "#0d0d0f" : "var(--text-primary)",
+                  fontSize:13, lineHeight:1.6,
+                  borderBottomRightRadius: m.role==="user" ? 4 : 12,
+                  borderBottomLeftRadius:  m.role==="user" ? 12 : 4,
+                }}>
+                  {m.content}
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div style={{ display:"flex", justifyContent:"flex-start" }}>
+                <div style={{ padding:"10px 14px", borderRadius:12, background:"var(--ink3)", display:"flex", gap:5, alignItems:"center" }}>
+                  {[0,1,2].map(i=>(
+                    <span key={i} style={{ width:6, height:6, borderRadius:"50%", background:"var(--gold)", display:"inline-block", animation:`bounce 1s ${i*0.15}s infinite` }} />
+                  ))}
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Suggestions */}
+          <div style={{ padding:"8px 16px", borderTop:"1px solid var(--border-subtle)", display:"flex", gap:6, flexWrap:"wrap" }}>
+            {["Make it more concise","Add more metrics","More confident tone","Improve the summary"].map((s,i)=>(
+              <button key={i} onClick={()=>setInput(s)} style={{ fontSize:11, padding:"4px 10px", borderRadius:8, border:"1px solid var(--ghost-border)", background:"transparent", color:"var(--ash)", cursor:"pointer", fontFamily:"var(--font-body)", transition:"all 0.2s" }}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--gold-border)";e.currentTarget.style.color="var(--gold)";}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--ghost-border)";e.currentTarget.style.color="var(--ash)";}}
+              >{s}</button>
+            ))}
+          </div>
+
+          {/* Input */}
+          <div style={{ padding:"12px 16px", borderTop:"1px solid var(--border-subtle)", display:"flex", gap:10 }}>
+            <input
+              value={input}
+              onChange={e=>setInput(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&send()}
+              placeholder="e.g. Make the summary more confident..."
+              style={{ flex:1, background:"var(--input-bg)", border:"1px solid var(--input-border)", borderRadius:9, padding:"10px 14px", color:"var(--text-primary)", fontSize:13, fontFamily:"var(--font-body)", outline:"none" }}
+            />
+            <button onClick={send} disabled={loading||!input.trim()} className="gold-btn" style={{ padding:"10px 18px", fontSize:13, flexShrink:0 }}>
+              Send
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Premium Lock Overlay ─── */
+function PremiumLock({ onUpgrade, message="This is a premium feature" }) {
+  return (
+    <div style={{ position:"relative", borderRadius:12, overflow:"hidden" }}>
+      <div style={{ filter:"blur(6px)", pointerEvents:"none", userSelect:"none", opacity:0.5 }}>
+        <div style={{ height:120, background:"linear-gradient(135deg, var(--ink3), var(--ink2))", borderRadius:12 }} />
+      </div>
+      <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12, background:"rgba(13,13,15,0.7)", backdropFilter:"blur(2px)", borderRadius:12, border:"1px solid var(--gold-border)" }}>
+        <span style={{ fontSize:20 }}>✦</span>
+        <div style={{ fontSize:13, color:"var(--text-primary)", fontWeight:500, textAlign:"center" }}>{message}</div>
+        <button className="gold-btn" style={{ fontSize:12, padding:"8px 20px" }} onClick={onUpgrade}>
+          Upgrade to Premium →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Blurred Resume Preview for free users ─── */
+function LockedPreview({ data, template, onUpgrade }) {
+  return (
+    <div style={{ position:"relative", borderRadius:18, overflow:"hidden" }}>
+      {/* Show top portion clearly */}
+      <div style={{ maxHeight:420, overflow:"hidden" }}>
+        <Preview data={data} template={template} />
+      </div>
+      {/* Blur fade over the bottom */}
+      <div style={{ position:"absolute", bottom:0, left:0, right:0, height:280, background:"linear-gradient(to bottom, transparent, var(--ink) 80%)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-end", paddingBottom:32, gap:12 }}>
+        <div style={{ fontSize:14, color:"var(--text-primary)", fontWeight:500 }}>Your resume is ready — upgrade to view and download</div>
+        <div style={{ fontSize:12, color:"var(--ash)", marginBottom:4 }}>PDF export · Share link · ATS fixer · Full preview</div>
+        <button className="gold-btn pulse" style={{ fontSize:13, padding:"11px 28px" }} onClick={onUpgrade}>
+          Unlock for $10/month →
+        </button>
+      </div>
+    </div>
+  );
+}
 function Sec({ title, accent, children }) {
   return (
     <div style={{ marginBottom:22 }}>
@@ -1200,7 +1351,7 @@ export default function App() {
       }
       setUser(false); setPage("login"); throw new Error("Please log in to continue.");
     }
-    if (res.status===402) { setPage("subscribe"); throw new Error("Active subscription required."); }
+    if (res.status===402) { throw new Error("premium_required"); }
     if (!res.ok){ const d=await res.json().catch(()=>({})); throw new Error(d.error||"Server error"); }
     return res.json();
   };
@@ -1398,7 +1549,7 @@ export default function App() {
                 AI-powered resume tools. Tailored cover letters. Interview prep.<br />All from a single job posting.
               </p>
               <div className="fade-up" style={{ animationDelay:"0.28s" }}>
-                <button className="gold-btn pulse" onClick={()=>{ if(!user){setPage("register");return;} if(user.subscriptionStatus!=="active"){setPage("subscribe");return;} go(1); }} style={{ fontSize:15, padding:"16px 48px", letterSpacing:"0.07em" }}>
+                <button className="gold-btn pulse" onClick={()=>{ if(!user){setPage("register");return;} go(1); }} style={{ fontSize:15, padding:"16px 48px", letterSpacing:"0.07em" }}>
                   Get Started →
                 </button>
               </div>
@@ -1816,31 +1967,54 @@ export default function App() {
               )}
 
               {/* Regular resume result */}
-              {result && (
+              {result && (() => {
+                const isPaid = user?.subscriptionStatus === "active";
+                return (
                 <>
                   {!isShared && (
                     <div className="card scale-in" style={{ borderColor:"rgba(74,222,128,0.2)", background:"rgba(74,222,128,0.035)", marginBottom:24 }}>
                       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:14 }}>
                         <div>
                           <div style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, color:"#4ade80", marginBottom:4 }}>✓ Resume Complete</div>
-                          <div style={{ fontSize:13,color:"var(--ash)",fontWeight:300 }}>Your AI-crafted resume is ready. Review below, then download or print.</div>
+                          <div style={{ fontSize:13,color:"var(--ash)",fontWeight:300 }}>
+                            {isPaid ? "Your AI-crafted resume is ready. Review below, then download or print." : "Your resume is ready — upgrade to download, share, and fix your ATS score."}
+                          </div>
                         </div>
                         <div className="result-actions" style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                           <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
-                          <button className="ghost-btn" style={{ fontSize:12 }} onClick={downloadTxt}>Download .txt</button>
-                          <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>makeShareLink(result)}>{shareMsg||"🔗 Share"}</button>
-                          <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>exportPDF(result.name)}>⬇ Download PDF</button>
+                          {isPaid ? (
+                            <>
+                              <button className="ghost-btn" style={{ fontSize:12 }} onClick={downloadTxt}>Download .txt</button>
+                              <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>makeShareLink(result)}>{shareMsg||"🔗 Share"}</button>
+                              <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>exportPDF(result.name)}>⬇ Download PDF</button>
+                            </>
+                          ) : (
+                            <button className="gold-btn pulse" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>setPage("subscribe")}>
+                              ✦ Upgrade to Download
+                            </button>
+                          )}
                         </div>
                       </div>
-                      <ATSMeter text={`${result.summary||""} ${result.experience||""} ${result.skills||""}`} onFix={fixATS} />
+                      <ATSMeter
+                        text={`${result.summary||""} ${result.experience||""} ${result.skills||""}`}
+                        onFix={isPaid ? fixATS : null}
+                        onUpgrade={()=>setPage("subscribe")}
+                      />
                     </div>
                   )}
-                  <div className="fade-up" style={{ borderRadius:18,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.65)", marginBottom:32 }}>
-                    <Preview data={result} template={form.template} />
+                  <div className="fade-up" style={{ marginBottom:32 }}>
+                    {isPaid || isShared
+                      ? <div style={{ borderRadius:18,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.65)" }}><Preview data={result} template={form.template} /></div>
+                      : <LockedPreview data={result} template={form.template} onUpgrade={()=>setPage("subscribe")} />
+                    }
                   </div>
+                  {isPaid && !isShared && (
+                    <ResumeChat resume={result} onUpdate={updated=>setResult(updated)} />
+                  )}
                   {!isShared && <JobRecommendations role={result.targetRole} skills={result.skills} location={form.location} />}
                 </>
-              )}
+                );
+              })()}
 
               {liResult && (
                 <>

@@ -146,7 +146,7 @@ function validateBody(body) {
 }
 
 // ─── Generate endpoint ───────────────────────
-app.post("/api/generate", limiter, requireAuth, requirePaid, async (req, res) => {
+app.post("/api/generate", limiter, requireAuth, async (req, res) => {
   try {
     // 1. Validate
     const errors = validateBody(req.body);
@@ -249,7 +249,7 @@ app.post("/api/generate", limiter, requireAuth, requirePaid, async (req, res) =>
 });
 
 // ─── Tailor endpoint (PDF upload + job description) ──
-app.post("/api/tailor", limiter, requireAuth, requirePaid, async (req, res) => {
+app.post("/api/tailor", limiter, requireAuth, async (req, res) => {
   try {
     const { pdfBase64, jobDescription, template } = req.body;
     if (!pdfBase64)       return res.status(400).json({ error: "PDF is required." });
@@ -338,7 +338,7 @@ Return ONLY a raw JSON object with no markdown, no preamble:
 });
 
 // ─── LinkedIn optimizer endpoint ──────────────
-app.post("/api/linkedin", limiter, requireAuth, requirePaid, async (req, res) => {
+app.post("/api/linkedin", limiter, requireAuth, async (req, res) => {
   try {
     const { name, targetRole, headline, about, experience, skills } = req.body;
     if (!name?.trim()) return res.status(400).json({ error: "Name is required." });
@@ -453,7 +453,7 @@ Provide 4-6 suggestions total. Be specific — generic advice is not helpful.`;
 });
 
 // ─── Job recommendations endpoint ─────────────
-app.post("/api/jobs", limiter, requireAuth, requirePaid, async (req, res) => {
+app.post("/api/jobs", limiter, requireAuth, async (req, res) => {
   try {
     const role     = sanitize(req.body.role || "", 200);
     const skills   = (req.body.skills || []).slice(0, 8).map(s => sanitize(s, 60));
@@ -652,7 +652,7 @@ Return ONLY a raw JSON object, no markdown:
 // ─── LinkedIn profile import endpoint ─────────
 // Accepts a LinkedIn profile URL, fetches the public page, extracts text,
 // and asks Claude to parse it into structured form fields.
-app.post("/api/linkedin-import", limiter, requireAuth, requirePaid, async (req, res) => {
+app.post("/api/linkedin-import", limiter, requireAuth, async (req, res) => {
   try {
     const url = sanitize(req.body.url || "", 300);
     if (!url || !url.includes("linkedin.com/in/")) {
@@ -730,6 +730,100 @@ If a field is not found, return an empty string for it.`;
   } catch(err) {
     console.error("LinkedIn import error:", err);
     return res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// ─── Resume Chat endpoint (premium) ──────────────────────────────────
+app.post("/api/resume-chat", limiter, requireAuth, requirePaid, async (req, res) => {
+  try {
+    const { message, resume, history } = req.body;
+    if (!message) return res.status(400).json({ error: "Message is required." });
+    if (!resume)  return res.status(400).json({ error: "Resume data is required." });
+
+    const safeMsg = sanitize(message, 500);
+
+    const systemPrompt = `You are a resume editing assistant for Crafted Resume. The user has a generated resume and wants to refine it through conversation.
+
+You can help with:
+- Rewriting or improving specific sections (summary, experience, skills)
+- Changing tone (more confident, more concise, more technical)
+- Adding metrics or quantifying achievements
+- Making it more targeted to a specific industry or role
+- Switching to a different writing style
+
+Current resume:
+Name: ${sanitize(resume.name||"",120)}
+Target Role: ${sanitize(resume.targetRole||"",200)}
+Summary: ${sanitize(resume.summary||"",1000)}
+Experience: ${sanitize(resume.experience||"",3000)}
+Education: ${sanitize(resume.education||"",500)}
+Skills: ${sanitize(resume.skills||"",1000)}
+Certifications: ${sanitize(resume.certifications||"",300)}
+
+When the user asks for changes to the resume content, respond with BOTH:
+1. A brief conversational reply explaining what you changed
+2. An updated JSON object with the full resume
+
+If the user is just asking a question (no changes needed), reply conversationally only.
+
+When returning updated resume, format your response EXACTLY like this:
+<reply>Your conversational message here</reply>
+<resume>${JSON.stringify({name:"...",email:"...",phone:"...",location:"...",linkedin:"...",targetRole:"...",summary:"...",experience:"...",education:"...",skills:"...",certifications:"..."})}</resume>
+
+If no resume update is needed, just reply normally with no tags.`;
+
+    const messages = [
+      ...((history||[]).slice(-6).map(m => ({ role: m.role, content: m.content }))),
+      { role: "user", content: safeMsg }
+    ];
+
+    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type":"application/json", "x-api-key":ANTHROPIC_API_KEY, "anthropic-version":"2023-06-01" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2000,
+        system: systemPrompt,
+        messages,
+      }),
+    });
+
+    if (!anthropicRes.ok) return res.status(502).json({ error:"AI service error — please try again." });
+
+    const aiData  = await anthropicRes.json();
+    const rawText = (aiData.content||[]).map(b=>b.text||"").join("");
+
+    // Parse reply and optional resume update
+    const replyMatch  = rawText.match(/<reply>([\s\S]*?)<\/reply>/);
+    const resumeMatch = rawText.match(/<resume>([\s\S]*?)<\/resume>/);
+
+    const reply = replyMatch ? replyMatch[1].trim() : rawText.trim();
+    let updatedResume = null;
+
+    if (resumeMatch) {
+      try {
+        const parsed = JSON.parse(resumeMatch[1]);
+        updatedResume = {
+          name:           String(parsed.name           || resume.name           || ""),
+          email:          String(parsed.email          || resume.email          || ""),
+          phone:          String(parsed.phone          || resume.phone          || ""),
+          location:       String(parsed.location       || resume.location       || ""),
+          linkedin:       String(parsed.linkedin       || resume.linkedin       || ""),
+          targetRole:     String(parsed.targetRole     || resume.targetRole     || ""),
+          summary:        String(parsed.summary        || ""),
+          experience:     String(parsed.experience     || ""),
+          education:      String(parsed.education      || resume.education      || ""),
+          skills:         String(parsed.skills         || ""),
+          certifications: String(parsed.certifications || resume.certifications || ""),
+        };
+      } catch(e) { console.error("Chat resume parse error:", e); }
+    }
+
+    return res.json({ reply, updatedResume });
+
+  } catch(err) {
+    console.error("Resume chat error:", err);
+    return res.status(500).json({ error:"Internal server error." });
   }
 });
 
