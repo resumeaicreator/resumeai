@@ -1246,7 +1246,7 @@ export default function App() {
             if (data?.user) {
               setUser(data.user);
               setAuthReady(true);
-              setPage(data.user.subscriptionStatus === "active" ? "app" : "subscribe");
+              setPage(data.user.subscriptionStatus === "active" ? "app" : "app");
             } else {
               setUser(false);
               setAuthReady(true);
@@ -1441,8 +1441,8 @@ export default function App() {
           <span style={{width:20,height:20,border:"2px solid rgba(201,168,76,0.3)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block"}} />
         </div>
       )}
-      {authReady && page==="login"    && <AuthPage mode="login"    onSuccess={u=>{setUser(u);setPage(u.subscriptionStatus==="active"?"app":"subscribe");}} switchMode={m=>setPage(m)} />}
-      {authReady && page==="register" && <AuthPage mode="register" onSuccess={u=>{setUser(u);setPage("subscribe");}} switchMode={m=>setPage(m)} />}
+      {authReady && page==="login"    && <AuthPage mode="login"    onSuccess={u=>{setUser(u);setPage("app");}} switchMode={m=>setPage(m)} />}
+      {authReady && page==="register" && <AuthPage mode="register" onSuccess={u=>{setUser(u);setPage("app");}} switchMode={m=>setPage(m)} />}
       {page==="forgot"    && <ForgotPasswordPage switchMode={m=>setPage(m)} />}
       {page==="reset"     && <ResetPasswordPage token={resetToken} onDone={()=>setPage("login")} />}
       {authReady && page==="subscribe" && <SubscribePage user={user} onSubscribed={()=>setPage("app")} onLogout={()=>{setUser(false);setPage("login");}} />}
