@@ -992,7 +992,6 @@ function AccountPage({ user, onLogout, onBack }) {
           </button>
         </div>
       </div>
-      </div>
     </div>
   );
 }
