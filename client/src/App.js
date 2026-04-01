@@ -777,7 +777,7 @@ function LinkedInImport({ onImport }) {
 }
 
 /* ─── Auth Pages ─── */
-function AuthPage({ mode, onSuccess, switchMode }) {
+function AuthPage({ mode, onSuccess, switchMode, onBack }) {
   const [email,setEmail]     = useState("");
   const [password,setPassword] = useState("");
   const [name,setName]       = useState("");
@@ -1031,6 +1031,9 @@ function ForgotPasswordPage({ switchMode }) {
   };
   return (
     <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+      <div style={{position:"fixed",top:20,left:24}}>
+        <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>switchMode("login")}>← Back</button>
+      </div>
       <div style={{width:"100%",maxWidth:400}}>
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{fontFamily:"var(--font-display)",fontSize:30,fontWeight:300,marginBottom:8}}>Reset your password</div>
@@ -1042,7 +1045,7 @@ function ForgotPasswordPage({ switchMode }) {
               <div style={{fontSize:32,marginBottom:12}}>📬</div>
               <div style={{fontWeight:500,marginBottom:8}}>Check your email</div>
               <div style={{fontSize:13,color:"var(--ash)",marginBottom:20}}>If that address is registered, a reset link is on its way.</div>
-              <button className="ghost-btn" style={{width:"100%"}} onClick={()=>switchMode("login")}>Back to Sign In</button>
+
             </div>
           ) : (
             <>
@@ -1054,7 +1057,7 @@ function ForgotPasswordPage({ switchMode }) {
               <button className="gold-btn" onClick={submit} disabled={loading} style={{width:"100%",marginBottom:14}}>
                 {loading ? "Sending…" : "Send Reset Link →"}
               </button>
-              <button className="ghost-btn" style={{width:"100%"}} onClick={()=>switchMode("login")}>← Back to Sign In</button>
+
             </>
           )}
         </div>
@@ -1476,8 +1479,8 @@ export default function App() {
           <span style={{width:20,height:20,border:"2px solid rgba(201,168,76,0.3)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block"}} />
         </div>
       )}
-      {authReady && page==="login"    && <AuthPage mode="login"    onSuccess={u=>{setUser(u);setPage("app");}} switchMode={m=>setPage(m)} />}
-      {authReady && page==="register" && <AuthPage mode="register" onSuccess={u=>{setUser(u);setPage("app");}} switchMode={m=>setPage(m)} />}
+      {authReady && page==="login"    && <AuthPage mode="login"    onBack={()=>setPage("app")} onSuccess={u=>{setUser(u);setPage("app");}} switchMode={m=>setPage(m)} />}
+      {authReady && page==="register" && <AuthPage mode="register" onBack={()=>setPage("app")} onSuccess={u=>{setUser(u);setPage("app");}} switchMode={m=>setPage(m)} />}
       {page==="forgot"    && <ForgotPasswordPage switchMode={m=>setPage(m)} />}
       {page==="reset"     && <ResetPasswordPage token={resetToken} onDone={()=>setPage("login")} />}
       {authReady && page==="subscribe" && <SubscribePage user={user} onSubscribed={()=>setPage("app")} onBack={()=>setPage("app")} onLogout={()=>{setUser(false);setPage("login");}} />}
@@ -1523,7 +1526,6 @@ export default function App() {
                   {label:"Apply",    mode:"apply"},
                 ].map((f,i)=>(
                   <button key={f.label} onClick={()=>{
-                    if (!user) { setPage("login"); return; }
                     if (page !== "app") setPage("app");
                     setErr("");
                     setResult(null);
@@ -1554,33 +1556,179 @@ export default function App() {
         </header>
 
         {/* ══ MAIN ══ */}
-        <div ref={containerRef} className="main-pad" style={{ maxWidth:960, margin:"0 auto", padding:"0 40px 90px", position:"relative", zIndex:2 }}>
+        <div ref={containerRef} className="main-pad" style={{ maxWidth: step===0 ? 1200 : 960, margin:"0 auto", padding:"0 40px 90px", position:"relative", zIndex:2 }}>
 
-          {/* ══ LANDING (step 0) — hero only ══ */}
+          {/* ══ LANDING (step 0) ══ */}
           {step===0 && (
-            <div style={{ textAlign:"center", padding:"120px 0 100px", maxWidth:620, margin:"0 auto" }}>
-              
-              <h1 className="hero-h1 fade-up" style={{ fontFamily:"var(--font-display)", fontSize:68, fontWeight:300, letterSpacing:"-2.5px", lineHeight:1.0, marginBottom:22, animationDelay:"0.1s" }}>
-                From resume to<br />
-                <em style={{ background:"linear-gradient(135deg,#c9a84c,#f0d98a,#c9a84c)", backgroundSize:"200% auto", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text", animation:"gradientShift 4s ease infinite" }}>
-                  interview-ready.
-                </em>
-              </h1>
-              <p className="fade-up" style={{ color:"var(--ash)", fontSize:18, fontWeight:300, lineHeight:1.75, marginBottom:44, animationDelay:"0.18s" }}>
-                AI-powered resume tools. Tailored cover letters. Interview prep.<br />All from a single job posting.
-              </p>
-              <div className="fade-up" style={{ animationDelay:"0.28s" }}>
-                <button className="gold-btn pulse" onClick={()=>{ if(!user){setPage("register");return;} go(1); }} style={{ fontSize:15, padding:"16px 48px", letterSpacing:"0.07em" }}>
-                  Get Started →
+            <div>
+
+              {/* ── Hero ── */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:60, alignItems:"center", padding:"100px 0 80px", maxWidth:1100, margin:"0 auto" }}>
+                {/* Left — copy */}
+                <div>
+                  <div className="fade-up" style={{ display:"inline-flex", alignItems:"center", gap:8, fontSize:11, letterSpacing:"0.18em", textTransform:"uppercase", color:"var(--gold)", border:"1px solid var(--gold-border)", borderRadius:20, padding:"5px 16px", marginBottom:28 }}>
+                    <span style={{ width:5, height:5, borderRadius:"50%", background:"var(--gold)", display:"inline-block" }} />
+                    AI-Powered Resume Tools
+                  </div>
+                  <h1 className="hero-h1 fade-up" style={{ fontFamily:"var(--font-display)", fontSize:62, fontWeight:300, letterSpacing:"-2px", lineHeight:1.05, marginBottom:24, animationDelay:"0.1s" }}>
+                    From resume to<br />
+                    <em style={{ background:"linear-gradient(135deg,#c9a84c,#f0d98a,#c9a84c)", backgroundSize:"200% auto", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text", animation:"gradientShift 4s ease infinite" }}>
+                      interview-ready.
+                    </em>
+                  </h1>
+                  <p className="fade-up" style={{ color:"var(--ash)", fontSize:17, fontWeight:300, lineHeight:1.8, marginBottom:40, animationDelay:"0.18s" }}>
+                    Build, tailor, and optimize your resume with AI. Get a tailored cover letter, interview prep, and ATS score — all from one job posting.
+                  </p>
+                  <div className="fade-up" style={{ display:"flex", gap:12, flexWrap:"wrap", animationDelay:"0.26s" }}>
+                    <button className="gold-btn pulse" onClick={()=>go(1)} style={{ fontSize:14, padding:"14px 36px" }}>
+                      Get Started Free →
+                    </button>
+                    <button className="ghost-btn" onClick={()=>go(1)} style={{ fontSize:14, padding:"14px 28px" }}>
+                      Sign In
+                    </button>
+                  </div>
+                  <div className="fade-in" style={{ marginTop:32, display:"flex", alignItems:"center", gap:24, flexWrap:"wrap", animationDelay:"0.4s" }}>
+                    {["Free to start","No watermarks","Cancel anytime"].map((t,i)=>(
+                      <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--ash)" }}>
+                        <span style={{ color:"#4ade80" }}>✓</span> {t}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right — product preview card */}
+                <div className="fade-up" style={{ animationDelay:"0.3s", position:"relative" }}>
+                  {/* Glow behind card */}
+                  <div style={{ position:"absolute", inset:-40, background:"radial-gradient(ellipse at center, rgba(201,168,76,0.08) 0%, transparent 70%)", pointerEvents:"none" }} />
+                  <div style={{ background:"#fff", borderRadius:16, padding:"32px 36px", boxShadow:"0 40px 100px rgba(0,0,0,0.6)", position:"relative", fontFamily:"Georgia, serif" }}>
+                    {/* Mock resume header */}
+                    <div style={{ borderBottom:"2px solid #1a1a2e", paddingBottom:16, marginBottom:18 }}>
+                      <div style={{ fontSize:22, fontWeight:300, color:"#1a1a2e", letterSpacing:"-0.5px" }}>Alexandra Chen</div>
+                      <div style={{ fontSize:13, color:"#8a8a96", fontStyle:"italic", marginBottom:8 }}>Senior Product Manager</div>
+                      <div style={{ fontSize:11, color:"#666", display:"flex", gap:14, flexWrap:"wrap" }}>
+                        <span>alex.chen@email.com</span><span>San Francisco, CA</span><span>linkedin.com/in/alexchen</span>
+                      </div>
+                    </div>
+                    {/* Mock profile */}
+                    <div style={{ marginBottom:14 }}>
+                      <div style={{ fontSize:8, fontWeight:700, letterSpacing:"0.15em", textTransform:"uppercase", color:"#1a1a2e", borderBottom:"1px solid rgba(26,26,46,0.15)", paddingBottom:4, marginBottom:8 }}>Profile</div>
+                      <div style={{ fontSize:11, color:"#333", lineHeight:1.6, fontStyle:"italic" }}>Results-driven Product Manager with 7+ years scaling B2B SaaS products from 0 to $12M ARR. Led cross-functional teams of 15+ across 3 time zones, delivering 40% improvement in user retention.</div>
+                    </div>
+                    {/* Mock experience lines */}
+                    <div style={{ marginBottom:10 }}>
+                      <div style={{ fontSize:8, fontWeight:700, letterSpacing:"0.15em", textTransform:"uppercase", color:"#1a1a2e", borderBottom:"1px solid rgba(26,26,46,0.15)", paddingBottom:4, marginBottom:8 }}>Experience</div>
+                      {[
+                        { role:"Senior Product Manager", co:"Stripe", dates:"2021–Present" },
+                        { role:"Product Manager", co:"Notion", dates:"2019–2021" },
+                      ].map((j,i)=>(
+                        <div key={i} style={{ marginBottom:8 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, fontWeight:600, color:"#1a1a2e" }}><span>{j.role} · {j.co}</span><span style={{ color:"#8a8a96", fontWeight:400 }}>{j.dates}</span></div>
+                          <div style={{ width:"100%", height:5, background:"rgba(0,0,0,0.06)", borderRadius:3, marginTop:5 }} />
+                          <div style={{ width:"85%", height:5, background:"rgba(0,0,0,0.06)", borderRadius:3, marginTop:4 }} />
+                        </div>
+                      ))}
+                    </div>
+                    {/* ATS badge overlay */}
+                    <div style={{ position:"absolute", bottom:24, right:24, background:"linear-gradient(135deg,#0d0d0f,#1a1a1f)", borderRadius:12, padding:"10px 16px", display:"flex", alignItems:"center", gap:10, border:"1px solid var(--gold-border)" }}>
+                      <div>
+                        <div style={{ fontSize:9, letterSpacing:"0.12em", textTransform:"uppercase", color:"#5a5a68", marginBottom:2 }}>ATS Score</div>
+                        <div style={{ fontFamily:"var(--font-display)", fontSize:22, fontWeight:300, color:"#4ade80" }}>94<span style={{ fontSize:11, color:"#5a5a68" }}>/100</span></div>
+                      </div>
+                      <div style={{ width:36, height:36, borderRadius:"50%", border:"2.5px solid #4ade80", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        <span style={{ color:"#4ade80", fontSize:14 }}>✓</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Stats bar ── */}
+              <div className="fade-in" style={{ borderTop:"1px solid var(--border-subtle)", borderBottom:"1px solid var(--border-subtle)", padding:"32px 0", marginBottom:80 }}>
+                <div style={{ display:"flex", justifyContent:"center", gap:80, flexWrap:"wrap" }}>
+                  {[
+                    { stat:"4 tools", label:"in one platform" },
+                    { stat:"ATS optimised", label:"every resume" },
+                    { stat:"$15/month", label:"all features included" },
+                    { stat:"Cancel anytime", label:"no lock-in" },
+                  ].map((s,i)=>(
+                    <div key={i} style={{ textAlign:"center" }}>
+                      <div style={{ fontFamily:"var(--font-display)", fontSize:28, fontWeight:300, color:"var(--gold)", marginBottom:4 }}>{s.stat}</div>
+                      <div style={{ fontSize:12, color:"var(--ash)" }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Features ── */}
+              <div style={{ maxWidth:1100, margin:"0 auto 100px" }}>
+                <div style={{ textAlign:"center", marginBottom:56 }}>
+                  <h2 style={{ fontFamily:"var(--font-display)", fontSize:44, fontWeight:300, letterSpacing:"-1px", marginBottom:14 }}>Everything you need to get hired</h2>
+                  <p style={{ color:"var(--ash)", fontSize:16, fontWeight:300 }}>Four powerful tools. One platform.</p>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:20 }}>
+                  {[
+                    { icon:"⚡", title:"Apply Mode", badge:"Premium", desc:"Paste any job URL. Get a tailored resume, cover letter, and interview prep — all in one shot. The fastest way to apply." },
+                    { icon:"✦", title:"Build Resume", badge:"Free", desc:"Start from scratch. Fill in your details and get a polished, ATS-optimised resume in under 2 minutes." },
+                    { icon:"↑", title:"Tailor to a Job", badge:"Free", desc:"Already have a resume? Upload your PDF and rewrite it specifically for any role — even if the industries are different." },
+                    { icon:"in", title:"LinkedIn Optimizer", badge:"Free", desc:"Get a full AI audit of your LinkedIn profile with prioritised, actionable fixes to attract more recruiters." },
+                  ].map((f,i)=>(
+                    <div key={i} className="card" style={{ padding:"28px 24px", cursor:"pointer" }} onClick={()=>go(1)}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
+                        <span style={{ fontSize:24, color:"var(--gold)" }}>{f.icon}</span>
+                        <span style={{ fontSize:9, padding:"3px 10px", borderRadius:8, background: f.badge==="Premium" ? "linear-gradient(135deg,#c9a84c,#e8c96d)" : "rgba(74,222,128,0.1)", color: f.badge==="Premium" ? "#0d0d0f" : "#4ade80", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", border: f.badge==="Free" ? "1px solid rgba(74,222,128,0.3)" : "none" }}>{f.badge}</span>
+                      </div>
+                      <div style={{ fontWeight:500, fontSize:16, marginBottom:10, color:"var(--text-primary)" }}>{f.title}</div>
+                      <div style={{ fontSize:13, color:"var(--text-secondary)", lineHeight:1.7 }}>{f.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Pricing ── */}
+              <div style={{ maxWidth:480, margin:"0 auto 100px", textAlign:"center" }}>
+                <h2 style={{ fontFamily:"var(--font-display)", fontSize:44, fontWeight:300, letterSpacing:"-1px", marginBottom:14 }}>Simple pricing</h2>
+                <p style={{ color:"var(--ash)", fontSize:16, fontWeight:300, marginBottom:40 }}>Start free. Upgrade when you're ready.</p>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:32 }}>
+                  {/* Free tier */}
+                  <div className="card" style={{ padding:"28px 24px", textAlign:"left" }}>
+                    <div style={{ fontSize:11, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--ash)", marginBottom:8 }}>Free</div>
+                    <div style={{ fontFamily:"var(--font-display)", fontSize:36, fontWeight:300, marginBottom:4 }}>$0</div>
+                    <div style={{ fontSize:12, color:"var(--ash)", marginBottom:20 }}>No card needed</div>
+                    {["Build Resume","Tailor to Job","LinkedIn Optimizer","ATS Score + Tips"].map((f,i)=>(
+                      <div key={i} style={{ display:"flex", gap:8, marginBottom:8, fontSize:13 }}>
+                        <span style={{ color:"#4ade80", flexShrink:0 }}>✓</span><span style={{ color:"var(--text-secondary)" }}>{f}</span>
+                      </div>
+                    ))}
+                    <button className="ghost-btn" style={{ width:"100%", marginTop:20, fontSize:13 }} onClick={()=>go(1)}>Get Started →</button>
+                  </div>
+                  {/* Premium tier */}
+                  <div style={{ padding:"28px 24px", textAlign:"left", background:"var(--gold-dim)", border:"1px solid var(--gold-border)", borderRadius:16, position:"relative" }}>
+                    <div style={{ position:"absolute", top:-10, right:16, fontSize:9, padding:"3px 12px", borderRadius:8, background:"linear-gradient(135deg,#c9a84c,#e8c96d)", color:"#0d0d0f", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase" }}>Popular</div>
+                    <div style={{ fontSize:11, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--gold)", marginBottom:8 }}>Premium</div>
+                    <div style={{ fontFamily:"var(--font-display)", fontSize:36, fontWeight:300, color:"var(--gold)", marginBottom:4 }}>$15<span style={{ fontSize:14, color:"var(--ash)" }}>/mo</span></div>
+                    <div style={{ fontSize:12, color:"var(--ash)", marginBottom:20 }}>Cancel anytime</div>
+                    {["Everything in Free","Apply Mode","PDF Download","Share Link","ATS Fix My Score","AI Resume Assistant","Job Recommendations"].map((f,i)=>(
+                      <div key={i} style={{ display:"flex", gap:8, marginBottom:8, fontSize:13 }}>
+                        <span style={{ color:"var(--gold)", flexShrink:0 }}>✦</span><span style={{ color:"var(--text-primary)" }}>{f}</span>
+                      </div>
+                    ))}
+                    <button className="gold-btn pulse" style={{ width:"100%", marginTop:20, fontSize:13 }} onClick={()=>go(1)}>Start Free →</button>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Final CTA ── */}
+              <div style={{ textAlign:"center", padding:"80px 0 60px", borderTop:"1px solid var(--border-subtle)" }}>
+                <h2 style={{ fontFamily:"var(--font-display)", fontSize:48, fontWeight:300, letterSpacing:"-1.5px", marginBottom:16 }}>
+                  Your next job starts<br />
+                  <em style={{ background:"linear-gradient(135deg,#c9a84c,#f0d98a)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>with a great resume.</em>
+                </h2>
+                <p style={{ color:"var(--ash)", fontSize:16, marginBottom:36 }}>Join thousands of job seekers who use Crafted Resume to stand out.</p>
+                <button className="gold-btn pulse" onClick={()=>go(1)} style={{ fontSize:15, padding:"16px 48px" }}>
+                  Get Started Free →
                 </button>
               </div>
-              <div className="fade-in" style={{ marginTop:44, display:"flex", alignItems:"center", justifyContent:"center", gap:28, flexWrap:"wrap", animationDelay:"0.42s" }}>
-                {["Cancel anytime","No watermarks","Secure payments"].map((t,i)=>(
-                  <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--ash)" }}>
-                    <span style={{ color:"#4ade80" }}>✓</span> {t}
-                  </div>
-                ))}
-              </div>
+
             </div>
           )}
 
