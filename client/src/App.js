@@ -460,7 +460,7 @@ function LockedPreview({ data, template, onUpgrade }) {
         <div style={{ fontSize:14, color:"var(--text-primary)", fontWeight:500 }}>Your resume is ready — upgrade to view and download</div>
         <div style={{ fontSize:12, color:"var(--ash)", marginBottom:4 }}>PDF export · Share link · ATS fixer · Full preview</div>
         <button className="gold-btn pulse" style={{ fontSize:13, padding:"11px 28px" }} onClick={onUpgrade}>
-          Unlock for $10/month →
+          Unlock for $15/month →
         </button>
       </div>
     </div>
@@ -809,7 +809,7 @@ function AuthPage({ mode, onSuccess, switchMode }) {
             {mode==="register" ? "Create account" : "Welcome back"}
           </div>
           <div style={{fontSize:13,color:"var(--ash)"}}>
-            {mode==="register" ? "$10/month. Cancel anytime." : "Sign in to your Crafted Resume account."}
+            {mode==="register" ? "$15/month. Cancel anytime." : "Sign in to your Crafted Resume account."}
           </div>
         </div>
 
@@ -909,7 +909,7 @@ function SubscribePage({ user, onSubscribed, onLogout, onBack }) {
         </p>
         <div className="card" style={{padding:"32px 28px",marginBottom:16}}>
           <div style={{fontFamily:"var(--font-display)",fontSize:52,fontWeight:300,marginBottom:4}}>
-            $10<span style={{fontSize:18,color:"var(--ash)"}}>/month</span>
+            $15<span style={{fontSize:18,color:"var(--ash)"}}>/month</span>
           </div>
           <div style={{fontSize:13,color:"var(--ash)",marginBottom:28}}>Cancel anytime. No contracts.</div>
           {[
@@ -927,7 +927,7 @@ function SubscribePage({ user, onSubscribed, onLogout, onBack }) {
           ))}
           {err && <div style={{margin:"14px 0",padding:"10px 14px",background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:9,fontSize:13,color:"#f87171"}}>{err}</div>}
           <button className="gold-btn pulse" onClick={checkout} disabled={loading} style={{width:"100%",marginTop:20,fontSize:14,padding:"14px"}}>
-            {loading ? "Redirecting to Stripe…" : "Subscribe — $10/month →"}
+            {loading ? "Redirecting to Stripe…" : "Subscribe — $15/month →"}
           </button>
           <div style={{marginTop:12,fontSize:11,color:"var(--ash)"}}>
             Secured by Stripe. We never see your card details.
@@ -977,7 +977,7 @@ function AccountPage({ user, onLogout, onBack }) {
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <span style={{width:8,height:8,borderRadius:"50%",background:user?.subscriptionStatus==="active"?"#4ade80":"#f87171",display:"inline-block"}} />
               <span style={{fontSize:14,fontWeight:500,color:user?.subscriptionStatus==="active"?"#4ade80":"#f87171"}}>
-                {user?.subscriptionStatus==="active" ? "Active — $10/month" : user?.subscriptionStatus==="past_due" ? "Payment issue" : "No active subscription"}
+                {user?.subscriptionStatus==="active" ? "Active — $15/month" : user?.subscriptionStatus==="past_due" ? "⚠ Payment failed — update billing" : "No active subscription"}
               </span>
             </div>
           </div>
@@ -1120,6 +1120,37 @@ function ResetPasswordPage({ token, onDone }) {
 }
 
 /* ─── Email Verified Banner ─── */
+/* ─── Expired Subscription Banner ─── */
+function ExpiredBanner({ status, onUpgrade }) {
+  if (status === "active") return null;
+  const isPastDue = status === "past_due";
+  return (
+    <div className="fade-in" style={{
+      position:"fixed", top:70, left:"50%", transform:"translateX(-50%)",
+      zIndex:999, padding:"12px 20px", borderRadius:12, fontSize:13,
+      display:"flex", alignItems:"center", gap:12,
+      background: isPastDue ? "rgba(251,191,36,0.1)" : "rgba(248,113,113,0.08)",
+      border: isPastDue ? "1px solid rgba(251,191,36,0.3)" : "1px solid rgba(248,113,113,0.2)",
+      color: isPastDue ? "#fbbf24" : "#f87171",
+      boxShadow:"0 8px 32px rgba(0,0,0,0.3)", maxWidth:520, width:"90vw",
+    }}>
+      <span style={{fontSize:16}}>{isPastDue ? "⚠" : "ℹ"}</span>
+      <span style={{flex:1}}>
+        {isPastDue
+          ? "Your payment failed — update your billing to keep access."
+          : "Your subscription has expired. Upgrade to regain full access."}
+      </span>
+      <button onClick={onUpgrade} style={{
+        background:"none", border:"1px solid currentColor", borderRadius:8,
+        color:"inherit", fontSize:11, padding:"5px 12px", cursor:"pointer",
+        fontFamily:"var(--font-body)", flexShrink:0, whiteSpace:"nowrap"
+      }}>
+        {isPastDue ? "Update Billing" : "Upgrade →"}
+      </button>
+    </div>
+  );
+}
+
 function VerifyBanner({ onClose }) {
   return (
     <div className="fade-in" style={{position:"fixed",top:80,left:"50%",transform:"translateX(-50%)",zIndex:999,padding:"14px 24px",background:"rgba(74,222,128,0.12)",border:"1px solid rgba(74,222,128,0.3)",borderRadius:12,fontSize:13,color:"#4ade80",display:"flex",alignItems:"center",gap:12,boxShadow:"0 8px 32px rgba(0,0,0,0.3)"}}>
@@ -1347,7 +1378,7 @@ export default function App() {
     const iv=startLoad(["Analysing your details…","Writing your bullet points…","Optimising for ATS…","Adding the finishing touches…"]);
     setResult(null);
     try { setResult(await callAPI("/api/generate",{name:form.name,email:form.email,phone:form.phone,location:form.location,linkedin:form.linkedin,targetRole:form.targetRole,targetIndustry:form.targetIndustry,experiences:form.experiences,education:form.education,skills:form.skills,certifications:form.certifications})); go(3); }
-    catch(e){ setErr(e.message||"Generation failed."); }
+    catch(e){ if(e.message==="premium_required"){setPage("subscribe");}else{setErr(e.message||"Generation failed.");} }
     finally { clearInterval(iv); setLoading(false); }
   };
 
@@ -1357,7 +1388,7 @@ export default function App() {
     const iv=startLoad(["Reading your resume…","Matching it to the role…","Rewriting your experience…","Polishing the result…"]);
     setResult(null);
     try { setResult(await callAPI("/api/tailor",{pdfBase64:uploadedPdf.base64,jobDescription,template:form.template})); go(3); }
-    catch(e){ setErr(e.message||"Tailoring failed."); }
+    catch(e){ if(e.message==="premium_required"){setPage("subscribe");}else{setErr(e.message||"Tailoring failed.");} }
     finally { clearInterval(iv); setLoading(false); }
   };
 
@@ -1366,7 +1397,7 @@ export default function App() {
     const iv=startLoad(["Reading your profile…","Spotting what to improve…","Writing your suggestions…","Putting it all together…"]);
     setLiResult(null);
     try { setLiResult(await callAPI("/api/linkedin",liData)); go(3); }
-    catch(e){ setErr(e.message||"LinkedIn analysis failed."); }
+    catch(e){ if(e.message==="premium_required"){setPage("subscribe");}else{setErr(e.message||"LinkedIn analysis failed.");} }
     finally { clearInterval(iv); setLoading(false); }
   };
 
@@ -1396,7 +1427,7 @@ export default function App() {
       setApplyResult(res);
       setApplyTab("resume");
       go(3);
-    } catch(e){ setErr(e.message||"Apply Mode failed — please try again."); }
+    } catch(e){ if(e.message==="premium_required"){setPage("subscribe");}else{setErr(e.message||"Apply Mode failed — please try again.");} }
     finally { clearInterval(iv); setLoading(false); }
   };
 
@@ -1452,6 +1483,9 @@ export default function App() {
       {authReady && page==="subscribe" && <SubscribePage user={user} onSubscribed={()=>setPage("app")} onBack={()=>setPage("app")} onLogout={()=>{setUser(false);setPage("login");}} />}
       {authReady && page==="account"   && <AccountPage user={user} onBack={()=>setPage("app")} onLogout={()=>{setUser(false);setPage("login");}} />}
       {showVerifyBanner && <VerifyBanner onClose={()=>setShowVerifyBanner(false)} />}
+      {user && user.subscriptionStatus !== "active" && page==="app" && (
+        <ExpiredBanner status={user.subscriptionStatus} onUpgrade={()=>setPage("subscribe")} />
+      )}
       {authReady && page==="app" && (
       <div style={{ minHeight:"100vh", background:"var(--ink)", position:"relative", overflowX:"hidden" }}>
         <HeroGlow />
@@ -1584,7 +1618,7 @@ export default function App() {
                   { id:"build",
                     icon:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
                     title:"Build Resume",
-                    desc:"Start from scratch. Fill in your details and Claude writes your resume." },
+                    desc:"Start from scratch. Fill in your details and get a polished resume in seconds." },
                   { id:"tailor",
                     icon:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
                     title:"Tailor to a Job",
@@ -1693,7 +1727,7 @@ export default function App() {
             <div>
               <div className="card fade-up d1">
                 <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Upload Your Existing Resume</h2>
-                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:24, fontWeight:300 }}>Claude will read your PDF and rewrite it to match the job you want — even if the roles are completely different.</p>
+                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:24, fontWeight:300 }}>Your PDF is read and rewritten to match the job you want — even if the roles are completely different.</p>
                 <div className={`drop-zone${dragOver?" drag-over":""}`} onClick={()=>fileRef.current?.click()} onDragOver={e=>{e.preventDefault();setDragOver(true);}} onDragLeave={()=>setDragOver(false)} onDrop={e=>{e.preventDefault();setDragOver(false);handleFile(e.dataTransfer.files[0]);}} style={{ marginBottom:24 }}>
                   <input ref={fileRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={e=>handleFile(e.target.files[0])} />
                   {uploadedPdf ? (
@@ -1780,7 +1814,7 @@ export default function App() {
                 {(applyInput.inputMode==="url"||applyInput.inputMode==="both") && (
                   <F label="Job Posting URL">
                     <input placeholder="https://www.linkedin.com/jobs/view/... or any job board URL" value={applyInput.jobUrl} onChange={e=>setApplyInput(a=>({...a,jobUrl:e.target.value}))} />
-                    <p style={{ fontSize:11,color:"rgba(255,255,255,0.2)",marginTop:5 }}>Claude will fetch and read the full job posting automatically.</p>
+                    <p style={{ fontSize:11,color:"rgba(255,255,255,0.2)",marginTop:5 }}>The full job posting is fetched and read automatically.</p>
                   </F>
                 )}
                 {(applyInput.inputMode==="text"||applyInput.inputMode==="both") && (
@@ -1793,7 +1827,7 @@ export default function App() {
               {/* Resume upload */}
               <div className="card fade-up d2">
                 <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Your Resume</h2>
-                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:20, fontWeight:300 }}>Upload your current resume PDF — Claude will tailor it specifically to this job.</p>
+                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:20, fontWeight:300 }}>Upload your current resume PDF and it will be tailored specifically to this job.</p>
                 <div className={`drop-zone${dragOver?" drag-over":""}`}
                   onClick={()=>applyFileRef.current?.click()}
                   onDragOver={e=>{e.preventDefault();setDragOver(true);}}
