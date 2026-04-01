@@ -447,23 +447,6 @@ function ResumeChat({ resume, onUpdate }) {
 }
 
 /* ─── Premium Lock Overlay ─── */
-function PremiumLock({ onUpgrade, message="This is a premium feature" }) {
-  return (
-    <div style={{ position:"relative", borderRadius:12, overflow:"hidden" }}>
-      <div style={{ filter:"blur(6px)", pointerEvents:"none", userSelect:"none", opacity:0.5 }}>
-        <div style={{ height:120, background:"linear-gradient(135deg, var(--ink3), var(--ink2))", borderRadius:12 }} />
-      </div>
-      <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12, background:"rgba(13,13,15,0.7)", backdropFilter:"blur(2px)", borderRadius:12, border:"1px solid var(--gold-border)" }}>
-        <span style={{ fontSize:20 }}>✦</span>
-        <div style={{ fontSize:13, color:"var(--text-primary)", fontWeight:500, textAlign:"center" }}>{message}</div>
-        <button className="gold-btn" style={{ fontSize:12, padding:"8px 20px" }} onClick={onUpgrade}>
-          Upgrade to Premium →
-        </button>
-      </div>
-    </div>
-  );
-}
-
 /* ─── Blurred Resume Preview for free users ─── */
 function LockedPreview({ data, template, onUpgrade }) {
   return (
