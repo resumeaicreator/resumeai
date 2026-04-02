@@ -183,12 +183,18 @@ const FontLink = () => {
     @media (max-width:640px) {
       .card { padding:20px 18px !important; border-radius:14px !important; }
       .mode-card { padding:16px 14px !important; }
-      .gold-btn { padding:12px 16px !important; font-size:12px !important; width:100% !important; }
+      .gold-btn { padding:12px 16px !important; font-size:12px !important; }
       .ghost-btn { padding:11px 14px !important; font-size:12px !important; }
       .drop-zone { padding:28px 16px !important; }
-      .hero-h1 { font-size:38px !important; letter-spacing:-1px !important; }
+      .hero-h1 { font-size:32px !important; letter-spacing:-1px !important; }
       .main-pad { padding:0 16px 80px !important; }
       .header-pills { display:none !important; }
+      .result-actions { flex-direction:column !important; }
+      .result-actions button { width:100% !important; }
+      .li-card { padding:16px !important; }
+    }
+    @media (max-width:480px) {
+      .hero-h1 { font-size:28px !important; }
     }
   `}</style>
   );
@@ -512,7 +518,7 @@ function ATSScoreHook({ onSignUp }) {
           </div>
 
           {/* Feedback */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:24 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))", gap:12, marginBottom:24 }}>
             {[
               { label:"Keywords found", value:score.hits.length, max:20, good: score.hits.length >= 8 },
               { label:"Word count", value:score.wordCount, max:600, good: score.wordCount >= 250 },
@@ -631,7 +637,7 @@ function InterviewPrepForm({ onResult, setErr, loading, setLoading, loadMsg, sta
   return (
     <div>
       <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:20 }}>Tell us about the interview</h2>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16, marginBottom:16 }}>
         <div>
           <label className="field-label">Job Role *</label>
           <input placeholder="e.g. Senior Product Manager" value={role} onChange={e=>setRole(e.target.value)} />
@@ -685,7 +691,7 @@ function LinkedInWriterForm({ onResult, setErr, loading, setLoading, loadMsg, st
   return (
     <div>
       <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:20 }}>Your LinkedIn profile</h2>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16, marginBottom:16 }}>
         <div>
           <label className="field-label">Your Name</label>
           <input placeholder="e.g. Alex Chen" value={name} onChange={e=>setName(e.target.value)} />
@@ -1759,8 +1765,8 @@ export default function App() {
           backgroundImage:`url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }} />
 
         {/* ══ HEADER ══ */}
-        <header style={{ position:"sticky", top:0, zIndex:100, borderBottom:"1px solid var(--border-subtle)", background:"var(--header-bg)", backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)", padding:"0 40px" }}>
-          <div style={{ maxWidth:880, margin:"0 auto", display:"flex", alignItems:"center", height:66 }}>
+        <header style={{ position:"sticky", top:0, zIndex:100, borderBottom:"1px solid var(--border-subtle)", background:"var(--header-bg)", backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)", padding:"0 20px" }}>
+          <div style={{ maxWidth:880, margin:"0 auto", display:"flex", alignItems:"center", height:60 }}>
             <div onClick={resetAll} style={{ display:"flex", alignItems:"center", gap:11, cursor:"pointer" }}
               onMouseEnter={e=>e.currentTarget.style.opacity="0.8"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
               <LogoMark size={36} />
@@ -1825,7 +1831,7 @@ export default function App() {
             <div>
 
               {/* ── Hero ── */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:60, alignItems:"center", padding:"100px 0 80px", maxWidth:1100, margin:"0 auto" }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))", gap:40, alignItems:"center", padding:"60px 0 60px", maxWidth:1100, margin:"0 auto" }}>
                 {/* Left — copy */}
                 <div>
                   <div className="fade-up" style={{ display:"inline-flex", alignItems:"center", gap:8, fontSize:11, letterSpacing:"0.18em", textTransform:"uppercase", color:"var(--gold)", border:"1px solid var(--gold-border)", borderRadius:20, padding:"5px 16px", marginBottom:28 }}>
@@ -1841,7 +1847,7 @@ export default function App() {
                   <p className="fade-up" style={{ color:"var(--ash)", fontSize:17, fontWeight:300, lineHeight:1.8, marginBottom:40, animationDelay:"0.18s" }}>
                     Build, tailor, and optimize your resume with AI. Get a tailored cover letter, interview prep, and ATS score — all from one job posting.
                   </p>
-                  <div className="fade-up" style={{ display:"flex", gap:12, flexWrap:"wrap", animationDelay:"0.26s" }}>
+                  <div className="fade-up" style={{ display:"flex", gap:12, flexWrap:"wrap", animationDelay:"0.26s", maxWidth:380 }}>
                     <button className="gold-btn pulse" onClick={()=>go(1)} style={{ fontSize:14, padding:"14px 36px" }}>
                       Get Started Free →
                     </button>
@@ -1906,7 +1912,7 @@ export default function App() {
 
               {/* ── Stats bar ── */}
               <div className="fade-in" style={{ borderTop:"1px solid var(--border-subtle)", borderBottom:"1px solid var(--border-subtle)", padding:"32px 0", marginBottom:80 }}>
-                <div style={{ display:"flex", justifyContent:"center", gap:80, flexWrap:"wrap" }}>
+                <div style={{ display:"flex", justifyContent:"center", gap:40, flexWrap:"wrap" }}>
                   {[
                     { stat:"4 tools", label:"in one platform" },
                     { stat:"ATS optimised", label:"every resume" },
@@ -1950,7 +1956,7 @@ export default function App() {
               <div style={{ maxWidth:480, margin:"0 auto 100px", textAlign:"center" }}>
                 <h2 style={{ fontFamily:"var(--font-display)", fontSize:44, fontWeight:300, letterSpacing:"-1px", marginBottom:14 }}>Simple pricing</h2>
                 <p style={{ color:"var(--ash)", fontSize:16, fontWeight:300, marginBottom:40 }}>Start free. Upgrade when you're ready.</p>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:32 }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16, marginBottom:32 }}>
                   {/* Free tier */}
                   <div className="card" style={{ padding:"28px 24px", textAlign:"left" }}>
                     <div style={{ fontSize:11, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--ash)", marginBottom:8 }}>Free</div>
