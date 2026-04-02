@@ -447,7 +447,106 @@ function ResumeChat({ resume, onUpdate }) {
 }
 
 /* ─── Premium Lock Overlay ─── */
-/* ─── Blurred Resume Preview for free users ─── */
+/* ─── ATS Score Hook (Landing Page) ─── */
+function ATSScoreHook({ onSignUp }) {
+  const [text, setText]     = useState("");
+  const [score, setScore]   = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const ATS_WORDS = ["led","managed","developed","increased","reduced","achieved","collaborated","implemented","delivered","optimized","launched","spearheaded","drove","built","designed","scaled","streamlined","negotiated","mentored","generated"];
+
+  const check = () => {
+    if (!text.trim()) return;
+    setLoading(true);
+    setTimeout(() => {
+      const lower = text.toLowerCase();
+      const hits = ATS_WORDS.filter(w => lower.includes(w));
+      const wordCount = text.split(/\s+/).filter(Boolean).length;
+      const lengthScore = Math.min(30, Math.round((wordCount / 400) * 30));
+      const keywordScore = Math.round((hits.length / ATS_WORDS.length) * 50);
+      const quantScore = (text.match(/\d+%|\$\d+|\d+x|\d+\+/g)||[]).length * 3;
+      const total = Math.min(98, 25 + lengthScore + keywordScore + quantScore);
+      setScore({ total, hits, wordCount });
+      setLoading(false);
+    }, 800);
+  };
+
+  const color = score ? (score.total >= 70 ? "#4ade80" : score.total >= 50 ? "#fbbf24" : "#f87171") : "var(--gold)";
+
+  return (
+    <div style={{ maxWidth:800, margin:"0 auto 80px", padding:"40px", background:"var(--ink2)", borderRadius:20, border:"1px solid var(--border-subtle)" }}>
+      <div style={{ textAlign:"center", marginBottom:28 }}>
+        <div style={{ fontFamily:"var(--font-display)", fontSize:32, fontWeight:300, marginBottom:8 }}>
+          How ATS-friendly is your resume?
+        </div>
+        <div style={{ fontSize:14, color:"var(--ash)" }}>Paste your resume text below for an instant score — no account needed.</div>
+      </div>
+
+      {!score ? (
+        <>
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder="Paste your resume text here..."
+            rows={8}
+            style={{ width:"100%", marginBottom:14, resize:"vertical", minHeight:160, fontFamily:"var(--font-body)", fontSize:13 }}
+          />
+          <button
+            className="gold-btn"
+            onClick={check}
+            disabled={loading || !text.trim()}
+            style={{ width:"100%", fontSize:14, padding:"14px" }}
+          >
+            {loading ? "Analysing…" : "Check My ATS Score →"}
+          </button>
+        </>
+      ) : (
+        <div className="fade-in">
+          {/* Score display */}
+          <div style={{ textAlign:"center", marginBottom:28 }}>
+            <div style={{ fontFamily:"var(--font-display)", fontSize:72, fontWeight:300, color, lineHeight:1 }}>{score.total}</div>
+            <div style={{ fontSize:14, color:"var(--ash)", marginBottom:16 }}>out of 100</div>
+            <div style={{ maxWidth:400, margin:"0 auto", background:"rgba(255,255,255,0.05)", borderRadius:999, height:8, overflow:"hidden" }}>
+              <div style={{ width:`${score.total}%`, height:"100%", background:`linear-gradient(90deg,${color}88,${color})`, borderRadius:999, transition:"width 1.4s cubic-bezier(0.16,1,0.3,1)" }} />
+            </div>
+          </div>
+
+          {/* Feedback */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:24 }}>
+            {[
+              { label:"Keywords found", value:score.hits.length, max:20, good: score.hits.length >= 8 },
+              { label:"Word count", value:score.wordCount, max:600, good: score.wordCount >= 250 },
+              { label:"Metrics detected", value:(text.match(/\d+%|\$\d+|\d+x|\d+\+/g)||[]).length, max:10, good: (text.match(/\d+%|\$\d+|\d+x|\d+\+/g)||[]).length >= 3 },
+            ].map((stat,i) => (
+              <div key={i} style={{ padding:"14px", background:"rgba(0,0,0,0.2)", borderRadius:12, textAlign:"center" }}>
+                <div style={{ fontFamily:"var(--font-display)", fontSize:28, fontWeight:300, color: stat.good ? "#4ade80" : "#f87171" }}>{stat.value}</div>
+                <div style={{ fontSize:11, color:"var(--ash)", marginTop:4 }}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Verdict + CTA */}
+          <div style={{ padding:"20px 24px", background: score.total >= 70 ? "rgba(74,222,128,0.06)" : "rgba(248,113,113,0.06)", borderRadius:12, border:`1px solid ${score.total >= 70 ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)"}`, marginBottom:20, textAlign:"center" }}>
+            <div style={{ fontSize:15, fontWeight:500, marginBottom:8, color: score.total >= 70 ? "#4ade80" : "#f87171" }}>
+              {score.total >= 70 ? "Good score — let's make it perfect" : score.total >= 50 ? "Room to improve — let AI fix it" : "Low score — this needs fixing before you apply"}
+            </div>
+            <div style={{ fontSize:13, color:"var(--ash)", marginBottom:16 }}>
+              {score.total >= 70 ? "Your resume passes basic ATS screening. Crafted Resume can optimise it further and tailor it to specific jobs." : "Many ATS systems will filter this resume out automatically. Crafted Resume can rewrite and optimise it in seconds."}
+            </div>
+            <button className="gold-btn pulse" style={{ fontSize:14, padding:"12px 32px" }} onClick={onSignUp}>
+              Fix My Resume for Free →
+            </button>
+          </div>
+          <div style={{ textAlign:"center" }}>
+            <button className="ghost-btn" style={{ fontSize:12 }} onClick={() => { setScore(null); setText(""); }}>Check another resume</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Locked Preview for free users ─── */
 function LockedPreview({ data, template, onUpgrade }) {
   return (
     <div style={{ position:"relative", borderRadius:18, overflow:"hidden" }}>
@@ -480,6 +579,10 @@ function Preview({ data, template }) {
     executive:{ accent:"#1a1a2e", sub:"#8a8a96", font:"'Cormorant Garamond',Georgia,serif", body:"'Outfit',sans-serif" },
     modern:   { accent:"#0f4c81", sub:"#555",    font:"'Outfit',sans-serif",                body:"'Outfit',sans-serif" },
     minimal:  { accent:"#2c2c2c", sub:"#777",    font:"Georgia,serif",                      body:"Georgia,serif" },
+    elegant:  { accent:"#6b4c3b", sub:"#9a7b6b", font:"'Cormorant Garamond',Georgia,serif", body:"'Outfit',sans-serif" },
+    bold:     { accent:"#111",    sub:"#444",     font:"'Outfit',sans-serif",                body:"'Outfit',sans-serif" },
+    navy:     { accent:"#1b3a5c", sub:"#5a7a9a",  font:"'Outfit',sans-serif",                body:"'Outfit',sans-serif" },
+    creative: { accent:"#5b2d8e", sub:"#8a6aaa",  font:"'Cormorant Garamond',Georgia,serif", body:"'Outfit',sans-serif" },
   };
   const c = cfg[template]||cfg.executive;
   return (
@@ -501,6 +604,131 @@ function Preview({ data, template }) {
 }
 
 /* ─── LinkedIn Results ─── */
+/* ─── Interview Prep Form ─── */
+function InterviewPrepForm({ onResult, setErr, loading, setLoading, loadMsg, startLoad }) {
+  const [role, setRole]       = useState("");
+  const [company, setCompany] = useState("");
+  const [background, setBackground] = useState("");
+  const API = process.env.REACT_APP_API_URL||"";
+
+  const generate = async () => {
+    if (!role.trim()) { setErr("Please enter the job role."); return; }
+    setErr("");
+    const iv = startLoad(["Researching the role…","Crafting your questions…","Writing guidance…","Finalising…"]);
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/interview-prep`, {
+        method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include",
+        body: JSON.stringify({ role: role.trim(), company: company.trim(), background: background.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setErr(data.error||"Something went wrong."); return; }
+      onResult(data);
+    } catch(e) { setErr(e.message||"Network error."); }
+    finally { clearInterval(iv); setLoading(false); }
+  };
+
+  return (
+    <div>
+      <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:20 }}>Tell us about the interview</h2>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
+        <div>
+          <label className="field-label">Job Role *</label>
+          <input placeholder="e.g. Senior Product Manager" value={role} onChange={e=>setRole(e.target.value)} />
+        </div>
+        <div>
+          <label className="field-label">Company (optional)</label>
+          <input placeholder="e.g. Google, a startup, any company" value={company} onChange={e=>setCompany(e.target.value)} />
+        </div>
+      </div>
+      <div style={{ marginBottom:20 }}>
+        <label className="field-label">Your Background (optional but recommended)</label>
+        <textarea
+          placeholder="Brief summary of your experience e.g. 5 years in product management, built 0-to-1 features, led teams of 8..."
+          value={background}
+          onChange={e=>setBackground(e.target.value)}
+          style={{ minHeight:100 }}
+        />
+      </div>
+      <button className="gold-btn" onClick={generate} disabled={loading||!role.trim()} style={{ width:"100%", fontSize:14, padding:"14px" }}>
+        {loading ? <span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><span style={{ width:16,height:16,border:"2px solid rgba(0,0,0,0.25)",borderTopColor:"#0d0d0f",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block" }} />{loadMsg}</span> : "🎯 Generate Interview Questions →"}
+      </button>
+    </div>
+  );
+}
+
+/* ─── LinkedIn Writer Form ─── */
+function LinkedInWriterForm({ onResult, setErr, loading, setLoading, loadMsg, startLoad }) {
+  const [name, setName]         = useState("");
+  const [role, setRole]         = useState("");
+  const [experience, setExperience] = useState("");
+  const [tone, setTone]         = useState("professional");
+  const API = process.env.REACT_APP_API_URL||"";
+
+  const generate = async () => {
+    if (!role.trim()) { setErr("Please enter your current or target role."); return; }
+    setErr("");
+    const iv = startLoad(["Writing your headline…","Crafting your About section…","Polishing the copy…"]);
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/linkedin-quick`, {
+        method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include",
+        body: JSON.stringify({ name: name.trim(), role: role.trim(), experience: experience.trim(), tone }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setErr(data.error||"Something went wrong."); return; }
+      onResult(data);
+    } catch(e) { setErr(e.message||"Network error."); }
+    finally { clearInterval(iv); setLoading(false); }
+  };
+
+  return (
+    <div>
+      <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:20 }}>Your LinkedIn profile</h2>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
+        <div>
+          <label className="field-label">Your Name</label>
+          <input placeholder="e.g. Alex Chen" value={name} onChange={e=>setName(e.target.value)} />
+        </div>
+        <div>
+          <label className="field-label">Current / Target Role *</label>
+          <input placeholder="e.g. Product Manager" value={role} onChange={e=>setRole(e.target.value)} />
+        </div>
+      </div>
+      <div style={{ marginBottom:16 }}>
+        <label className="field-label">Your Experience & Achievements</label>
+        <textarea
+          placeholder="e.g. 6 years in SaaS product management, led launch of 3 products, grew user base from 10k to 500k, team of 8..."
+          value={experience}
+          onChange={e=>setExperience(e.target.value)}
+          style={{ minHeight:120 }}
+        />
+      </div>
+      <div style={{ marginBottom:20 }}>
+        <label className="field-label">Tone</label>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+          {[
+            { id:"professional", label:"Professional" },
+            { id:"conversational", label:"Conversational" },
+            { id:"bold", label:"Bold & Direct" },
+            { id:"creative", label:"Creative" },
+          ].map(t => (
+            <button key={t.id} onClick={()=>setTone(t.id)} style={{
+              padding:"8px 16px", borderRadius:20, border:`1px solid ${tone===t.id?"var(--gold)":"rgba(255,255,255,0.1)"}`,
+              background: tone===t.id ? "var(--gold-dim)" : "transparent",
+              color: tone===t.id ? "var(--gold)" : "var(--ash)",
+              cursor:"pointer", fontSize:12, fontFamily:"var(--font-body)", transition:"all 0.2s"
+            }}>{t.label}</button>
+          ))}
+        </div>
+      </div>
+      <button className="gold-btn" onClick={generate} disabled={loading||!role.trim()} style={{ width:"100%", fontSize:14, padding:"14px" }}>
+        {loading ? <span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><span style={{ width:16,height:16,border:"2px solid rgba(0,0,0,0.25)",borderTopColor:"#0d0d0f",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block" }} />{loadMsg}</span> : "✍️ Write My LinkedIn Copy →"}
+      </button>
+    </div>
+  );
+}
+
 function LinkedInResults({ data }) {
   if (!data) return null;
   const pri = { high:"tag-high", medium:"tag-med", low:"tag-low" };
@@ -1246,6 +1474,10 @@ export default function App() {
   const [applyTab,setApplyTab]       = useState("resume");
   const applyFileRef = useRef(null);
 
+  // New tools state
+  const [interviewResult,setInterviewResult]           = useState(null);
+  const [linkedInWriterResult,setLinkedInWriterResult] = useState(null);
+
   const fileRef      = useRef(null);
   const containerRef = useRef(null);
 
@@ -1372,7 +1604,7 @@ export default function App() {
   const rmExp  = i  => set("experiences",form.experiences.filter((_,j)=>j!==i));
   const addEdu = () => set("education",[...form.education,blankEdu()]);
   const go     = n  => { setStep(n); setTimeout(()=>containerRef.current?.scrollTo({top:0,behavior:"smooth"}),50); };
-  const resetAll = () => { setResult(null);setLiResult(null);setApplyResult(null);setUploadedPdf(null);setApplyResume(null);setJobDescription("");setMode("");setApplyInput({jobUrl:"",jobText:"",inputMode:"url"});go(0); };
+  const resetAll = () => { setResult(null);setLiResult(null);setApplyResult(null);setInterviewResult(null);setLinkedInWriterResult(null);setUploadedPdf(null);setApplyResume(null);setJobDescription("");setMode("");setApplyInput({jobUrl:"",jobText:"",inputMode:"url"});go(0); };
 
   const handleFile = file => {
     if (!file||file.type!=="application/pdf"){ setErr("Please upload a PDF file."); return; }
@@ -1489,7 +1721,7 @@ export default function App() {
 
   const TemplateSelector = () => (
     <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
-      {[{id:"executive",title:"Executive",desc:"Serif, commanding"},{id:"modern",title:"Modern",desc:"Clean sans-serif"},{id:"minimal",title:"Minimal",desc:"Let content lead"}].map(t=>(
+      {[{id:"executive",title:"Executive",desc:"Serif, commanding"},{id:"modern",title:"Modern",desc:"Clean sans-serif"},{id:"minimal",title:"Minimal",desc:"Let content lead"},{id:"elegant",title:"Elegant",desc:"Warm serif tones"},{id:"bold",title:"Bold",desc:"High contrast"},{id:"navy",title:"Navy",desc:"Corporate blue"},{id:"creative",title:"Creative",desc:"Purple accent"}].map(t=>(
         <div key={t.id} className={`mode-card${form.template===t.id?" active":""}`} onClick={()=>set("template",t.id)} style={{ padding:16 }}>
           <div style={{ fontWeight:500,fontSize:13,marginBottom:3,color:form.template===t.id?"var(--gold)":"#e2e2ea" }}>{t.title}</div>
           <div style={{ fontSize:11,color:"var(--ash)" }}>{t.desc}</div>
@@ -1552,6 +1784,8 @@ export default function App() {
                   {label:"Tailor",   mode:"tailor"},
                   {label:"LinkedIn", mode:"linkedin"},
                   {label:"Apply",    mode:"apply"},
+                  {label:"Interview",mode:"interview"},
+                  {label:"LI Writer",mode:"linkedin-quick"},
                 ].map((f,i)=>(
                   <button key={f.label} onClick={()=>{
                     if (page !== "app") setPage("app");
@@ -1745,6 +1979,9 @@ export default function App() {
                 </div>
               </div>
 
+              {/* ── ATS Score Hook ── */}
+              <ATSScoreHook onSignUp={()=>setPage("register")} />
+
               {/* ── Final CTA ── */}
               <div style={{ textAlign:"center", padding:"80px 0 60px", borderTop:"1px solid var(--border-subtle)" }}>
                 <h2 style={{ fontFamily:"var(--font-display)", fontSize:48, fontWeight:300, letterSpacing:"-1.5px", marginBottom:16 }}>
@@ -1803,6 +2040,14 @@ export default function App() {
                     icon:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>,
                     title:"LinkedIn Optimizer",
                     desc:"AI audit of your LinkedIn profile with prioritised, actionable fixes." },
+                  { id:"interview",
+                    icon:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+                    title:"Interview Prep",
+                    desc:"Enter a role and company. Get tailored interview questions with expert guidance." },
+                  { id:"linkedin-quick",
+                    icon:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+                    title:"LinkedIn Writer",
+                    desc:"Write a punchy LinkedIn headline and About section in seconds." },
                 ].map((m,i)=>(
                   <div key={m.id} className={`mode-card fade-up d${i+1}`}
                     onClick={()=>{ setMode(m.id); go(2); }}
@@ -2039,6 +2284,44 @@ export default function App() {
                     ? <span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>
                     : "⚡ Generate Full Package"}
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* ══ INTERVIEW PREP FORM ══ */}
+          {step===2 && mode==="interview" && (
+            <div>
+              <div className="fade-up" style={{ background:"linear-gradient(135deg,rgba(74,222,128,0.06),rgba(74,222,128,0.02))", border:"1px solid rgba(74,222,128,0.2)", borderRadius:14, padding:"18px 24px", marginBottom:20, display:"flex", alignItems:"center", gap:14 }}>
+                <div style={{ fontSize:28 }}>🎯</div>
+                <div>
+                  <div style={{ fontFamily:"var(--font-display)", fontSize:18, fontWeight:300, color:"#4ade80", marginBottom:2 }}>Interview Prep Generator</div>
+                  <div style={{ fontSize:13, color:"var(--ash)", fontWeight:300 }}>Enter the role, company, and your background — get tailored interview questions with expert guidance on how to answer.</div>
+                </div>
+              </div>
+              <div className="card fade-up d1">
+                <InterviewPrepForm onResult={r=>{ setInterviewResult(r); go(3); }} setErr={setErr} loading={loading} setLoading={setLoading} loadMsg={loadMsg} startLoad={startLoad} />
+              </div>
+              <div style={{ textAlign:"center", marginTop:16 }}>
+                <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>go(1)}>← Back</button>
+              </div>
+            </div>
+          )}
+
+          {/* ══ LINKEDIN WRITER FORM ══ */}
+          {step===2 && mode==="linkedin-quick" && (
+            <div>
+              <div className="fade-up" style={{ background:"linear-gradient(135deg,rgba(10,102,194,0.08),rgba(10,102,194,0.02))", border:"1px solid rgba(10,102,194,0.2)", borderRadius:14, padding:"18px 24px", marginBottom:20, display:"flex", alignItems:"center", gap:14 }}>
+                <div style={{ fontSize:28 }}>✍️</div>
+                <div>
+                  <div style={{ fontFamily:"var(--font-display)", fontSize:18, fontWeight:300, color:"#60a5fa", marginBottom:2 }}>LinkedIn Headline & Summary Writer</div>
+                  <div style={{ fontSize:13, color:"var(--ash)", fontWeight:300 }}>Get a punchy LinkedIn headline and compelling About section written by AI in seconds.</div>
+                </div>
+              </div>
+              <div className="card fade-up d1">
+                <LinkedInWriterForm onResult={r=>{ setLinkedInWriterResult(r); go(3); }} setErr={setErr} loading={loading} setLoading={setLoading} loadMsg={loadMsg} startLoad={startLoad} />
+              </div>
+              <div style={{ textAlign:"center", marginTop:16 }}>
+                <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>go(1)}>← Back</button>
               </div>
             </div>
           )}
@@ -2288,6 +2571,93 @@ export default function App() {
                   </div>
                   <LinkedInResults data={liResult} />
                 </>
+              )}
+
+              {/* Interview Prep Results */}
+              {interviewResult && (
+                <div className="fade-up">
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+                    <div style={{ fontFamily:"var(--font-display)", fontSize:26, fontWeight:300, color:"#4ade80" }}>🎯 Your Interview Questions</div>
+                    <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
+                  </div>
+                  {interviewResult.role && (
+                    <div style={{ marginBottom:20, padding:"12px 18px", background:"rgba(74,222,128,0.06)", border:"1px solid rgba(74,222,128,0.15)", borderRadius:10, fontSize:13, color:"var(--ash)" }}>
+                      Prepared for: <strong style={{ color:"var(--text-primary)" }}>{interviewResult.role}{interviewResult.company ? ` at ${interviewResult.company}` : ""}</strong>
+                    </div>
+                  )}
+                  <div style={{ marginBottom:16, padding:"14px 18px", background:"rgba(201,168,76,0.06)", border:"1px solid var(--gold-border)", borderRadius:11, fontSize:13, color:"var(--ash)", lineHeight:1.6 }}>
+                    <strong style={{ color:"var(--gold)" }}>🎯 Prep tip:</strong> Practise answering out loud. Aim for 90 seconds per answer using the STAR method: Situation → Task → Action → Result.
+                  </div>
+                  {(interviewResult.questions||[]).map((item,i) => (
+                    <div key={i} className="card fade-up" style={{ animationDelay:`${i*0.06}s`, marginBottom:14 }}>
+                      <div style={{ display:"flex", gap:12, alignItems:"flex-start", marginBottom:10 }}>
+                        <div style={{ width:28,height:28,borderRadius:8,background:"var(--gold-dim)",border:"1px solid var(--gold-border)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,color:"var(--gold)",flexShrink:0 }}>{i+1}</div>
+                        <div style={{ fontWeight:500,fontSize:15,lineHeight:1.4 }}>{item.question}</div>
+                      </div>
+                      <div style={{ marginLeft:40 }}>
+                        <div style={{ fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",color:"var(--gold)",marginBottom:6 }}>How to answer</div>
+                        <div style={{ fontSize:13,color:"var(--ash)",lineHeight:1.7,marginBottom:10 }}>{item.guidance}</div>
+                        {item.keyPoints && item.keyPoints.length > 0 && (
+                          <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                            {item.keyPoints.map((kp,j) => (
+                              <span key={j} style={{ fontSize:11,padding:"3px 10px",borderRadius:8,background:"var(--mist)",border:"1px solid rgba(255,255,255,0.08)",color:"var(--ash)" }}>{kp}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {interviewResult.generalTips && (
+                    <div className="card" style={{ borderColor:"var(--gold-border)", background:"var(--gold-dim)" }}>
+                      <div style={{ fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", color:"var(--gold)", marginBottom:10 }}>General Tips for This Role</div>
+                      <div style={{ fontSize:13, color:"var(--ash)", lineHeight:1.7 }}>{interviewResult.generalTips}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* LinkedIn Writer Results */}
+              {linkedInWriterResult && (
+                <div className="fade-up">
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+                    <div style={{ fontFamily:"var(--font-display)", fontSize:26, fontWeight:300, color:"#60a5fa" }}>✍️ Your LinkedIn Copy</div>
+                    <button className="ghost-btn" style={{ fontSize:12 }} onClick={resetAll}>Start Over</button>
+                  </div>
+
+                  {/* Headlines */}
+                  <div className="card fade-up" style={{ marginBottom:16, borderColor:"rgba(10,102,194,0.2)" }}>
+                    <div style={{ fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:"#60a5fa",marginBottom:14 }}>Headline Options — pick your favourite</div>
+                    {(linkedInWriterResult.headlines||[]).map((h,i) => (
+                      <div key={i} style={{ display:"flex", gap:12, alignItems:"center", padding:"12px 0", borderBottom: i < (linkedInWriterResult.headlines.length-1) ? "1px solid var(--border-subtle)" : "none" }}>
+                        <span style={{ width:22, height:22, borderRadius:"50%", background:"rgba(10,102,194,0.15)", border:"1px solid rgba(10,102,194,0.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, color:"#60a5fa", flexShrink:0 }}>{i+1}</span>
+                        <div style={{ flex:1, fontSize:14, color:"var(--text-primary)", lineHeight:1.5 }}>{h}</div>
+                        <button onClick={()=>navigator.clipboard.writeText(h)} style={{ background:"none", border:"1px solid var(--ghost-border)", borderRadius:6, padding:"4px 10px", fontSize:11, color:"var(--ash)", cursor:"pointer", fontFamily:"var(--font-body)", flexShrink:0 }}>Copy</button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* About section */}
+                  <div className="card fade-up" style={{ marginBottom:16, borderColor:"rgba(10,102,194,0.2)" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                      <div style={{ fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:"#60a5fa" }}>About / Summary Section</div>
+                      <button onClick={()=>navigator.clipboard.writeText(linkedInWriterResult.about||"")} style={{ background:"none", border:"1px solid var(--ghost-border)", borderRadius:6, padding:"4px 10px", fontSize:11, color:"var(--ash)", cursor:"pointer", fontFamily:"var(--font-body)" }}>Copy</button>
+                    </div>
+                    <div style={{ fontSize:13, color:"var(--text-primary)", lineHeight:1.8, whiteSpace:"pre-wrap" }}>{linkedInWriterResult.about}</div>
+                  </div>
+
+                  {/* Tips */}
+                  {linkedInWriterResult.tips && linkedInWriterResult.tips.length > 0 && (
+                    <div className="card fade-up" style={{ borderColor:"var(--gold-border)", background:"var(--gold-dim)" }}>
+                      <div style={{ fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", color:"var(--gold)", marginBottom:10 }}>Profile Optimisation Tips</div>
+                      {linkedInWriterResult.tips.map((tip,i) => (
+                        <div key={i} style={{ display:"flex", gap:8, marginBottom:8, fontSize:13 }}>
+                          <span style={{ color:"var(--gold)", flexShrink:0 }}>→</span>
+                          <span style={{ color:"var(--ash)", lineHeight:1.6 }}>{tip}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}

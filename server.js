@@ -822,6 +822,155 @@ If no resume update is needed (just answering a question or directing to templat
   }
 });
 
+// ─── Interview Prep endpoint ──────────────────────────────────────────
+app.post("/api/interview-prep", limiter, requireAuth, async (req, res) => {
+  try {
+    const role       = sanitize(req.body.role       || "", 200);
+    const company    = sanitize(req.body.company    || "", 200);
+    const background = sanitize(req.body.background || "", 1000);
+
+    if (!role) return res.status(400).json({ error: "Role is required." });
+
+    const prompt = `You are an expert interview coach with 15+ years preparing candidates for roles at top companies.
+
+The candidate is preparing for: ${role}${company ? ` at ${company}` : ""}
+Their background: ${background || "Not provided — generate general questions for this role"}
+
+Generate 8 highly specific interview questions for this exact role${company ? ` at ${company}` : ""}. Include:
+- 2 behavioural questions (past experience)
+- 2 situational questions (hypothetical scenarios)
+- 2 technical/domain questions specific to this role
+- 1 motivation/culture question
+- 1 tricky question they might not expect
+
+For each question provide:
+- Specific guidance on how to answer based on their background
+- 3 key points to hit in their answer
+
+Also provide 2-3 sentences of general advice for this specific role/company.
+
+Return ONLY a raw JSON object, no markdown:
+{
+  "role": "${role}",
+  "company": "${company}",
+  "questions": [
+    {
+      "question": "Tell me about a time you...",
+      "type": "behavioural",
+      "guidance": "Specific 2-3 sentence guidance",
+      "keyPoints": ["point 1", "point 2", "point 3"]
+    }
+  ],
+  "generalTips": "2-3 sentences of general advice for this role/company"
+}`;
+
+    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type":"application/json", "x-api-key":ANTHROPIC_API_KEY, "anthropic-version":"2023-06-01" },
+      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:2000, messages:[{ role:"user", content:prompt }] }),
+    });
+
+    if (!anthropicRes.ok) return res.status(502).json({ error:"AI service error — please try again." });
+
+    const aiData  = await anthropicRes.json();
+    const rawText = (aiData.content||[]).map(b=>b.text||"").join("");
+    const cleaned = rawText.replace(/```json|```/g,"").trim();
+
+    let data;
+    try { data = JSON.parse(cleaned); }
+    catch { return res.status(502).json({ error:"AI returned malformed data — please try again." }); }
+
+    return res.json({
+      role:        String(data.role        || role),
+      company:     String(data.company     || company),
+      generalTips: String(data.generalTips || ""),
+      questions: (data.questions||[]).slice(0,8).map(q => ({
+        question:  String(q.question  || ""),
+        type:      String(q.type      || ""),
+        guidance:  String(q.guidance  || ""),
+        keyPoints: (q.keyPoints||[]).slice(0,4).map(k => String(k)),
+      })),
+    });
+
+  } catch(err) {
+    console.error("Interview prep error:", err);
+    return res.status(500).json({ error:"Internal server error." });
+  }
+});
+
+// ─── LinkedIn Quick Writer endpoint ───────────────────────────────────
+app.post("/api/linkedin-quick", limiter, requireAuth, async (req, res) => {
+  try {
+    const name       = sanitize(req.body.name       || "", 120);
+    const role       = sanitize(req.body.role       || "", 200);
+    const experience = sanitize(req.body.experience || "", 1000);
+    const tone       = sanitize(req.body.tone       || "professional", 30);
+
+    if (!role) return res.status(400).json({ error: "Role is required." });
+
+    const toneDesc = {
+      professional:   "polished, formal, results-focused",
+      conversational: "warm, approachable, first-person and personable",
+      bold:           "direct, punchy, confident — short sentences, strong claims",
+      creative:       "creative, distinctive, memorable — stands out from standard profiles",
+    }[tone] || "professional";
+
+    const prompt = `You are a LinkedIn profile expert and personal branding specialist.
+
+Write compelling LinkedIn copy for:
+${name ? `Name: ${name}` : ""}
+Role: ${role}
+Experience: ${experience || "Not provided — write for a professional in this field"}
+Desired tone: ${toneDesc}
+
+Create:
+1. THREE different headline options (max 220 characters each). Each should be distinct — vary the structure and angle.
+2. ONE compelling About/Summary section (250-350 words). Use first person. Start with a hook, not "I am a...". Include their value proposition, key achievements if provided, and end with a soft call to action.
+3. THREE profile optimisation tips specific to their role/industry.
+
+Return ONLY a raw JSON object, no markdown:
+{
+  "headlines": [
+    "Headline option 1",
+    "Headline option 2",
+    "Headline option 3"
+  ],
+  "about": "Full about section text...",
+  "tips": [
+    "Tip 1",
+    "Tip 2",
+    "Tip 3"
+  ]
+}`;
+
+    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type":"application/json", "x-api-key":ANTHROPIC_API_KEY, "anthropic-version":"2023-06-01" },
+      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1500, messages:[{ role:"user", content:prompt }] }),
+    });
+
+    if (!anthropicRes.ok) return res.status(502).json({ error:"AI service error — please try again." });
+
+    const aiData  = await anthropicRes.json();
+    const rawText = (aiData.content||[]).map(b=>b.text||"").join("");
+    const cleaned = rawText.replace(/```json|```/g,"").trim();
+
+    let data;
+    try { data = JSON.parse(cleaned); }
+    catch { return res.status(502).json({ error:"AI returned malformed data — please try again." }); }
+
+    return res.json({
+      headlines: (data.headlines||[]).slice(0,3).map(h => String(h)),
+      about:     String(data.about || ""),
+      tips:      (data.tips||[]).slice(0,3).map(t => String(t)),
+    });
+
+  } catch(err) {
+    console.error("LinkedIn quick error:", err);
+    return res.status(500).json({ error:"Internal server error." });
+  }
+});
+
 // ─── Fix ATS Score endpoint ───────────────────────────────────────────
 app.post("/api/fix-ats", limiter, requireAuth, requirePaid, async (req, res) => {
   try {
