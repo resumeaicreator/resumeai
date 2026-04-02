@@ -745,33 +745,58 @@ function JobRecommendations({ role, skills, location }) {
 /* ─── LinkedIn URL Import ─── */
 /* ─── Shared Resume Page ─── */
 function LinkedInImport({ onImport }) {
-  const [url,setUrl]         = useState("");
-  const [loading,setLoading] = useState(false);
-  const [msg,setMsg]         = useState("");
+  const [text,setText]        = useState("");
+  const [url,setUrl]          = useState("");
+  const [loading,setLoading]  = useState(false);
+  const [msg,setMsg]          = useState("");
+  const [expanded,setExpanded]= useState(false);
   const doImport = async () => {
-    if (!url.trim()) return;
+    if (!text.trim()) { setMsg("Please paste your LinkedIn profile text first."); return; }
     setLoading(true); setMsg("");
     try {
       const API = process.env.REACT_APP_API_URL||"";
-      const res = await fetch(`${API}/api/linkedin-import`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:url.trim()})});
+      const res = await fetch(`${API}/api/linkedin-import`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify({text:text.trim(),url:url.trim()})});
       const data = await res.json();
       if (!res.ok){setMsg(data.error||"Import failed."); return;}
       onImport(data);
-      setMsg("✓ Imported — review and edit the fields below.");
+      setMsg("✓ Imported successfully — review and edit the fields below.");
+      setText(""); setUrl("");
     } catch(e){setMsg("Couldn't reach the server.");}
     finally{setLoading(false);}
   };
   return (
     <div style={{marginBottom:24,padding:"16px 18px",background:"rgba(10,102,194,0.06)",border:"1px solid rgba(10,102,194,0.2)",borderRadius:12}}>
-      <div style={{fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:"#60a5fa",marginBottom:10}}>Auto-import from LinkedIn URL</div>
-      <div style={{display:"flex",gap:8}}>
-        <input placeholder="https://linkedin.com/in/yourname" value={url} onChange={e=>setUrl(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doImport()} style={{flex:1}} />
-        <button onClick={doImport} disabled={loading||!url.trim()} style={{padding:"10px 18px",borderRadius:9,border:"none",background:"#0a66c2",color:"#fff",fontFamily:"var(--font-body)",fontSize:13,fontWeight:500,cursor:loading||!url.trim()?"not-allowed":"pointer",opacity:loading||!url.trim()?0.5:1,whiteSpace:"nowrap",flexShrink:0}}>
-          {loading?"Importing…":"Import →"}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:expanded?12:0}}>
+        <div style={{fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:"#60a5fa"}}>Import from LinkedIn</div>
+        <button onClick={()=>setExpanded(e=>!e)} style={{background:"none",border:"none",color:"#60a5fa",cursor:"pointer",fontSize:12,fontFamily:"var(--font-body)"}}>
+          {expanded ? "▲ Hide" : "▼ Show"}
         </button>
       </div>
-      {msg && <div style={{marginTop:8,fontSize:12,color:msg.startsWith("✓")?"#4ade80":"#f87171"}}>{msg}</div>}
-      <div style={{marginTop:6,fontSize:11,color:"var(--ash)"}}>Only public profiles can be imported. If blocked, fill the fields below manually.</div>
+      {expanded && (
+        <div className="fade-in">
+          <div style={{fontSize:12,color:"var(--ash)",marginBottom:12,lineHeight:1.6}}>
+            LinkedIn blocks direct access, so paste your profile text below.<br/>
+            <strong style={{color:"#60a5fa"}}>How:</strong> Open your LinkedIn profile → select all text (Ctrl+A) → copy (Ctrl+C) → paste here.
+          </div>
+          <textarea
+            placeholder="Paste your LinkedIn profile text here..."
+            value={text}
+            onChange={e=>setText(e.target.value)}
+            rows={5}
+            style={{width:"100%",marginBottom:8,resize:"vertical",minHeight:100}}
+          />
+          <input
+            placeholder="LinkedIn URL (optional, e.g. linkedin.com/in/yourname)"
+            value={url}
+            onChange={e=>setUrl(e.target.value)}
+            style={{width:"100%",marginBottom:8}}
+          />
+          <button onClick={doImport} disabled={loading||!text.trim()} style={{width:"100%",padding:"10px",borderRadius:9,border:"none",background:"#0a66c2",color:"#fff",fontFamily:"var(--font-body)",fontSize:13,fontWeight:500,cursor:loading||!text.trim()?"not-allowed":"pointer",opacity:loading||!text.trim()?0.5:1}}>
+            {loading ? "Importing…" : "Import Profile →"}
+          </button>
+          {msg && <div style={{marginTop:8,fontSize:12,color:msg.startsWith("✓")?"#4ade80":"#f87171"}}>{msg}</div>}
+        </div>
+      )}
     </div>
   );
 }
@@ -2188,6 +2213,10 @@ export default function App() {
                       </div>
                     );
                   })()}
+                  {/* AI Assistant for Apply Mode */}
+                  {user?.subscriptionStatus === "active" && (
+                    <ResumeChat resume={applyResult.resume} onUpdate={updated=>setApplyResult(r=>({...r,resume:updated}))} />
+                  )}
                 </div>
               )}
 

@@ -650,40 +650,25 @@ Return ONLY a raw JSON object, no markdown:
 });
 
 // ─── LinkedIn profile import endpoint ─────────
-// Accepts a LinkedIn profile URL, fetches the public page, extracts text,
-// and asks Claude to parse it into structured form fields.
+// LinkedIn profile import — accepts pasted profile text (URL fetch blocked by LinkedIn)
 app.post("/api/linkedin-import", limiter, requireAuth, async (req, res) => {
   try {
-    const url = sanitize(req.body.url || "", 300);
-    if (!url || !url.includes("linkedin.com/in/")) {
-      return res.status(400).json({ error: "Please provide a valid LinkedIn profile URL (linkedin.com/in/...)." });
-    }
+    const { text, url } = req.body;
+    const profileText = sanitize(text || "", 10000);
+    const profileUrl  = sanitize(url  || "", 300);
 
-    // Fetch the public LinkedIn page
-    let pageText = "";
-    try {
-      const r = await fetch(url, {
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" },
-        signal: AbortSignal.timeout(8000),
-      });
-      if (r.ok) {
-        const html = await r.text();
-        pageText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 8000);
-      }
-    } catch(e) {
-      console.log("LinkedIn fetch failed:", e.message);
-    }
-
-    if (!pageText || pageText.length < 100) {
-      return res.status(422).json({
-        error: "Couldn't read that LinkedIn page — it may be private or blocked. Try pasting your profile text manually instead."
+    if (!profileText || profileText.length < 50) {
+      return res.status(400).json({
+        error: "Please paste your LinkedIn profile text. LinkedIn blocks direct access so we can't fetch it automatically."
       });
     }
 
-    const IMPORT_PROMPT = `You are a resume data extractor. Extract structured information from this LinkedIn profile page text.
+    const IMPORT_PROMPT = `You are a resume data extractor. Extract structured information from this LinkedIn profile text that the user has copied and pasted.
 
-PAGE TEXT:
-${pageText}
+PROFILE TEXT:
+${profileText}
+
+${profileUrl ? `PROFILE URL: ${profileUrl}` : ""}
 
 Extract whatever you can find. Return ONLY a raw JSON object, no markdown:
 {
@@ -696,6 +681,42 @@ Extract whatever you can find. Return ONLY a raw JSON object, no markdown:
   "education": "Degree, Field, School (Year)"
 }
 If a field is not found, return an empty string for it.`;
+
+    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1200,
+        messages: [{ role: "user", content: IMPORT_PROMPT }],
+      }),
+    });
+
+    if (!anthropicRes.ok) return res.status(502).json({ error: "AI service error — please try again." });
+
+    const aiData  = await anthropicRes.json();
+    const rawText = (aiData.content || []).map(b => b.text || "").join("");
+    const cleaned = rawText.replace(/```json|```/g, "").trim();
+
+    let data;
+    try { data = JSON.parse(cleaned); }
+    catch { return res.status(502).json({ error: "Couldn't parse profile data — try pasting more of your profile." }); }
+
+    return res.json({
+      name:       String(data.name       || ""),
+      targetRole: String(data.targetRole || ""),
+      headline:   String(data.headline   || ""),
+      about:      String(data.about      || ""),
+      experience: String(data.experience || ""),
+      skills:     String(data.skills     || ""),
+      education:  String(data.education  || ""),
+    });
+
+  } catch(err) {
+    console.error("LinkedIn import error:", err);
+    return res.status(500).json({ error: "Internal server error." });
+  }
+});
 
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -744,12 +765,16 @@ app.post("/api/resume-chat", limiter, requireAuth, requirePaid, async (req, res)
 
     const systemPrompt = `You are a resume editing assistant for Crafted Resume. The user has a generated resume and wants to refine it through conversation.
 
-You can help with:
-- Rewriting or improving specific sections (summary, experience, skills)
-- Changing tone (more confident, more concise, more technical)
+You CAN help with:
+- Rewriting or improving specific sections (summary, experience, skills, certifications)
+- Changing tone (more confident, more concise, more aggressive, more professional)
 - Adding metrics or quantifying achievements
 - Making it more targeted to a specific industry or role
-- Switching to a different writing style
+- Expanding or shortening sections
+- Improving action verbs and language
+- Restructuring bullet points
+
+For TEMPLATE/DESIGN changes (font, layout, colors), tell the user to use the template selector above the resume preview. Say something like: "To change the visual style, use the template selector just above your resume — choose from Executive, Modern, or Minimal."
 
 Current resume:
 Name: ${sanitize(resume.name||"",120)}
@@ -760,17 +785,15 @@ Education: ${sanitize(resume.education||"",500)}
 Skills: ${sanitize(resume.skills||"",1000)}
 Certifications: ${sanitize(resume.certifications||"",300)}
 
-When the user asks for changes to the resume content, respond with BOTH:
+When the user asks for changes to the resume CONTENT, respond with BOTH:
 1. A brief conversational reply explaining what you changed
-2. An updated JSON object with the full resume
-
-If the user is just asking a question (no changes needed), reply conversationally only.
+2. The full updated resume as JSON
 
 When returning updated resume, format your response EXACTLY like this:
 <reply>Your conversational message here</reply>
 <resume>${JSON.stringify({name:"...",email:"...",phone:"...",location:"...",linkedin:"...",targetRole:"...",summary:"...",experience:"...",education:"...",skills:"...",certifications:"..."})}</resume>
 
-If no resume update is needed, just reply normally with no tags.`;
+If no resume update is needed (just answering a question or directing to template selector), reply normally with no XML tags.`;
 
     const messages = [
       ...((history||[]).slice(-6).map(m => ({ role: m.role, content: m.content }))),
