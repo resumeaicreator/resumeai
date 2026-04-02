@@ -1956,7 +1956,7 @@ export default function App() {
               <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
                 <button className="ghost-btn" onClick={()=>go(1)}>← Back</button>
                 <button className="gold-btn" onClick={generateLinkedIn} disabled={loading} style={{ minWidth:220 }}>
-                  {loading?<span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:\"center\" }}><Spinner />{loadMsg}</span>:"Analyse My Profile"}
+                  {loading?<span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>:"Analyse My Profile"}
                 </button>
               </div>
             </div>
