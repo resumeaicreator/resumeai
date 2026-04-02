@@ -718,42 +718,6 @@ If a field is not found, return an empty string for it.`;
   }
 });
 
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1200,
-        messages: [{ role: "user", content: IMPORT_PROMPT }],
-      }),
-    });
-
-    if (!anthropicRes.ok) return res.status(502).json({ error: "AI service error — please try again." });
-
-    const aiData  = await anthropicRes.json();
-    const rawText = (aiData.content || []).map(b => b.text || "").join("");
-    const cleaned = rawText.replace(/```json|```/g, "").trim();
-
-    let data;
-    try { data = JSON.parse(cleaned); }
-    catch { return res.status(502).json({ error: "Couldn't parse profile data — try pasting manually." }); }
-
-    return res.json({
-      name:       String(data.name       || ""),
-      targetRole: String(data.targetRole || ""),
-      headline:   String(data.headline   || ""),
-      about:      String(data.about      || ""),
-      experience: String(data.experience || ""),
-      skills:     String(data.skills     || ""),
-      education:  String(data.education  || ""),
-    });
-
-  } catch(err) {
-    console.error("LinkedIn import error:", err);
-    return res.status(500).json({ error: "Internal server error." });
-  }
-});
-
 // ─── Resume Chat endpoint (premium) ──────────────────────────────────
 app.post("/api/resume-chat", limiter, requireAuth, requirePaid, async (req, res) => {
   try {
