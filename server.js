@@ -465,36 +465,43 @@ app.post("/api/jobs", limiter, requireAuth, async (req, res) => {
     //  ✦ JOB RECOMMENDATIONS PROMPT — Edit this to change
     //    how Claude suggests roles and search strategies.
     // ═══════════════════════════════════════════════════
-    const JOBS_PROMPT = `You are a career advisor helping someone find jobs after creating their resume.
+    const JOBS_PROMPT = `You are an expert career coach and recruiter with deep knowledge of the job market.
 
-Their target role: ${role}
-Their skills: ${skills.join(", ")}
-Their location: ${location || "not specified"}
+The candidate has just created their resume with the following profile:
+- Target role: ${role}
+- Key skills: ${skills.join(", ")}
+- Location: ${location || "not specified"}
 
-Suggest 4 specific job titles they should search for. These should include:
-- 1 exact match for their target role
-- 1 slightly more senior version
-- 1 adjacent role that uses similar skills
-- 1 creative alternative they may not have considered
+Your task: generate 5 highly specific, realistic job titles this person should search for RIGHT NOW.
+
+Rules:
+1. Be VERY specific — not "Software Engineer" but "Senior Backend Engineer (Python/AWS)" 
+2. Match their exact skill set — only suggest roles where their listed skills are genuinely required
+3. Include real-world job title variations that recruiters actually use on LinkedIn and Indeed
+4. Consider their location if specified — include remote options if relevant
+5. One title should be slightly aspirational (10-15% above their current level)
+6. One title should be a lateral move into a growing industry that values their skills
+7. Include a brief, specific reason for each that references their actual skills
 
 Return ONLY a raw JSON object, no markdown:
 {
   "suggestions": [
     {
-      "title": "Exact job title to search",
+      "title": "Exact searchable job title",
       "match": 95,
-      "reason": "One sentence explaining why this is a good fit",
-      "skills": ["skill1", "skill2", "skill3"]
+      "reason": "Specific one-sentence reason referencing their actual skills",
+      "skills": ["skill1", "skill2", "skill3"],
+      "searchQuery": "Best search query to use on LinkedIn for this role"
     }
   ]
 }
 
-Match is a percentage 0-100 of how well this fits their profile. Keep reasons concise and specific.`;
+Match is 0-100. Be honest — don't inflate scores.`;
 
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
       method:"POST",
       headers:{ "Content-Type":"application/json", "x-api-key":ANTHROPIC_API_KEY, "anthropic-version":"2023-06-01" },
-      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:600, messages:[{ role:"user", content:JOBS_PROMPT }] }),
+      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1000, messages:[{ role:"user", content:JOBS_PROMPT }] }),
     });
 
     if (!anthropicRes.ok) return res.status(502).json({ error: "AI service error." });
@@ -507,11 +514,12 @@ Match is a percentage 0-100 of how well this fits their profile. Keep reasons co
     try { data = JSON.parse(cleaned); } catch { return res.status(502).json({ error:"Malformed response." }); }
 
     return res.json({
-      suggestions: (data.suggestions||[]).slice(0,4).map(j=>({
-        title:  String(j.title||""),
-        match:  Math.min(100, Math.max(0, Number(j.match)||80)),
-        reason: String(j.reason||""),
-        skills: (j.skills||[]).slice(0,4).map(s=>String(s)),
+      suggestions: (data.suggestions||[]).slice(0,5).map(j=>({
+        title:       String(j.title||""),
+        match:       Math.min(100, Math.max(0, Number(j.match)||80)),
+        reason:      String(j.reason||""),
+        skills:      (j.skills||[]).slice(0,4).map(s=>String(s)),
+        searchQuery: String(j.searchQuery||j.title||""),
       }))
     });
 

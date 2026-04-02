@@ -629,7 +629,7 @@ function JobRecommendations({ role, skills, location }) {
   const [expanded, setExpanded] = useState(false);
 
   const roleClean = (role||"").trim();
-  const skillList = (skills||"").split(/[,|]/).map(s=>s.trim()).filter(Boolean).slice(0,5);
+  const skillList = (skills||"").split(/[,|]/).map(s=>s.trim()).filter(Boolean).slice(0,10);
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -724,7 +724,7 @@ function JobRecommendations({ role, skills, location }) {
                         <span key={j} style={{ fontSize:10, padding:"2px 8px", borderRadius:8, background:"var(--mist)", border:"1px solid rgba(255,255,255,0.08)", color:"var(--ash)" }}>{s}</span>
                       ))}
                     </div>
-                    <a href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(job.title)}&location=${encodeURIComponent(location||"")}`} target="_blank" rel="noopener noreferrer"
+                    <a href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(job.searchQuery||job.title)}&location=${encodeURIComponent(location||"")}`} target="_blank" rel="noopener noreferrer"
                       style={{ fontSize:11, color:"var(--gold)", textDecoration:"none", letterSpacing:"0.06em", textTransform:"uppercase", display:"inline-flex", alignItems:"center", gap:5 }}
                     >Search on LinkedIn ↗</a>
                   </div>
@@ -1956,7 +1956,7 @@ export default function App() {
               <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
                 <button className="ghost-btn" onClick={()=>go(1)}>← Back</button>
                 <button className="gold-btn" onClick={generateLinkedIn} disabled={loading} style={{ minWidth:220 }}>
-                  {loading?<span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>:"in  Analyse My Profile"}
+                  {loading?<span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:\"center\" }}><Spinner />{loadMsg}</span>:"Analyse My Profile"}
                 </button>
               </div>
             </div>
