@@ -857,6 +857,36 @@ const SEARCH_TIPS = [
   r => `${r} contract`,
 ];
 
+/* ─── Live Jobs Search Wrapper (landing page) ─── */
+function LiveJobsSearch() {
+  const [what, setWhat]     = useState("software engineer");
+  const [where, setWhere]   = useState("");
+  const [search, setSearch] = useState({ what:"software engineer", where:"" });
+
+  return (
+    <div>
+      <div style={{ display:"flex", gap:10, marginBottom:24, maxWidth:620, margin:"0 auto 24px" }}>
+        <input
+          value={what}
+          onChange={e=>setWhat(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&setSearch({what,where})}
+          placeholder="Job title or keyword..."
+          style={{ flex:2 }}
+        />
+        <input
+          value={where}
+          onChange={e=>setWhere(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&setSearch({what,where})}
+          placeholder="Location (optional)"
+          style={{ flex:1 }}
+        />
+        <button className="gold-btn" onClick={()=>setSearch({what,where})} style={{ flexShrink:0, padding:"10px 20px", fontSize:13 }}>Search</button>
+      </div>
+      <LiveJobs key={search.what+search.where} what={search.what} where={search.where} title={true} />
+    </div>
+  );
+}
+
 /* ─── Live Job Listings (Adzuna) ─── */
 function LiveJobs({ what, where, title, compact }) {
   const [jobs, setJobs]       = useState([]);
@@ -864,22 +894,37 @@ function LiveJobs({ what, where, title, compact }) {
   const [total, setTotal]     = useState(0);
   const [page, setPage]       = useState(1);
   const [fetched, setFetched] = useState(false);
+  const [err, setErr]         = useState("");
   const API = process.env.REACT_APP_API_URL || "";
 
   const fetchJobs = async (p = 1) => {
     setLoading(true);
+    setErr("");
     try {
       const params = new URLSearchParams({ what: what || "software engineer", page: p });
       if (where) params.set("where", where);
       const res = await fetch(`${API}/api/live-jobs?${params}`);
-      if (!res.ok) return;
       const data = await res.json();
-      setJobs(data.jobs || []);
+      if (!res.ok) {
+        setErr(data.error || "Could not load jobs. Please try again.");
+        setFetched(true);
+        return;
+      }
+      if (!data.jobs || data.jobs.length === 0) {
+        setErr(`No listings found for "${what}". Try a different search term.`);
+        setFetched(true);
+        return;
+      }
+      setJobs(data.jobs);
       setTotal(data.total || 0);
       setPage(p);
       setFetched(true);
-    } catch(e) {}
-    finally { setLoading(false); }
+    } catch(e) {
+      setErr("Network error — please check your connection and try again.");
+      setFetched(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatSalary = (min, max) => {
@@ -910,6 +955,15 @@ function LiveJobs({ what, where, title, compact }) {
             : "✦ Load Live Job Listings"}
         </button>
         <div style={{ fontSize:12, color:"var(--ash)", marginTop:8 }}>Live listings from thousands of job boards</div>
+      </div>
+    );
+  }
+
+  if (err) {
+    return (
+      <div style={{ textAlign:"center", padding:"24px 0" }}>
+        <div style={{ fontSize:13, color:"#f87171", marginBottom:14 }}>{err}</div>
+        <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>{ setFetched(false); setErr(""); }}>Try Again</button>
       </div>
     );
   }
@@ -2104,7 +2158,7 @@ export default function App() {
                   <h2 style={{ fontFamily:"var(--font-display)", fontSize:44, fontWeight:300, letterSpacing:"-1px", marginBottom:10 }}>Live job listings</h2>
                   <p style={{ color:"var(--ash)", fontSize:15, fontWeight:300 }}>Real jobs from thousands of boards — updated daily.</p>
                 </div>
-                <LiveJobs what="software engineer" title={true} />
+                <LiveJobsSearch />
               </div>
 
               {/* ── ATS Score Hook ── */}
