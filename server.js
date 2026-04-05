@@ -1050,6 +1050,60 @@ Return ONLY a raw JSON object, no markdown:
   }
 });
 
+// ─── Live Jobs from Adzuna ────────────────────────────────────────────
+app.get("/api/live-jobs", limiter, async (req, res) => {
+  try {
+    const what     = sanitize(req.query.what     || "software engineer", 200);
+    const where    = sanitize(req.query.where    || "", 120);
+    const country  = sanitize(req.query.country  || "us", 2);
+    const page     = Math.max(1, parseInt(req.query.page) || 1);
+    const perPage  = 6;
+
+    const ADZUNA_ID  = process.env.ADZUNA_APP_ID  || "c3aa1c4a";
+    const ADZUNA_KEY = process.env.ADZUNA_APP_KEY || "daaf89a3ec74cfd2905a1adfede5c068";
+
+    const params = new URLSearchParams({
+      app_id:          ADZUNA_ID,
+      app_key:         ADZUNA_KEY,
+      results_per_page: perPage,
+      what,
+      ...(where ? { where } : {}),
+      "content-type":  "application/json",
+      sort_by:         "date",
+    });
+
+    const url = `https://api.adzuna.com/v1/api/jobs/${country}/search/${page}?${params}`;
+    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+
+    if (!r.ok) {
+      const err = await r.text();
+      console.error("Adzuna error:", r.status, err.slice(0,200));
+      return res.status(502).json({ error: "Job search unavailable right now." });
+    }
+
+    const data = await r.json();
+
+    const jobs = (data.results || []).map(j => ({
+      id:          j.id,
+      title:       j.title,
+      company:     j.company?.display_name || "Company",
+      location:    j.location?.display_name || "",
+      salaryMin:   j.salary_min ? Math.round(j.salary_min) : null,
+      salaryMax:   j.salary_max ? Math.round(j.salary_max) : null,
+      description: (j.description || "").slice(0, 200),
+      url:         j.redirect_url,
+      created:     j.created,
+      category:    j.category?.label || "",
+    }));
+
+    return res.json({ jobs, total: data.count || 0, page });
+
+  } catch(err) {
+    console.error("Live jobs error:", err.message);
+    return res.status(500).json({ error: "Internal server error." });
+  }
+});
+
 // ─── Health check ─────────────────────────────────────────────────────
 app.get("/api/health", (_, res) => res.json({
   status: "ok",

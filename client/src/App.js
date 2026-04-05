@@ -857,6 +857,113 @@ const SEARCH_TIPS = [
   r => `${r} contract`,
 ];
 
+/* ─── Live Job Listings (Adzuna) ─── */
+function LiveJobs({ what, where, title, compact }) {
+  const [jobs, setJobs]       = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [total, setTotal]     = useState(0);
+  const [page, setPage]       = useState(1);
+  const [fetched, setFetched] = useState(false);
+  const API = process.env.REACT_APP_API_URL || "";
+
+  const fetchJobs = async (p = 1) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ what: what || "software engineer", page: p });
+      if (where) params.set("where", where);
+      const res = await fetch(`${API}/api/live-jobs?${params}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setJobs(data.jobs || []);
+      setTotal(data.total || 0);
+      setPage(p);
+      setFetched(true);
+    } catch(e) {}
+    finally { setLoading(false); }
+  };
+
+  const formatSalary = (min, max) => {
+    if (!min && !max) return null;
+    const fmt = n => n >= 1000 ? `$${Math.round(n/1000)}k` : `$${n}`;
+    if (min && max) return `${fmt(min)} – ${fmt(max)}`;
+    if (min) return `From ${fmt(min)}`;
+    return `Up to ${fmt(max)}`;
+  };
+
+  const timeAgo = (dateStr) => {
+    if (!dateStr) return "";
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const days = Math.floor(diff / 86400000);
+    if (days === 0) return "Today";
+    if (days === 1) return "Yesterday";
+    if (days < 7) return `${days}d ago`;
+    if (days < 30) return `${Math.floor(days/7)}w ago`;
+    return `${Math.floor(days/30)}mo ago`;
+  };
+
+  if (!fetched) {
+    return (
+      <div style={{ textAlign:"center", padding: compact ? "20px 0" : "40px 0" }}>
+        <button className="gold-btn" onClick={()=>fetchJobs(1)} disabled={loading} style={{ fontSize:13, padding:"11px 28px" }}>
+          {loading
+            ? <span style={{ display:"flex",alignItems:"center",gap:8 }}><span style={{ width:14,height:14,border:"2px solid rgba(0,0,0,0.25)",borderTopColor:"#0d0d0f",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block"}} />Loading jobs…</span>
+            : "✦ Load Live Job Listings"}
+        </button>
+        <div style={{ fontSize:12, color:"var(--ash)", marginTop:8 }}>Live listings from thousands of job boards</div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {title && (
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:16, flexWrap:"wrap", gap:8 }}>
+          <div style={{ fontSize:13, color:"var(--ash)" }}>{total.toLocaleString()} live listings for <strong style={{ color:"var(--text-primary)" }}>{what}</strong></div>
+          <button onClick={()=>fetchJobs(1)} disabled={loading} style={{ background:"none", border:"none", color:"var(--gold)", cursor:"pointer", fontSize:12, fontFamily:"var(--font-body)" }}>
+            {loading ? "Refreshing…" : "↺ Refresh"}
+          </button>
+        </div>
+      )}
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:12, marginBottom:16 }}>
+        {jobs.map((job,i) => (
+          <a key={job.id||i} href={job.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none" }}>
+            <div className="card" style={{ padding:"16px 18px", cursor:"pointer", height:"100%", transition:"all 0.2s", borderColor:"rgba(255,255,255,0.06)" }}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--gold-border)";e.currentTarget.style.transform="translateY(-2px)";}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.06)";e.currentTarget.style.transform="translateY(0)";}}
+            >
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6, gap:8 }}>
+                <div style={{ fontWeight:500, fontSize:14, color:"var(--text-primary)", lineHeight:1.3 }}>{job.title}</div>
+                <span style={{ fontSize:10, color:"var(--ash)", whiteSpace:"nowrap", flexShrink:0 }}>{timeAgo(job.created)}</span>
+              </div>
+              <div style={{ fontSize:12, color:"var(--gold)", marginBottom:4 }}>{job.company}</div>
+              <div style={{ fontSize:12, color:"var(--ash)", marginBottom:8 }}>{job.location}</div>
+              {formatSalary(job.salaryMin, job.salaryMax) && (
+                <div style={{ fontSize:11, padding:"3px 10px", borderRadius:8, background:"rgba(74,222,128,0.08)", border:"1px solid rgba(74,222,128,0.2)", color:"#4ade80", display:"inline-block", marginBottom:8 }}>
+                  {formatSalary(job.salaryMin, job.salaryMax)}
+                </div>
+              )}
+              <div style={{ fontSize:11, color:"var(--ash)", lineHeight:1.5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>
+                {job.description}
+              </div>
+              <div style={{ marginTop:10, fontSize:11, color:"var(--gold)", letterSpacing:"0.06em" }}>Apply ↗</div>
+            </div>
+          </a>
+        ))}
+      </div>
+
+      {/* Pagination */}
+      {total > 6 && (
+        <div style={{ display:"flex", justifyContent:"center", gap:8, marginTop:8 }}>
+          <button className="ghost-btn" style={{ fontSize:11, padding:"6px 14px" }} onClick={()=>fetchJobs(Math.max(1,page-1))} disabled={loading||page===1}>← Prev</button>
+          <span style={{ fontSize:12, color:"var(--ash)", padding:"6px 10px" }}>Page {page}</span>
+          <button className="ghost-btn" style={{ fontSize:11, padding:"6px 14px" }} onClick={()=>fetchJobs(page+1)} disabled={loading}>Next →</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function JobRecommendations({ role, skills, location }) {
   const [loading, setLoading] = useState(false);
   const [jobs, setJobs]       = useState(null);
@@ -969,6 +1076,12 @@ function JobRecommendations({ role, skills, location }) {
 
           <div style={{ marginTop:18, textAlign:"center" }}>
             <button className="ghost-btn" style={{ fontSize:11 }} onClick={()=>setExpanded(false)}>Collapse ↑</button>
+          </div>
+
+          {/* Live listings for this role */}
+          <div style={{ marginTop:24, borderTop:"1px solid var(--border-subtle)", paddingTop:24 }}>
+            <div style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--ash)", marginBottom:16 }}>Live listings for {roleClean}</div>
+            <LiveJobs what={roleClean} where={location} title={false} compact={true} />
           </div>
         </div>
       )}
@@ -1983,6 +2096,15 @@ export default function App() {
                     <button className="gold-btn pulse" style={{ width:"100%", marginTop:20, fontSize:13 }} onClick={()=>go(1)}>Start Free →</button>
                   </div>
                 </div>
+              </div>
+
+              {/* ── Live Job Listings ── */}
+              <div style={{ marginBottom:80 }}>
+                <div style={{ textAlign:"center", marginBottom:32 }}>
+                  <h2 style={{ fontFamily:"var(--font-display)", fontSize:44, fontWeight:300, letterSpacing:"-1px", marginBottom:10 }}>Live job listings</h2>
+                  <p style={{ color:"var(--ash)", fontSize:15, fontWeight:300 }}>Real jobs from thousands of boards — updated daily.</p>
+                </div>
+                <LiveJobs what="software engineer" title={true} />
               </div>
 
               {/* ── ATS Score Hook ── */}
