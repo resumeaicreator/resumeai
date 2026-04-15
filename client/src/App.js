@@ -2232,7 +2232,7 @@ export default function App() {
           )}
 
           {/* ══ TOOL PICKER (step 1) ══ */}
-          {step===1 && !mode && (
+          {step===1 && (
             <div className="scale-in">
               <div style={{ textAlign:"center", padding:"52px 0 36px" }}>
                 {(() => {
@@ -2369,7 +2369,7 @@ export default function App() {
                 <TemplateSelector />
               </div>
               <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                <button className="ghost-btn" onClick={()=>go(1)}>← Back</button>
+                <button className="ghost-btn" onClick={()=>{setMode("");go(1);}}>← Back</button>
                 <button className="gold-btn" onClick={generateBuild} disabled={loading} style={{ minWidth:210 }}>
                   {loading?<span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>:"✦ Generate Resume"}
                 </button>
@@ -2408,7 +2408,7 @@ export default function App() {
                 <F label="Resume Style"><TemplateSelector /></F>
               </div>
               <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                <button className="ghost-btn" onClick={()=>go(1)}>← Back</button>
+                <button className="ghost-btn" onClick={()=>{setMode("");go(1);}}>← Back</button>
                 <button className="gold-btn" onClick={generateTailor} disabled={loading} style={{ minWidth:220 }}>
                   {loading?<span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>:"⟳ Tailor My Resume"}
                 </button>
@@ -2433,7 +2433,7 @@ export default function App() {
                 <F label="Skills (comma separated)"><input placeholder="Penetration Testing, SIEM, Python, Network Security..." value={liData.skills} onChange={e=>setLiData(d=>({...d,skills:e.target.value}))} /></F>
               </div>
               <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                <button className="ghost-btn" onClick={()=>go(1)}>← Back</button>
+                <button className="ghost-btn" onClick={()=>{setMode("");go(1);}}>← Back</button>
                 <button className="gold-btn" onClick={generateLinkedIn} disabled={loading} style={{ minWidth:220 }}>
                   {loading?<span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>:"Analyse My Profile"}
                 </button>
@@ -2512,7 +2512,7 @@ export default function App() {
               </div>
 
               <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                <button className="ghost-btn" onClick={()=>go(1)}>← Back</button>
+                <button className="ghost-btn" onClick={()=>{setMode("");go(1);}}>← Back</button>
                 <button className="gold-btn" onClick={generateApply} disabled={loading} style={{ minWidth:240 }}>
                   {loading
                     ? <span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>
@@ -2526,7 +2526,7 @@ export default function App() {
           {step===2 && mode==="interview" && (
             <div>
               <div style={{marginBottom:16}}>
-                <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>go(1)}>← Back</button>
+                <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>{setMode("");go(1);}}>← Back</button>
               </div>
               <div className="fade-up" style={{ background:"linear-gradient(135deg,rgba(74,222,128,0.06),rgba(74,222,128,0.02))", border:"1px solid rgba(74,222,128,0.2)", borderRadius:14, padding:"18px 24px", marginBottom:20, display:"flex", alignItems:"center", gap:14 }}>
                 <div style={{ fontSize:28 }}>🎯</div>
@@ -2548,7 +2548,7 @@ export default function App() {
           {step===2 && mode==="linkedin-quick" && (
             <div>
               <div style={{marginBottom:16}}>
-                <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>go(1)}>← Back</button>
+                <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>{setMode("");go(1);}}>← Back</button>
               </div>
               <div className="fade-up" style={{ background:"linear-gradient(135deg,rgba(10,102,194,0.08),rgba(10,102,194,0.02))", border:"1px solid rgba(10,102,194,0.2)", borderRadius:14, padding:"18px 24px", marginBottom:20, display:"flex", alignItems:"center", gap:14 }}>
                 <div style={{ fontSize:28 }}>✍️</div>
@@ -2571,7 +2571,7 @@ export default function App() {
             <div>
               {/* Back button + Start Over on all results */}
               <div style={{marginBottom:16, display:"flex", alignItems:"center", justifyContent:"space-between"}}>
-                <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>mode ? go(2) : go(1)}>← Back</button>
+                <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>{setMode("");go(1);}}>← Back</button>
                 <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={resetAll}>Start Over</button>
               </div>
               {/* Apply Mode Results */}
