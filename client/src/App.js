@@ -1019,123 +1019,167 @@ function LiveJobs({ what, where, title, compact }) {
 }
 
 function JobRecommendations({ role, skills, location }) {
-  const [loading, setLoading] = useState(false);
-  const [jobs, setJobs]       = useState(null);
-  const [expanded, setExpanded] = useState(false);
+  const [tab, setTab]         = useState("live");       // "live" | "boolean" | "ai"
+  const [aiJobs, setAiJobs]   = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [boolQuery, setBoolQuery] = useState("");
+  const [expanded, setExpanded]   = useState(false);
 
   const roleClean = (role||"").trim();
   const skillList = (skills||"").split(/[,|]/).map(s=>s.trim()).filter(Boolean).slice(0,10);
 
-  const fetchJobs = async () => {
-    setLoading(true);
+  // Generate boolean search query from resume
+  const generateBoolean = () => {
+    const loc = location || "United States";
+    const topSkills = skillList.slice(0,4).join(" OR ");
+    const query = `site:lever.co OR site:greenhouse.io ("${roleClean}" OR ${topSkills}) remote "${loc}" after:${new Date(Date.now()-7*86400000).toISOString().split("T")[0]}`;
+    return query;
+  };
+
+  const fetchAiJobs = async () => {
+    setAiLoading(true);
     const API = process.env.REACT_APP_API_URL || "";
     try {
       const res = await fetch(`${API}/api/jobs`, {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({ role: roleClean, skills: skillList, location }),
       });
-      if (res.ok) setJobs(await res.json());
+      if (res.ok) setAiJobs(await res.json());
     } catch(e) {}
-    finally { setLoading(false); setExpanded(true); }
+    finally { setAiLoading(false); }
   };
 
   if (!roleClean) return null;
 
   return (
     <div className="card fade-up" style={{ borderColor:"rgba(201,168,76,0.15)", marginTop:8 }}>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12, marginBottom: expanded ? 24 : 0 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12, marginBottom:20 }}>
         <div>
           <div style={{ fontFamily:"var(--font-display)", fontSize:22, fontWeight:300, marginBottom:3 }}>
             Find Jobs for <em style={{ color:"var(--gold)" }}>{roleClean}</em>
           </div>
-          <div style={{ fontSize:13, color:"var(--ash)", fontWeight:300 }}>Search live job boards or get AI-curated suggestions based on your resume.</div>
+          <div style={{ fontSize:13, color:"var(--ash)", fontWeight:300 }}>Live listings, smart boolean searches, and AI-curated suggestions.</div>
         </div>
         {!expanded && (
-          <button className="gold-btn" style={{ fontSize:12, padding:"10px 20px", flexShrink:0 }} onClick={fetchJobs} disabled={loading}>
-            {loading ? <span style={{ display:"flex",alignItems:"center",gap:8 }}><span style={{ width:12,height:12,border:"2px solid rgba(0,0,0,0.25)",borderTopColor:"#0d0d0f",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block" }} />Finding jobs…</span> : "✦ Find Jobs"}
+          <button className="gold-btn" style={{ fontSize:12, padding:"10px 20px", flexShrink:0 }} onClick={()=>setExpanded(true)}>
+            ✦ Find Jobs
           </button>
         )}
       </div>
 
       {expanded && (
         <div className="fade-in">
-          {/* Quick search links */}
-          <div style={{ marginBottom:24 }}>
-            <div style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--ash)", marginBottom:12 }}>Search on job boards</div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(160px, 1fr))", gap:10 }}>
-              {JOB_BOARDS.map(b => (
-                <a key={b.name} href={b.url(roleClean, location)} target="_blank" rel="noopener noreferrer"
-                  style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", borderRadius:10, border:"1px solid rgba(255,255,255,0.08)", background:"var(--mist2)", textDecoration:"none", transition:"all 0.25s", color:"var(--text-primary)" }}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor=b.color+"66";e.currentTarget.style.background=b.color+"12";}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.08)";e.currentTarget.style.background="var(--mist2)";}}
-                >
-                  <div style={{ width:28, height:28, borderRadius:6, background:b.color, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700, color:"#fff", flexShrink:0 }}>{b.icon.toUpperCase().slice(0,2)}</div>
-                  <span style={{ fontSize:13, fontWeight:400 }}>{b.name}</span>
-                  <span style={{ marginLeft:"auto", fontSize:14, color:"var(--ash)" }}>↗</span>
-                </a>
-              ))}
-            </div>
+          {/* Tab switcher */}
+          <div style={{ display:"flex", gap:4, marginBottom:20, background:"var(--mist2)", borderRadius:12, padding:4 }}>
+            {[
+              { id:"live",    label:"🔴 Live Listings" },
+              { id:"boolean", label:"🔍 Boolean Search" },
+              { id:"ai",      label:"✦ AI Suggestions" },
+            ].map(t => (
+              <button key={t.id} onClick={()=>setTab(t.id)} style={{
+                flex:1, padding:"9px 8px", borderRadius:9, border:"none", cursor:"pointer",
+                fontFamily:"var(--font-body)", fontSize:12, fontWeight:500, transition:"all 0.2s",
+                background: tab===t.id ? "var(--ink2)" : "transparent",
+                color:      tab===t.id ? "var(--text-primary)" : "var(--ash)",
+                boxShadow:  tab===t.id ? "0 2px 8px rgba(0,0,0,0.3)" : "none",
+              }}>{t.label}</button>
+            ))}
           </div>
 
-          {/* Refined search suggestions */}
-          <div style={{ marginBottom: jobs ? 24 : 0 }}>
-            <div style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--ash)", marginBottom:12 }}>Try these searches</div>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-              {SEARCH_TIPS.map((tip,i) => {
-                const q = tip(roleClean);
-                return (
-                  <a key={i} href={`https://www.google.com/search?q=${encodeURIComponent(q+" jobs "+(location||""))}`} target="_blank" rel="noopener noreferrer"
-                    style={{ fontSize:12, padding:"6px 14px", borderRadius:20, border:"1px solid var(--gold-border)", color:"var(--gold)", textDecoration:"none", background:"var(--gold-dim)", transition:"all 0.2s" }}
-                    onMouseEnter={e=>{e.currentTarget.style.background="rgba(201,168,76,0.22)";}}
-                    onMouseLeave={e=>{e.currentTarget.style.background="var(--gold-dim)";}}
-                  >{q} ↗</a>
-                );
-              })}
-              {skillList.slice(0,3).map((skill,i) => (
-                <a key={"s"+i} href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(skill)}&location=${encodeURIComponent(location||"")}`} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize:12, padding:"6px 14px", borderRadius:20, border:"1px solid rgba(255,255,255,0.1)", color:"var(--ash)", textDecoration:"none", background:"var(--mist2)", transition:"all 0.2s" }}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.2)";e.currentTarget.style.color="var(--text-primary)";}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.1)";e.currentTarget.style.color="var(--ash)";}}
-                >{skill} jobs ↗</a>
-              ))}
-            </div>
-          </div>
+          {/* Tab: Live Listings */}
+          {tab==="live" && (
+            <LiveJobs key={roleClean+location} what={roleClean} where={location} title={true} compact={true} />
+          )}
 
-          {/* AI-curated job suggestions */}
-          {jobs && jobs.suggestions && (
+          {/* Tab: Boolean Search */}
+          {tab==="boolean" && (
             <div className="fade-in">
-              <div style={{ height:1, background:"linear-gradient(90deg,transparent,var(--gold-border),transparent)", margin:"20px 0" }} />
-              <div style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--ash)", marginBottom:14 }}>AI-curated roles to consider</div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(260px, 1fr))", gap:12 }}>
-                {jobs.suggestions.map((job,i) => (
-                  <div key={i} className="li-card fade-up" style={{ animationDelay:`${i*0.07}s`, borderColor:"rgba(201,168,76,0.15)" }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
-                      <div style={{ fontWeight:500, fontSize:14, color:"var(--text-primary)" }}>{job.title}</div>
-                      <span style={{ fontSize:10, padding:"2px 8px", borderRadius:10, background:"var(--gold-dim)", color:"var(--gold)", whiteSpace:"nowrap", marginLeft:8 }}>{job.match}% match</span>
-                    </div>
-                    <div style={{ fontSize:12, color:"var(--ash)", marginBottom:10, lineHeight:1.5 }}>{job.reason}</div>
-                    <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:12 }}>
-                      {(job.skills||[]).map((s,j)=>(
-                        <span key={j} style={{ fontSize:10, padding:"2px 8px", borderRadius:8, background:"var(--mist)", border:"1px solid rgba(255,255,255,0.08)", color:"var(--ash)" }}>{s}</span>
-                      ))}
-                    </div>
-                    <a href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(job.searchQuery||job.title)}&location=${encodeURIComponent(location||"")}`} target="_blank" rel="noopener noreferrer"
-                      style={{ fontSize:11, color:"var(--gold)", textDecoration:"none", letterSpacing:"0.06em", textTransform:"uppercase", display:"inline-flex", alignItems:"center", gap:5 }}
-                    >Search on LinkedIn ↗</a>
-                  </div>
+              <div style={{ fontSize:13, color:"var(--ash)", lineHeight:1.7, marginBottom:16 }}>
+                This boolean search finds remote jobs posted on Lever and Greenhouse in the last 7 days that match your resume. Copy it and paste into Google, or click to search directly.
+              </div>
+              <div style={{ padding:"14px 16px", background:"rgba(0,0,0,0.3)", borderRadius:10, border:"1px solid rgba(255,255,255,0.08)", fontFamily:"monospace", fontSize:12, color:"#4ade80", lineHeight:1.8, marginBottom:14, wordBreak:"break-all" }}>
+                {boolQuery || generateBoolean()}
+              </div>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:20 }}>
+                <button className="gold-btn" style={{ fontSize:12, padding:"9px 18px" }} onClick={()=>{
+                  const q = boolQuery || generateBoolean();
+                  window.open(`https://www.google.com/search?q=${encodeURIComponent(q)}`, "_blank");
+                }}>Search on Google ↗</button>
+                <button className="ghost-btn" style={{ fontSize:12, padding:"9px 18px" }} onClick={()=>{
+                  navigator.clipboard.writeText(boolQuery || generateBoolean());
+                }}>Copy Query</button>
+              </div>
+
+              {/* Custom query editor */}
+              <div style={{ marginBottom:12 }}>
+                <div style={{ fontSize:11, color:"var(--ash)", marginBottom:6 }}>Customise the search query:</div>
+                <textarea
+                  value={boolQuery || generateBoolean()}
+                  onChange={e=>setBoolQuery(e.target.value)}
+                  rows={4}
+                  style={{ width:"100%", fontFamily:"monospace", fontSize:12, resize:"vertical" }}
+                />
+              </div>
+
+              {/* Job board quick links */}
+              <div style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--ash)", marginBottom:10 }}>Or search directly:</div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))", gap:8 }}>
+                {JOB_BOARDS.map(b => (
+                  <a key={b.name} href={b.url(roleClean, location)} target="_blank" rel="noopener noreferrer"
+                    style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 12px", borderRadius:10, border:"1px solid rgba(255,255,255,0.08)", background:"var(--mist2)", textDecoration:"none", color:"var(--text-primary)", fontSize:12, transition:"all 0.2s" }}
+                    onMouseEnter={e=>{e.currentTarget.style.borderColor=b.color+"66";e.currentTarget.style.background=b.color+"12";}}
+                    onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.08)";e.currentTarget.style.background="var(--mist2)";}}
+                  >
+                    <div style={{ width:22,height:22,borderRadius:5,background:b.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:"#fff",flexShrink:0 }}>{b.icon.toUpperCase().slice(0,2)}</div>
+                    <span>{b.name}</span>
+                    <span style={{ marginLeft:"auto", fontSize:12, color:"var(--ash)" }}>↗</span>
+                  </a>
                 ))}
               </div>
             </div>
           )}
 
-          <div style={{ marginTop:18, textAlign:"center" }}>
-            <button className="ghost-btn" style={{ fontSize:11 }} onClick={()=>setExpanded(false)}>Collapse ↑</button>
-          </div>
+          {/* Tab: AI Suggestions */}
+          {tab==="ai" && (
+            <div className="fade-in">
+              {!aiJobs ? (
+                <div style={{ textAlign:"center", padding:"20px 0" }}>
+                  <button className="gold-btn" onClick={fetchAiJobs} disabled={aiLoading} style={{ fontSize:13, padding:"11px 28px" }}>
+                    {aiLoading
+                      ? <span style={{ display:"flex",alignItems:"center",gap:8 }}><span style={{ width:14,height:14,border:"2px solid rgba(0,0,0,0.25)",borderTopColor:"#0d0d0f",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block" }} />Finding roles…</span>
+                      : "✦ Get AI-Curated Roles"}
+                  </button>
+                  <div style={{ fontSize:12, color:"var(--ash)", marginTop:8 }}>AI analyses your resume and suggests the best-matching roles</div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--ash)",marginBottom:14 }}>Roles matched to your resume</div>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:12 }}>
+                    {(aiJobs.suggestions||[]).map((job,i) => (
+                      <div key={i} className="card fade-up" style={{ animationDelay:`${i*0.07}s`, borderColor:"rgba(201,168,76,0.15)" }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
+                          <div style={{ fontWeight:500, fontSize:14, color:"var(--text-primary)" }}>{job.title}</div>
+                          <span style={{ fontSize:10,padding:"2px 8px",borderRadius:10,background:"var(--gold-dim)",color:"var(--gold)",whiteSpace:"nowrap",marginLeft:8 }}>{job.match}% match</span>
+                        </div>
+                        <div style={{ fontSize:12,color:"var(--ash)",marginBottom:10,lineHeight:1.5 }}>{job.reason}</div>
+                        <div style={{ display:"flex",gap:6,flexWrap:"wrap",marginBottom:12 }}>
+                          {(job.skills||[]).map((s,j)=>(
+                            <span key={j} style={{ fontSize:10,padding:"2px 8px",borderRadius:8,background:"var(--mist)",border:"1px solid rgba(255,255,255,0.08)",color:"var(--ash)" }}>{s}</span>
+                          ))}
+                        </div>
+                        <a href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(job.searchQuery||job.title)}&location=${encodeURIComponent(location||"")}`} target="_blank" rel="noopener noreferrer"
+                          style={{ fontSize:11,color:"var(--gold)",textDecoration:"none",letterSpacing:"0.06em",textTransform:"uppercase" }}
+                        >Search on LinkedIn ↗</a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
-          {/* Live listings for this role */}
-          <div style={{ marginTop:24, borderTop:"1px solid var(--border-subtle)", paddingTop:24 }}>
-            <div style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--ash)", marginBottom:16 }}>Live listings for {roleClean}</div>
-            <LiveJobs what={roleClean} where={location} title={false} compact={true} />
+          <div style={{ marginTop:20, textAlign:"center" }}>
+            <button className="ghost-btn" style={{ fontSize:11 }} onClick={()=>setExpanded(false)}>Collapse ↑</button>
           </div>
         </div>
       )}
@@ -1803,7 +1847,7 @@ export default function App() {
           if (refresh.ok) return callAPI(endpoint, body, true);
         } catch(e) {}
       }
-      setUser(false); setPage("login"); throw new Error("Please log in to continue.");
+      setUser(false); throw new Error("login_required");
     }
     if (res.status===402) { throw new Error("premium_required"); }
     if (!res.ok){ const d=await res.json().catch(()=>({})); throw new Error(d.error||"Server error"); }
@@ -1814,7 +1858,7 @@ export default function App() {
     const iv=startLoad(["Analysing your details…","Writing your bullet points…","Optimising for ATS…","Adding the finishing touches…"]);
     setResult(null);
     try { setResult(await callAPI("/api/generate",{name:form.name,email:form.email,phone:form.phone,location:form.location,linkedin:form.linkedin,targetRole:form.targetRole,targetIndustry:form.targetIndustry,experiences:form.experiences,education:form.education,skills:form.skills,certifications:form.certifications})); go(3); }
-    catch(e){ if(e.message==="premium_required"){setPage("subscribe");}else{setErr(e.message||"Generation failed.");} }
+    catch(e){ if(e.message==="premium_required"){setPage("subscribe");}else if(e.message==="login_required"){setErr("Please sign in to generate your resume.");setPage("login");}else{setErr(e.message||"Generation failed.");} }
     finally { clearInterval(iv); setLoading(false); }
   };
 
@@ -1824,7 +1868,7 @@ export default function App() {
     const iv=startLoad(["Reading your resume…","Matching it to the role…","Rewriting your experience…","Polishing the result…"]);
     setResult(null);
     try { setResult(await callAPI("/api/tailor",{pdfBase64:uploadedPdf.base64,jobDescription,template:form.template})); go(3); }
-    catch(e){ if(e.message==="premium_required"){setPage("subscribe");}else{setErr(e.message||"Tailoring failed.");} }
+    catch(e){ if(e.message==="premium_required"){setPage("subscribe");}else if(e.message==="login_required"){setErr("Please sign in to continue.");setPage("login");}else{setErr(e.message||"Tailoring failed.");} }
     finally { clearInterval(iv); setLoading(false); }
   };
 
@@ -1833,7 +1877,7 @@ export default function App() {
     const iv=startLoad(["Reading your profile…","Spotting what to improve…","Writing your suggestions…","Putting it all together…"]);
     setLiResult(null);
     try { setLiResult(await callAPI("/api/linkedin",liData)); go(3); }
-    catch(e){ if(e.message==="premium_required"){setPage("subscribe");}else{setErr(e.message||"LinkedIn analysis failed.");} }
+    catch(e){ if(e.message==="premium_required"){setPage("subscribe");}else if(e.message==="login_required"){setErr("Please sign in to continue.");setPage("login");}else{setErr(e.message||"LinkedIn analysis failed.");} }
     finally { clearInterval(iv); setLoading(false); }
   };
 
@@ -1863,7 +1907,7 @@ export default function App() {
       setApplyResult(res);
       setApplyTab("resume");
       go(3);
-    } catch(e){ if(e.message==="premium_required"){setPage("subscribe");}else{setErr(e.message||"Apply Mode failed — please try again.");} }
+    } catch(e){ if(e.message==="premium_required"){setPage("subscribe");}else if(e.message==="login_required"){setErr("Please sign in to use Apply Mode.");setPage("login");}else{setErr(e.message||"Apply Mode failed — please try again.");} }
     finally { clearInterval(iv); setLoading(false); }
   };
 
@@ -2473,6 +2517,9 @@ export default function App() {
           {/* ══ INTERVIEW PREP FORM ══ */}
           {step===2 && mode==="interview" && (
             <div>
+              <div style={{marginBottom:16}}>
+                <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>go(1)}>← Back</button>
+              </div>
               <div className="fade-up" style={{ background:"linear-gradient(135deg,rgba(74,222,128,0.06),rgba(74,222,128,0.02))", border:"1px solid rgba(74,222,128,0.2)", borderRadius:14, padding:"18px 24px", marginBottom:20, display:"flex", alignItems:"center", gap:14 }}>
                 <div style={{ fontSize:28 }}>🎯</div>
                 <div>
@@ -2492,6 +2539,9 @@ export default function App() {
           {/* ══ LINKEDIN WRITER FORM ══ */}
           {step===2 && mode==="linkedin-quick" && (
             <div>
+              <div style={{marginBottom:16}}>
+                <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>go(1)}>← Back</button>
+              </div>
               <div className="fade-up" style={{ background:"linear-gradient(135deg,rgba(10,102,194,0.08),rgba(10,102,194,0.02))", border:"1px solid rgba(10,102,194,0.2)", borderRadius:14, padding:"18px 24px", marginBottom:20, display:"flex", alignItems:"center", gap:14 }}>
                 <div style={{ fontSize:28 }}>✍️</div>
                 <div>
@@ -2511,6 +2561,10 @@ export default function App() {
           {/* ══ STEP 2 — RESULTS ══ */}
           {step===3 && (
             <div>
+              {/* Back button on all results */}
+              <div style={{marginBottom:16}}>
+                <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>go(2)}>← Back</button>
+              </div>
               {/* Apply Mode Results */}
               {applyResult && (
                 <div className="fade-up">
