@@ -1829,7 +1829,7 @@ export default function App() {
   const rmExp  = i  => set("experiences",form.experiences.filter((_,j)=>j!==i));
   const addEdu = () => set("education",[...form.education,blankEdu()]);
   const go     = n  => { setStep(n); setTimeout(()=>containerRef.current?.scrollTo({top:0,behavior:"smooth"}),50); };
-  const resetAll = () => { setResult(null);setLiResult(null);setApplyResult(null);setInterviewResult(null);setLinkedInWriterResult(null);setUploadedPdf(null);setApplyResume(null);setJobDescription("");setMode("");setApplyInput({jobUrl:"",jobText:"",inputMode:"url"});try{sessionStorage.removeItem("cr_nav");}catch(e){}go(0); };
+  const resetAll = () => { setResult(null);setLiResult(null);setApplyResult(null);setInterviewResult(null);setLinkedInWriterResult(null);setUploadedPdf(null);setApplyResume(null);setJobDescription("");setMode("");setApplyInput({jobUrl:"",jobText:"",inputMode:"url"});try{sessionStorage.removeItem("cr_nav");}catch(e){}go(1); };
 
   const handleFile = file => {
     if (!file||file.type!=="application/pdf"){ setErr("Please upload a PDF file."); return; }
@@ -2569,9 +2569,10 @@ export default function App() {
           {/* ══ STEP 2 — RESULTS ══ */}
           {step===3 && (
             <div>
-              {/* Back button on all results */}
-              <div style={{marginBottom:16}}>
-                <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>go(2)}>← Back</button>
+              {/* Back button + Start Over on all results */}
+              <div style={{marginBottom:16, display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+                <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>mode ? go(2) : go(1)}>← Back</button>
+                <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={resetAll}>Start Over</button>
               </div>
               {/* Apply Mode Results */}
               {applyResult && (
