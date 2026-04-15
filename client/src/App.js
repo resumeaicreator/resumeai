@@ -849,13 +849,6 @@ const JOB_BOARDS = [
   { name:"We Work Remotely",color:"#1a9e6e",icon:"ww", url:(r)  =>`https://weworkremotely.com/remote-jobs/search?term=${encodeURIComponent(r)}` },
 ];
 
-const SEARCH_TIPS = [
-  r => `${r} remote`,
-  r => `${r} entry level`,
-  r => `${r} senior`,
-  r => `junior ${r}`,
-  r => `${r} contract`,
-];
 
 /* ─── Live Jobs Search Wrapper (landing page) ─── */
 function LiveJobsSearch() {
