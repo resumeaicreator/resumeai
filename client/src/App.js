@@ -1723,6 +1723,21 @@ export default function App() {
     try { localStorage.setItem(LS_KEY, JSON.stringify(form)); } catch(e){}
   }, [form]);
 
+  /* ── Persist step + mode across refresh (sessionStorage) ── */
+  useEffect(() => {
+    try {
+      const s = sessionStorage.getItem("cr_nav");
+      if (s) {
+        const { step: savedStep, mode: savedMode } = JSON.parse(s);
+        if (savedStep && savedStep > 0) { setStep(savedStep); setMode(savedMode||""); }
+      }
+    } catch(e) {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    try { sessionStorage.setItem("cr_nav", JSON.stringify({ step, mode })); } catch(e) {}
+  }, [step, mode]);
+
   /* ── Share link: encode result into URL ── */
   const makeShareLink = (data) => {
     try {
@@ -1814,7 +1829,7 @@ export default function App() {
   const rmExp  = i  => set("experiences",form.experiences.filter((_,j)=>j!==i));
   const addEdu = () => set("education",[...form.education,blankEdu()]);
   const go     = n  => { setStep(n); setTimeout(()=>containerRef.current?.scrollTo({top:0,behavior:"smooth"}),50); };
-  const resetAll = () => { setResult(null);setLiResult(null);setApplyResult(null);setInterviewResult(null);setLinkedInWriterResult(null);setUploadedPdf(null);setApplyResume(null);setJobDescription("");setMode("");setApplyInput({jobUrl:"",jobText:"",inputMode:"url"});go(0); };
+  const resetAll = () => { setResult(null);setLiResult(null);setApplyResult(null);setInterviewResult(null);setLinkedInWriterResult(null);setUploadedPdf(null);setApplyResume(null);setJobDescription("");setMode("");setApplyInput({jobUrl:"",jobText:"",inputMode:"url"});try{sessionStorage.removeItem("cr_nav");}catch(e){}go(0); };
 
   const handleFile = file => {
     if (!file||file.type!=="application/pdf"){ setErr("Please upload a PDF file."); return; }
@@ -2139,12 +2154,12 @@ export default function App() {
                 </div>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:20 }}>
                   {[
-                    { icon:"⚡", title:"Apply Mode", badge:"Premium", desc:"Paste any job URL. Get a tailored resume, cover letter, and interview prep — all in one shot. The fastest way to apply." },
-                    { icon:"✦", title:"Build Resume", badge:"Free", desc:"Start from scratch. Fill in your details and get a polished, ATS-optimised resume in under 2 minutes." },
-                    { icon:"↑", title:"Tailor to a Job", badge:"Free", desc:"Already have a resume? Upload your PDF and rewrite it specifically for any role — even if the industries are different." },
-                    { icon:"in", title:"LinkedIn Optimizer", badge:"Free", desc:"Get a full AI audit of your LinkedIn profile with prioritised, actionable fixes to attract more recruiters." },
+                    { icon:"⚡", title:"Apply Mode",        badge:"Premium", mode:"apply",          desc:"Paste any job URL. Get a tailored resume, cover letter, and interview prep — all in one shot. The fastest way to apply." },
+                    { icon:"✦", title:"Build Resume",       badge:"Free",    mode:"build",          desc:"Start from scratch. Fill in your details and get a polished, ATS-optimised resume in under 2 minutes." },
+                    { icon:"↑", title:"Tailor to a Job",    badge:"Free",    mode:"tailor",         desc:"Already have a resume? Upload your PDF and rewrite it specifically for any role — even if the industries are different." },
+                    { icon:"in", title:"LinkedIn Optimizer",badge:"Free",    mode:"linkedin",       desc:"Get a full AI audit of your LinkedIn profile with prioritised, actionable fixes to attract more recruiters." },
                   ].map((f,i)=>(
-                    <div key={i} className="card" style={{ padding:"28px 24px", cursor:"pointer" }} onClick={()=>go(1)}>
+                    <div key={i} className="card" style={{ padding:"28px 24px", cursor:"pointer" }} onClick={()=>{ setMode(f.mode); go(2); }}>
                       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
                         <span style={{ fontSize:24, color:"var(--gold)" }}>{f.icon}</span>
                         <span style={{ fontSize:9, padding:"3px 10px", borderRadius:8, background: f.badge==="Premium" ? "linear-gradient(135deg,#c9a84c,#e8c96d)" : "rgba(74,222,128,0.1)", color: f.badge==="Premium" ? "#0d0d0f" : "#4ade80", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", border: f.badge==="Free" ? "1px solid rgba(74,222,128,0.3)" : "none" }}>{f.badge}</span>
