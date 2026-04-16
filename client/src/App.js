@@ -1311,7 +1311,7 @@ export default function App() {
       .then(data => { setUser(data?.user || false); setAuthReady(true); })
       .catch(() => { setUser(false); setAuthReady(true); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [location.pathname]);
 
   /* ── localStorage auto-save form ── */
   const LS_KEY = "resumeai_form_v2";
@@ -1488,8 +1488,8 @@ export default function App() {
           <span style={{width:20,height:20,border:"2px solid rgba(201,168,76,0.3)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block"}} />
         </div>
       )}
-      {authReady && page==="login"     && <Login onSuccess={()=>{ const dest=sessionStorage.getItem("cr_redirect")||"/dashboard"; sessionStorage.removeItem("cr_redirect"); navigate(dest); }} />}
-      {authReady && page==="register"  && <Register onSuccess={()=>navigate("/dashboard")} />}
+      {authReady && page==="login"     && <Login />}
+      {authReady && page==="register"  && <Register />}
       {page==="forgot"                 && <ForgotPassword />}
       {page==="reset"                  && <ResetPassword token={resetToken} />}
       {authReady && page==="subscribe" && <Subscribe user={user} setUser={setUser} />}

@@ -95,13 +95,14 @@ function AuthPage({ mode, onSuccess, switchMode, onBack }) {
 }
 
 
-export default function Login({ onSuccess }) {
+export default function Login() {
   const navigate = useNavigate();
+  const dest = sessionStorage.getItem("cr_redirect") || "/dashboard";
   return (
     <AuthPage
       mode="login"
       onBack={()=>navigate("/")}
-      onSuccess={onSuccess || (()=>navigate("/dashboard"))}
+      onSuccess={()=>{ sessionStorage.removeItem("cr_redirect"); navigate(dest); }}
       switchMode={m=>navigate("/"+m)}
     />
   );
