@@ -102,7 +102,7 @@ export default function Login() {
     <AuthPage
       mode="login"
       onBack={()=>navigate("/")}
-      onSuccess={()=>{ sessionStorage.removeItem("cr_redirect"); navigate(dest); }}
+      onSuccess={u=>{ try{localStorage.setItem("cr_user",JSON.stringify(u));}catch{} sessionStorage.removeItem("cr_redirect"); navigate(dest); }}
       switchMode={m=>navigate("/"+m)}
     />
   );

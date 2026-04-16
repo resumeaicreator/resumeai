@@ -1297,10 +1297,17 @@ export default function App() {
       return;
     }
     const API = process.env.REACT_APP_API_URL || "";
+    // Read cached user from localStorage for instant load (no flash)
+    try {
+      const cached = localStorage.getItem("cr_user");
+      if (cached) { setUser(JSON.parse(cached)); setAuthReady(true); }
+    } catch {}
+
+    // Verify with server in background
     fetch(`${API}/api/auth/me`, { credentials: "include" })
       .then(async r => {
         if (r.ok) return r.json();
-        // Access token expired — try refresh before giving up
+        // Access token expired — try refresh
         const ref = await fetch(`${API}/api/auth/refresh`, { method:"POST", credentials:"include" }).catch(()=>null);
         if (ref?.ok) {
           const r2 = await fetch(`${API}/api/auth/me`, { credentials:"include" });
@@ -1308,10 +1315,19 @@ export default function App() {
         }
         return null;
       })
-      .then(data => { setUser(data?.user || false); setAuthReady(true); })
+      .then(data => {
+        if (data?.user) {
+          try { localStorage.setItem("cr_user", JSON.stringify(data.user)); } catch {}
+          setUser(data.user);
+        } else {
+          try { localStorage.removeItem("cr_user"); } catch {}
+          setUser(false);
+        }
+        setAuthReady(true);
+      })
       .catch(() => { setUser(false); setAuthReady(true); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  }, []);
 
   /* ── localStorage auto-save form ── */
   const LS_KEY = "resumeai_form_v2";
@@ -1439,6 +1455,7 @@ export default function App() {
           if (refresh.ok) return callAPI(endpoint, body, true);
         } catch(e) {}
       }
+      try{localStorage.removeItem("cr_user");}catch{}
       setUser(false);
       if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
         sessionStorage.setItem("cr_redirect", window.location.pathname);
