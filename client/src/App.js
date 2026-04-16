@@ -1,4 +1,19 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import Landing      from "./pages/Landing";
+import Login        from "./pages/Login";
+import Register     from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword  from "./pages/ResetPassword";
+import Subscribe    from "./pages/Subscribe";
+import Account      from "./pages/Account";
+import Dashboard    from "./pages/Dashboard";
+import BuildResume  from "./pages/BuildResume";
+import TailorJob    from "./pages/TailorJob";
+import LinkedInOptimizer from "./pages/LinkedInOptimizer";
+import ApplyMode      from "./pages/ApplyMode";
+import InterviewPrep  from "./pages/InterviewPrep";
+import LinkedInWriter from "./pages/LinkedInWriter";
 
 /* ─── Fonts + Global Styles ─── */
 const FontLink = () => {
@@ -66,6 +81,7 @@ const FontLink = () => {
     @keyframes breathe   { 0%,100%{box-shadow:0 0 0 0 rgba(201,168,76,0)} 50%{box-shadow:0 0 28px 4px rgba(201,168,76,0.18)} }
     @keyframes drawLine  { from{stroke-dashoffset:300} to{stroke-dashoffset:0} }
     @keyframes logoFade  { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeIn    { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
     @keyframes particleDrift {
       0%   { transform:translateY(0px) translateX(0px); opacity:0; }
       10%  { opacity:1; } 90% { opacity:0.6; }
@@ -199,6 +215,119 @@ const FontLink = () => {
   `}</style>
   );
 };
+
+
+const JOB_BOARDS = [
+  { name:"LinkedIn Jobs",   color:"#0a66c2", icon:"in", url:(r,l)=>`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(r)}&location=${encodeURIComponent(l||"")}` },
+  { name:"Indeed",          color:"#003a9b", icon:"in", url:(r,l)=>`https://www.indeed.com/jobs?q=${encodeURIComponent(r)}&l=${encodeURIComponent(l||"")}` },
+  { name:"Glassdoor",       color:"#0caa41", icon:"gd", url:(r,l)=>`https://www.glassdoor.com/Job/jobs.htm?sc.keyword=${encodeURIComponent(r)}&locT=C&locId=1` },
+  { name:"Google Jobs",     color:"#4285f4", icon:"g",  url:(r,l)=>`https://www.google.com/search?q=${encodeURIComponent(r+" jobs "+(l||""))}` },
+  { name:"Remotive",        color:"#7c3aed", icon:"re", url:(r)=>`https://remotive.com/remote-jobs?search=${encodeURIComponent(r)}` },
+  { name:"We Work Remotely",color:"#1a9e6e", icon:"ww", url:(r)=>`https://weworkremotely.com/remote-jobs/search?term=${encodeURIComponent(r)}` },
+];
+
+function HeroGlow() {
+  return (
+    <>
+      <div style={{ position:"fixed", top:"-20%", left:"20%", width:"60%", height:600, background:"radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.04) 0%, transparent 70%)", pointerEvents:"none", zIndex:0 }} />
+      <div style={{ position:"fixed", bottom:"10%", right:"-5%", width:400, height:400, background:"radial-gradient(ellipse, rgba(201,168,76,0.03) 0%, transparent 65%)", pointerEvents:"none", zIndex:0 }} />
+    </>
+  );
+}
+
+function LiveJobs({ what, where, title, compact }) {
+  const [jobs, setJobs]       = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [total, setTotal]     = useState(0);
+  const [page, setPage]       = useState(1);
+  const [fetched, setFetched] = useState(false);
+  const [err, setErr]         = useState("");
+  const API = process.env.REACT_APP_API_URL || "";
+
+  const fetchJobs = async (p=1) => {
+    setLoading(true); setErr("");
+    try {
+      const params = new URLSearchParams({ what: what||"software engineer", page: p });
+      if (where) params.set("where", where);
+      const res  = await fetch(`${API}/api/live-jobs?${params}`);
+      const data = await res.json();
+      if (!res.ok) { setErr(data.error||"Could not load jobs."); setFetched(true); return; }
+      if (!data.jobs||data.jobs.length===0) { setErr(`No listings found for "${what}".`); setFetched(true); return; }
+      setJobs(data.jobs); setTotal(data.total||0); setPage(p); setFetched(true);
+    } catch(e) { setErr("Network error — please try again."); setFetched(true); }
+    finally { setLoading(false); }
+  };
+
+  // Fetch when scrolled into view — avoids rate limiting
+  const liveJobsRef = useRef(null);
+  useEffect(() => {
+    const el = liveJobsRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { fetchJobs(1); observer.disconnect(); } },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fmt = n => n>=1000?`$${Math.round(n/1000)}k`:`$${n}`;
+  const sal = (min,max) => !min&&!max?null:min&&max?`${fmt(min)} – ${fmt(max)}`:min?`From ${fmt(min)}`:`Up to ${fmt(max)}`;
+  const ago = d => { if(!d)return""; const days=Math.floor((Date.now()-new Date(d).getTime())/86400000); return days===0?"Today":days===1?"Yesterday":days<7?`${days}d ago`:days<30?`${Math.floor(days/7)}w ago`:`${Math.floor(days/30)}mo ago`; };
+
+  if (!fetched) return (
+    <div ref={liveJobsRef} style={{ textAlign:"center", padding:compact?"20px 0":"40px 0" }}>
+      <span style={{ width:18,height:18,border:"2px solid rgba(201,168,76,0.3)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block" }} />
+      <div style={{ fontSize:12, color:"var(--ash)", marginTop:10 }}>Loading live listings…</div>
+    </div>
+  );
+
+  if (err) return (
+    <div style={{ textAlign:"center", padding:"24px 0" }}>
+      <div style={{ fontSize:13, color:"#f87171", marginBottom:14 }}>{err}</div>
+      <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>{ setFetched(false); setErr(""); }}>Try Again</button>
+    </div>
+  );
+
+  return (
+    <div>
+      {title && (
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:16, flexWrap:"wrap", gap:8 }}>
+          <div style={{ fontSize:13, color:"var(--ash)" }}>{total.toLocaleString()} listings for <strong style={{ color:"var(--text-primary)" }}>{what}</strong></div>
+          <button onClick={()=>fetchJobs(1)} disabled={loading} style={{ background:"none", border:"none", color:"var(--gold)", cursor:"pointer", fontSize:12, fontFamily:"var(--font-body)" }}>{loading?"Refreshing…":"↺ Refresh"}</button>
+        </div>
+      )}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:12, marginBottom:16 }}>
+        {jobs.map((job,i)=>(
+          <a key={job.id||i} href={job.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none" }}>
+            <div className="card" style={{ padding:"16px 18px", cursor:"pointer", height:"100%", transition:"all 0.2s", borderColor:"rgba(255,255,255,0.06)" }}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--gold-border)";e.currentTarget.style.transform="translateY(-2px)";}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.06)";e.currentTarget.style.transform="translateY(0)";}}
+            >
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6, gap:8 }}>
+                <div style={{ fontWeight:500, fontSize:14, color:"var(--text-primary)", lineHeight:1.3 }}>{job.title}</div>
+                <span style={{ fontSize:10, color:"var(--ash)", whiteSpace:"nowrap", flexShrink:0 }}>{ago(job.created)}</span>
+              </div>
+              <div style={{ fontSize:12, color:"var(--gold)", marginBottom:4 }}>{job.company}</div>
+              <div style={{ fontSize:12, color:"var(--ash)", marginBottom:8 }}>{job.location}</div>
+              {sal(job.salaryMin,job.salaryMax)&&<div style={{ fontSize:11, padding:"3px 10px", borderRadius:8, background:"rgba(74,222,128,0.08)", border:"1px solid rgba(74,222,128,0.2)", color:"#4ade80", display:"inline-block", marginBottom:8 }}>{sal(job.salaryMin,job.salaryMax)}</div>}
+              <div style={{ fontSize:11, color:"var(--ash)", lineHeight:1.5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{job.description}</div>
+              <div style={{ marginTop:10, fontSize:11, color:"var(--gold)", letterSpacing:"0.06em" }}>Apply ↗</div>
+            </div>
+          </a>
+        ))}
+      </div>
+      {total>6&&(
+        <div style={{ display:"flex", justifyContent:"center", gap:8, marginTop:8 }}>
+          <button className="ghost-btn" style={{ fontSize:11, padding:"6px 14px" }} onClick={()=>fetchJobs(Math.max(1,page-1))} disabled={loading||page===1}>← Prev</button>
+          <span style={{ fontSize:12, color:"var(--ash)", padding:"6px 10px" }}>Page {page}</span>
+          <button className="ghost-btn" style={{ fontSize:11, padding:"6px 14px" }} onClick={()=>fetchJobs(page+1)} disabled={loading}>Next →</button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ─── Floating Particles ─── */
 function Particles() {
@@ -452,105 +581,7 @@ function ResumeChat({ resume, onUpdate }) {
   );
 }
 
-/* ─── Premium Lock Overlay ─── */
-/* ─── ATS Score Hook (Landing Page) ─── */
-function ATSScoreHook({ onSignUp }) {
-  const [text, setText]     = useState("");
-  const [score, setScore]   = useState(null);
-  const [loading, setLoading] = useState(false);
 
-  const ATS_WORDS = ["led","managed","developed","increased","reduced","achieved","collaborated","implemented","delivered","optimized","launched","spearheaded","drove","built","designed","scaled","streamlined","negotiated","mentored","generated"];
-
-  const check = () => {
-    if (!text.trim()) return;
-    setLoading(true);
-    setTimeout(() => {
-      const lower = text.toLowerCase();
-      const hits = ATS_WORDS.filter(w => lower.includes(w));
-      const wordCount = text.split(/\s+/).filter(Boolean).length;
-      const lengthScore = Math.min(30, Math.round((wordCount / 400) * 30));
-      const keywordScore = Math.round((hits.length / ATS_WORDS.length) * 50);
-      const quantScore = (text.match(/\d+%|\$\d+|\d+x|\d+\+/g)||[]).length * 3;
-      const total = Math.min(98, 25 + lengthScore + keywordScore + quantScore);
-      setScore({ total, hits, wordCount });
-      setLoading(false);
-    }, 800);
-  };
-
-  const color = score ? (score.total >= 70 ? "#4ade80" : score.total >= 50 ? "#fbbf24" : "#f87171") : "var(--gold)";
-
-  return (
-    <div style={{ maxWidth:800, margin:"0 auto 80px", padding:"40px", background:"var(--ink2)", borderRadius:20, border:"1px solid var(--border-subtle)" }}>
-      <div style={{ textAlign:"center", marginBottom:28 }}>
-        <div style={{ fontFamily:"var(--font-display)", fontSize:32, fontWeight:300, marginBottom:8 }}>
-          How ATS-friendly is your resume?
-        </div>
-        <div style={{ fontSize:14, color:"var(--ash)" }}>Paste your resume text below for an instant score — no account needed.</div>
-      </div>
-
-      {!score ? (
-        <>
-          <textarea
-            value={text}
-            onChange={e => setText(e.target.value)}
-            placeholder="Paste your resume text here..."
-            rows={8}
-            style={{ width:"100%", marginBottom:14, resize:"vertical", minHeight:160, fontFamily:"var(--font-body)", fontSize:13 }}
-          />
-          <button
-            className="gold-btn"
-            onClick={check}
-            disabled={loading || !text.trim()}
-            style={{ width:"100%", fontSize:14, padding:"14px" }}
-          >
-            {loading ? "Analysing…" : "Check My ATS Score →"}
-          </button>
-        </>
-      ) : (
-        <div className="fade-in">
-          {/* Score display */}
-          <div style={{ textAlign:"center", marginBottom:28 }}>
-            <div style={{ fontFamily:"var(--font-display)", fontSize:72, fontWeight:300, color, lineHeight:1 }}>{score.total}</div>
-            <div style={{ fontSize:14, color:"var(--ash)", marginBottom:16 }}>out of 100</div>
-            <div style={{ maxWidth:400, margin:"0 auto", background:"rgba(255,255,255,0.05)", borderRadius:999, height:8, overflow:"hidden" }}>
-              <div style={{ width:`${score.total}%`, height:"100%", background:`linear-gradient(90deg,${color}88,${color})`, borderRadius:999, transition:"width 1.4s cubic-bezier(0.16,1,0.3,1)" }} />
-            </div>
-          </div>
-
-          {/* Feedback */}
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))", gap:12, marginBottom:24 }}>
-            {[
-              { label:"Keywords found", value:score.hits.length, max:20, good: score.hits.length >= 8 },
-              { label:"Word count", value:score.wordCount, max:600, good: score.wordCount >= 250 },
-              { label:"Metrics detected", value:(text.match(/\d+%|\$\d+|\d+x|\d+\+/g)||[]).length, max:10, good: (text.match(/\d+%|\$\d+|\d+x|\d+\+/g)||[]).length >= 3 },
-            ].map((stat,i) => (
-              <div key={i} style={{ padding:"14px", background:"rgba(0,0,0,0.2)", borderRadius:12, textAlign:"center" }}>
-                <div style={{ fontFamily:"var(--font-display)", fontSize:28, fontWeight:300, color: stat.good ? "#4ade80" : "#f87171" }}>{stat.value}</div>
-                <div style={{ fontSize:11, color:"var(--ash)", marginTop:4 }}>{stat.label}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Verdict + CTA */}
-          <div style={{ padding:"20px 24px", background: score.total >= 70 ? "rgba(74,222,128,0.06)" : "rgba(248,113,113,0.06)", borderRadius:12, border:`1px solid ${score.total >= 70 ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)"}`, marginBottom:20, textAlign:"center" }}>
-            <div style={{ fontSize:15, fontWeight:500, marginBottom:8, color: score.total >= 70 ? "#4ade80" : "#f87171" }}>
-              {score.total >= 70 ? "Good score — let's make it perfect" : score.total >= 50 ? "Room to improve — let AI fix it" : "Low score — this needs fixing before you apply"}
-            </div>
-            <div style={{ fontSize:13, color:"var(--ash)", marginBottom:16 }}>
-              {score.total >= 70 ? "Your resume passes basic ATS screening. Crafted Resume can optimise it further and tailor it to specific jobs." : "Many ATS systems will filter this resume out automatically. Crafted Resume can rewrite and optimise it in seconds."}
-            </div>
-            <button className="gold-btn pulse" style={{ fontSize:14, padding:"12px 32px" }} onClick={onSignUp}>
-              Fix My Resume for Free →
-            </button>
-          </div>
-          <div style={{ textAlign:"center" }}>
-            <button className="ghost-btn" style={{ fontSize:12 }} onClick={() => { setScore(null); setText(""); }}>Check another resume</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ─── Locked Preview for free users ─── */
 function LockedPreview({ data, template, onUpgrade }) {
@@ -565,176 +596,233 @@ function LockedPreview({ data, template, onUpgrade }) {
         <div style={{ fontSize:14, color:"var(--text-primary)", fontWeight:500 }}>Your resume is ready — upgrade to view and download</div>
         <div style={{ fontSize:12, color:"var(--ash)", marginBottom:4 }}>PDF export · Share link · ATS fixer · Full preview</div>
         <button className="gold-btn pulse" style={{ fontSize:13, padding:"11px 28px" }} onClick={onUpgrade}>
-          Unlock for $15/month →
+          Unlock for $20/month →
         </button>
       </div>
     </div>
   );
 }
-function Sec({ title, accent, children }) {
+function Sec({ title, accent, border, children }) {
   return (
     <div style={{ marginBottom:22 }}>
-      <h2 style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:accent, borderBottom:`1px solid ${accent}22`, paddingBottom:6, marginBottom:12 }}>{title}</h2>
+      <h2 style={{ fontSize:10, fontWeight:700, letterSpacing:"0.18em", textTransform:"uppercase", color:accent, borderBottom:border||`1.5px solid ${accent}33`, paddingBottom:6, marginBottom:12 }}>{title}</h2>
       {children}
     </div>
   );
 }
+
 function Preview({ data, template }) {
   if (!data) return null;
-  const cfg = {
-    executive:{ accent:"#1a1a2e", sub:"#8a8a96", font:"'Cormorant Garamond',Georgia,serif", body:"'Outfit',sans-serif" },
-    modern:   { accent:"#0f4c81", sub:"#555",    font:"'Outfit',sans-serif",                body:"'Outfit',sans-serif" },
-    minimal:  { accent:"#2c2c2c", sub:"#777",    font:"Georgia,serif",                      body:"Georgia,serif" },
-    elegant:  { accent:"#6b4c3b", sub:"#9a7b6b", font:"'Cormorant Garamond',Georgia,serif", body:"'Outfit',sans-serif" },
-    bold:     { accent:"#111",    sub:"#444",     font:"'Outfit',sans-serif",                body:"'Outfit',sans-serif" },
-    navy:     { accent:"#1b3a5c", sub:"#5a7a9a",  font:"'Outfit',sans-serif",                body:"'Outfit',sans-serif" },
-    creative: { accent:"#5b2d8e", sub:"#8a6aaa",  font:"'Cormorant Garamond',Georgia,serif", body:"'Outfit',sans-serif" },
-  };
-  const c = cfg[template]||cfg.executive;
-  return (
-    <div id="resume-output" style={{ background:"#fff", color:"#1a1a2e", fontFamily:c.body, padding:"52px 60px", lineHeight:1.65, fontSize:13.5 }}>
-      <div style={{ marginBottom:28 }}>
-        <h1 style={{ fontFamily:c.font, fontSize:36, fontWeight:300, letterSpacing:"-0.5px", color:c.accent, marginBottom:4 }}>{data.name}</h1>
-        <div style={{ fontFamily:c.font, fontSize:16, fontStyle:"italic", color:c.sub, marginBottom:10 }}>{data.targetRole}</div>
-        <div style={{ display:"flex", flexWrap:"wrap", gap:16, fontSize:12, color:"#666", borderTop:`1.5px solid ${c.accent}`, paddingTop:10 }}>
-          {[data.email,data.phone,data.location,data.linkedin].filter(Boolean).map((v,i)=><span key={i}>{v}</span>)}
+
+  // ── EXECUTIVE: Classic serif, single column, gold rule ──────────────
+  if (!template || template==="executive") {
+    const A="#1a1a2e", S="#8a8a96";
+    return (
+      <div id="resume-output" style={{ background:"#fff", color:"#1a1a2e", fontFamily:"'Outfit',sans-serif", padding:"52px 60px", lineHeight:1.65, fontSize:13.5 }}>
+        <div style={{ marginBottom:28 }}>
+          <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:38, fontWeight:600, letterSpacing:"-0.5px", color:A, marginBottom:2 }}>{data.name}</h1>
+          <div style={{ fontSize:15, fontStyle:"italic", color:S, marginBottom:12, fontFamily:"'Cormorant Garamond',Georgia,serif" }}>{data.targetRole}</div>
+          <div style={{ height:2, background:`linear-gradient(90deg,${A},${A}22)`, marginBottom:10 }} />
+          <div style={{ display:"flex", flexWrap:"wrap", gap:16, fontSize:11.5, color:"#666" }}>
+            {[data.email,data.phone,data.location,data.linkedin].filter(Boolean).map((v,i)=><span key={i}>{v}</span>)}
+          </div>
+        </div>
+        {data.summary    && <Sec title="Profile"    accent={A}><p style={{ color:"#333", fontStyle:"italic", lineHeight:1.8 }}>{data.summary}</p></Sec>}
+        {data.experience && <Sec title="Experience" accent={A}><div dangerouslySetInnerHTML={{ __html:data.experience.replace(/\n/g,"<br/>").replace(/•/g,`<span style='color:${A}'>•</span>`) }} style={{ color:"#333" }} /></Sec>}
+        {data.education  && <Sec title="Education"  accent={A}><div dangerouslySetInnerHTML={{ __html:data.education.replace(/\n/g,"<br/>") }} style={{ color:"#333" }} /></Sec>}
+        {data.skills     && <Sec title="Skills"     accent={A}><div style={{ color:"#333" }}>{data.skills}</div></Sec>}
+        {data.certifications && <Sec title="Certifications" accent={A}><div style={{ color:"#333" }}>{data.certifications}</div></Sec>}
+      </div>
+    );
+  }
+
+  // ── MODERN: Two-column sidebar, blue accent ──────────────────────────
+  if (template==="modern") {
+    const A="#0f4c81", SIDE="#f0f4f8";
+    return (
+      <div id="resume-output" style={{ background:"#fff", color:"#222", fontFamily:"'Outfit',sans-serif", fontSize:13, lineHeight:1.6, display:"flex", minHeight:"100%" }}>
+        {/* Sidebar */}
+        <div style={{ width:"32%", background:SIDE, padding:"40px 24px", flexShrink:0 }}>
+          <div style={{ marginBottom:28 }}>
+            <h1 style={{ fontSize:22, fontWeight:700, color:A, lineHeight:1.2, marginBottom:4 }}>{data.name}</h1>
+            <div style={{ fontSize:12, color:"#555", fontWeight:500 }}>{data.targetRole}</div>
+          </div>
+          <div style={{ marginBottom:20 }}>
+            <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.18em", textTransform:"uppercase", color:A, marginBottom:8 }}>Contact</div>
+            {[data.email,data.phone,data.location,data.linkedin].filter(Boolean).map((v,i)=>(
+              <div key={i} style={{ fontSize:11, color:"#444", marginBottom:4, wordBreak:"break-all" }}>{v}</div>
+            ))}
+          </div>
+          {data.skills && (
+            <div>
+              <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.18em", textTransform:"uppercase", color:A, marginBottom:8 }}>Skills</div>
+              {data.skills.split(/[,|\n]/).filter(Boolean).map((s,i)=>(
+                <div key={i} style={{ fontSize:11, color:"#333", marginBottom:6 }}>
+                  <div style={{ marginBottom:3 }}>{s.trim()}</div>
+                  <div style={{ height:4, background:"#ddd", borderRadius:2 }}><div style={{ height:"100%", width:`${75+Math.random()*20}%`, background:A, borderRadius:2 }} /></div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        {/* Main */}
+        <div style={{ flex:1, padding:"40px 32px" }}>
+          {data.summary    && <Sec title="About Me"   accent={A}><p style={{ color:"#333" }}>{data.summary}</p></Sec>}
+          {data.experience && <Sec title="Experience" accent={A}><div dangerouslySetInnerHTML={{ __html:data.experience.replace(/\n/g,"<br/>").replace(/•/g,`<span style='color:${A}'>•</span>`) }} style={{ color:"#333" }} /></Sec>}
+          {data.education  && <Sec title="Education"  accent={A}><div dangerouslySetInnerHTML={{ __html:data.education.replace(/\n/g,"<br/>") }} style={{ color:"#333" }} /></Sec>}
+          {data.certifications && <Sec title="Certifications" accent={A}><div style={{ color:"#333" }}>{data.certifications}</div></Sec>}
         </div>
       </div>
-      {data.summary        && <Sec title="Profile"        accent={c.accent}><p style={{ color:"#333", fontStyle:"italic" }}>{data.summary}</p></Sec>}
-      {data.experience     && <Sec title="Experience"     accent={c.accent}><div dangerouslySetInnerHTML={{ __html:data.experience.replace(/\n/g,"<br/>").replace(/•/g,`<span style='color:${c.accent}'>•</span>`) }} style={{ color:"#333" }} /></Sec>}
-      {data.education      && <Sec title="Education"      accent={c.accent}><div dangerouslySetInnerHTML={{ __html:data.education.replace(/\n/g,"<br/>") }} style={{ color:"#333" }} /></Sec>}
-      {data.skills         && <Sec title="Skills"         accent={c.accent}><div style={{ color:"#333" }}>{data.skills}</div></Sec>}
-      {data.certifications && <Sec title="Certifications" accent={c.accent}><div style={{ color:"#333" }}>{data.certifications}</div></Sec>}
-    </div>
-  );
-}
+    );
+  }
 
+  // ── MINIMAL: Ultra clean, lots of whitespace, thin rules ────────────
+  if (template==="minimal") {
+    const A="#2c2c2c";
+    return (
+      <div id="resume-output" style={{ background:"#fff", color:"#222", fontFamily:"Georgia,serif", padding:"60px 70px", lineHeight:1.8, fontSize:13.5 }}>
+        <div style={{ marginBottom:36 }}>
+          <h1 style={{ fontSize:32, fontWeight:400, letterSpacing:"0.02em", color:A, marginBottom:4 }}>{data.name}</h1>
+          <div style={{ fontSize:13, color:"#888", letterSpacing:"0.08em", marginBottom:16 }}>{data.targetRole?.toUpperCase()}</div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:20, fontSize:11.5, color:"#666" }}>
+            {[data.email,data.phone,data.location,data.linkedin].filter(Boolean).map((v,i)=><span key={i}>{v}</span>)}
+          </div>
+        </div>
+        {data.summary    && <Sec title="Summary"    accent="#888" border="1px solid #eee"><p style={{ color:"#333", fontStyle:"italic" }}>{data.summary}</p></Sec>}
+        {data.experience && <Sec title="Experience" accent="#888" border="1px solid #eee"><div dangerouslySetInnerHTML={{ __html:data.experience.replace(/\n/g,"<br/>") }} style={{ color:"#333" }} /></Sec>}
+        {data.education  && <Sec title="Education"  accent="#888" border="1px solid #eee"><div dangerouslySetInnerHTML={{ __html:data.education.replace(/\n/g,"<br/>") }} style={{ color:"#333" }} /></Sec>}
+        {data.skills     && <Sec title="Skills"     accent="#888" border="1px solid #eee"><div style={{ color:"#333" }}>{data.skills}</div></Sec>}
+        {data.certifications && <Sec title="Certifications" accent="#888" border="1px solid #eee"><div style={{ color:"#333" }}>{data.certifications}</div></Sec>}
+      </div>
+    );
+  }
+
+  // ── ELEGANT: Warm serif, centered header, decorative rules ──────────
+  if (template==="elegant") {
+    const A="#6b4c3b", S="#9a7b6b";
+    return (
+      <div id="resume-output" style={{ background:"#fffdf9", color:"#2a1f1a", fontFamily:"'Outfit',sans-serif", padding:"52px 60px", lineHeight:1.7, fontSize:13.5 }}>
+        <div style={{ textAlign:"center", marginBottom:30, paddingBottom:20, borderBottom:`1px solid ${A}44` }}>
+          <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:40, fontWeight:400, color:A, marginBottom:4, letterSpacing:"0.03em" }}>{data.name}</h1>
+          <div style={{ fontSize:14, color:S, fontStyle:"italic", marginBottom:12 }}>{data.targetRole}</div>
+          <div style={{ display:"flex", justifyContent:"center", flexWrap:"wrap", gap:16, fontSize:11.5, color:"#888" }}>
+            {[data.email,data.phone,data.location,data.linkedin].filter(Boolean).map((v,i)=>(
+              <span key={i} style={{ display:"flex", alignItems:"center", gap:4 }}>{i>0&&<span style={{ color:`${A}66` }}>·</span>}{v}</span>
+            ))}
+          </div>
+        </div>
+        {data.summary    && <Sec title="Profile"    accent={A}><p style={{ color:"#444", fontStyle:"italic", lineHeight:1.9 }}>{data.summary}</p></Sec>}
+        {data.experience && <Sec title="Experience" accent={A}><div dangerouslySetInnerHTML={{ __html:data.experience.replace(/\n/g,"<br/>").replace(/•/g,`<span style='color:${A}'>◆</span>`) }} style={{ color:"#333" }} /></Sec>}
+        {data.education  && <Sec title="Education"  accent={A}><div dangerouslySetInnerHTML={{ __html:data.education.replace(/\n/g,"<br/>") }} style={{ color:"#333" }} /></Sec>}
+        {data.skills     && <Sec title="Skills"     accent={A}><div style={{ color:"#333" }}>{data.skills}</div></Sec>}
+        {data.certifications && <Sec title="Certifications" accent={A}><div style={{ color:"#333" }}>{data.certifications}</div></Sec>}
+      </div>
+    );
+  }
+
+  // ── BOLD: Dark header bar, high contrast, strong typography ─────────
+  if (template==="bold") {
+    const A="#111", HL="#e8c96d";
+    return (
+      <div id="resume-output" style={{ background:"#fff", color:"#111", fontFamily:"'Outfit',sans-serif", fontSize:13.5, lineHeight:1.6 }}>
+        {/* Header block */}
+        <div style={{ background:A, color:"#fff", padding:"36px 52px", marginBottom:0 }}>
+          <h1 style={{ fontSize:34, fontWeight:800, letterSpacing:"-0.5px", marginBottom:4, color:"#fff" }}>{data.name}</h1>
+          <div style={{ fontSize:14, color:HL, fontWeight:600, letterSpacing:"0.08em", marginBottom:14 }}>{data.targetRole?.toUpperCase()}</div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:16, fontSize:11.5, color:"rgba(255,255,255,0.7)" }}>
+            {[data.email,data.phone,data.location,data.linkedin].filter(Boolean).map((v,i)=><span key={i}>{v}</span>)}
+          </div>
+        </div>
+        <div style={{ padding:"36px 52px" }}>
+          {data.summary    && <Sec title="Profile"    accent={A} border={`2px solid ${A}`}><p style={{ color:"#333" }}>{data.summary}</p></Sec>}
+          {data.experience && <Sec title="Experience" accent={A} border={`2px solid ${A}`}><div dangerouslySetInnerHTML={{ __html:data.experience.replace(/\n/g,"<br/>").replace(/•/g,`<span style='color:${HL};background:${A};padding:0 3px'>•</span>`) }} style={{ color:"#333" }} /></Sec>}
+          {data.education  && <Sec title="Education"  accent={A} border={`2px solid ${A}`}><div dangerouslySetInnerHTML={{ __html:data.education.replace(/\n/g,"<br/>") }} style={{ color:"#333" }} /></Sec>}
+          {data.skills     && <Sec title="Skills"     accent={A} border={`2px solid ${A}`}><div style={{ color:"#333" }}>{data.skills}</div></Sec>}
+          {data.certifications && <Sec title="Certifications" accent={A} border={`2px solid ${A}`}><div style={{ color:"#333" }}>{data.certifications}</div></Sec>}
+        </div>
+      </div>
+    );
+  }
+
+  // ── NAVY: Corporate two-tone, left accent bar ────────────────────────
+  if (template==="navy") {
+    const A="#1b3a5c", S="#5a7a9a", BAR="#e8f0f7";
+    return (
+      <div id="resume-output" style={{ background:"#fff", color:"#1b2a3b", fontFamily:"'Outfit',sans-serif", fontSize:13.5, lineHeight:1.65, display:"flex", minHeight:"100%" }}>
+        <div style={{ width:6, background:A, flexShrink:0 }} />
+        <div style={{ flex:1, padding:"48px 52px" }}>
+          <div style={{ background:BAR, margin:"-48px -52px 32px", padding:"36px 52px", borderBottom:`3px solid ${A}` }}>
+            <h1 style={{ fontSize:32, fontWeight:700, color:A, marginBottom:4 }}>{data.name}</h1>
+            <div style={{ fontSize:14, color:S, fontWeight:500, marginBottom:12 }}>{data.targetRole}</div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:16, fontSize:11.5, color:"#555" }}>
+              {[data.email,data.phone,data.location,data.linkedin].filter(Boolean).map((v,i)=><span key={i}>{v}</span>)}
+            </div>
+          </div>
+          {data.summary    && <Sec title="Professional Summary" accent={A}><p style={{ color:"#333" }}>{data.summary}</p></Sec>}
+          {data.experience && <Sec title="Work Experience"      accent={A}><div dangerouslySetInnerHTML={{ __html:data.experience.replace(/\n/g,"<br/>").replace(/•/g,`<span style='color:${A}'>▸</span>`) }} style={{ color:"#333" }} /></Sec>}
+          {data.education  && <Sec title="Education"            accent={A}><div dangerouslySetInnerHTML={{ __html:data.education.replace(/\n/g,"<br/>") }} style={{ color:"#333" }} /></Sec>}
+          {data.skills     && <Sec title="Core Skills"          accent={A}><div style={{ color:"#333", display:"flex", flexWrap:"wrap", gap:"6px 16px" }}>{data.skills.split(/[,|]/).map((s,i)=><span key={i} style={{ background:BAR, padding:"2px 10px", borderRadius:4, fontSize:12, border:`1px solid ${A}22` }}>{s.trim()}</span>)}</div></Sec>}
+          {data.certifications && <Sec title="Certifications" accent={A}><div style={{ color:"#333" }}>{data.certifications}</div></Sec>}
+        </div>
+      </div>
+    );
+  }
+
+  // ── CREATIVE: Purple gradient header, two-column, modern ────────────
+  if (template==="creative") {
+    const A="#5b2d8e", GRAD="linear-gradient(135deg,#5b2d8e,#9b59b6)";
+    return (
+      <div id="resume-output" style={{ background:"#fff", color:"#1a1a2e", fontFamily:"'Outfit',sans-serif", fontSize:13.5, lineHeight:1.65 }}>
+        {/* Gradient header */}
+        <div style={{ background:GRAD, color:"#fff", padding:"40px 52px", marginBottom:0 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", flexWrap:"wrap", gap:16 }}>
+            <div>
+              <h1 style={{ fontSize:34, fontWeight:700, letterSpacing:"-0.3px", marginBottom:4, color:"#fff" }}>{data.name}</h1>
+              <div style={{ fontSize:14, color:"rgba(255,255,255,0.85)", fontWeight:400 }}>{data.targetRole}</div>
+            </div>
+            <div style={{ textAlign:"right", fontSize:11.5, color:"rgba(255,255,255,0.75)", lineHeight:1.9 }}>
+              {[data.email,data.phone,data.location,data.linkedin].filter(Boolean).map((v,i)=><div key={i}>{v}</div>)}
+            </div>
+          </div>
+        </div>
+        {/* Body */}
+        <div style={{ display:"flex" }}>
+          <div style={{ flex:"0 0 62%", padding:"36px 32px 36px 52px", borderRight:`1px solid #eee` }}>
+            {data.summary    && <Sec title="About"      accent={A}><p style={{ color:"#333" }}>{data.summary}</p></Sec>}
+            {data.experience && <Sec title="Experience" accent={A}><div dangerouslySetInnerHTML={{ __html:data.experience.replace(/\n/g,"<br/>").replace(/•/g,`<span style='color:${A}'>✦</span>`) }} style={{ color:"#333" }} /></Sec>}
+            {data.education  && <Sec title="Education"  accent={A}><div dangerouslySetInnerHTML={{ __html:data.education.replace(/\n/g,"<br/>") }} style={{ color:"#333" }} /></Sec>}
+          </div>
+          <div style={{ flex:1, padding:"36px 36px 36px 28px", background:"#faf8ff" }}>
+            {data.skills && (
+              <div style={{ marginBottom:22 }}>
+                <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.18em", textTransform:"uppercase", color:A, marginBottom:12 }}>Skills</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {data.skills.split(/[,|\n]/).filter(Boolean).map((s,i)=>(
+                    <div key={i}>
+                      <div style={{ fontSize:12, marginBottom:4, color:"#333" }}>{s.trim()}</div>
+                      <div style={{ height:5, background:"#e8d5f5", borderRadius:3 }}><div style={{ height:"100%", width:`${70+((i*17)%25)}%`, background:GRAD, borderRadius:3 }} /></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {data.certifications && (
+              <div>
+                <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.18em", textTransform:"uppercase", color:A, marginBottom:10 }}>Certifications</div>
+                <div style={{ color:"#333", fontSize:13 }}>{data.certifications}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
 /* ─── LinkedIn Results ─── */
 /* ─── Interview Prep Form ─── */
-function InterviewPrepForm({ onResult, setErr, loading, setLoading, loadMsg, startLoad }) {
-  const [role, setRole]       = useState("");
-  const [company, setCompany] = useState("");
-  const [background, setBackground] = useState("");
-  const API = process.env.REACT_APP_API_URL||"";
-
-  const generate = async () => {
-    if (!role.trim()) { setErr("Please enter the job role."); return; }
-    setErr("");
-    const iv = startLoad(["Researching the role…","Crafting your questions…","Writing guidance…","Finalising…"]);
-    setLoading(true);
-    try {
-      const res = await fetch(`${API}/api/interview-prep`, {
-        method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include",
-        body: JSON.stringify({ role: role.trim(), company: company.trim(), background: background.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setErr(data.error||"Something went wrong."); return; }
-      onResult(data);
-    } catch(e) { setErr(e.message||"Network error."); }
-    finally { clearInterval(iv); setLoading(false); }
-  };
-
-  return (
-    <div>
-      <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:20 }}>Tell us about the interview</h2>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16, marginBottom:16 }}>
-        <div>
-          <label className="field-label">Job Role *</label>
-          <input placeholder="e.g. Senior Product Manager" value={role} onChange={e=>setRole(e.target.value)} />
-        </div>
-        <div>
-          <label className="field-label">Company (optional)</label>
-          <input placeholder="e.g. Google, a startup, any company" value={company} onChange={e=>setCompany(e.target.value)} />
-        </div>
-      </div>
-      <div style={{ marginBottom:20 }}>
-        <label className="field-label">Your Background (optional but recommended)</label>
-        <textarea
-          placeholder="Brief summary of your experience e.g. 5 years in product management, built 0-to-1 features, led teams of 8..."
-          value={background}
-          onChange={e=>setBackground(e.target.value)}
-          style={{ minHeight:100 }}
-        />
-      </div>
-      <button className="gold-btn" onClick={generate} disabled={loading||!role.trim()} style={{ width:"100%", fontSize:14, padding:"14px" }}>
-        {loading ? <span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><span style={{ width:16,height:16,border:"2px solid rgba(0,0,0,0.25)",borderTopColor:"#0d0d0f",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block" }} />{loadMsg}</span> : "🎯 Generate Interview Questions →"}
-      </button>
-    </div>
-  );
-}
-
 /* ─── LinkedIn Writer Form ─── */
-function LinkedInWriterForm({ onResult, setErr, loading, setLoading, loadMsg, startLoad }) {
-  const [name, setName]         = useState("");
-  const [role, setRole]         = useState("");
-  const [experience, setExperience] = useState("");
-  const [tone, setTone]         = useState("professional");
-  const API = process.env.REACT_APP_API_URL||"";
-
-  const generate = async () => {
-    if (!role.trim()) { setErr("Please enter your current or target role."); return; }
-    setErr("");
-    const iv = startLoad(["Writing your headline…","Crafting your About section…","Polishing the copy…"]);
-    setLoading(true);
-    try {
-      const res = await fetch(`${API}/api/linkedin-quick`, {
-        method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include",
-        body: JSON.stringify({ name: name.trim(), role: role.trim(), experience: experience.trim(), tone }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setErr(data.error||"Something went wrong."); return; }
-      onResult(data);
-    } catch(e) { setErr(e.message||"Network error."); }
-    finally { clearInterval(iv); setLoading(false); }
-  };
-
-  return (
-    <div>
-      <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:20 }}>Your LinkedIn profile</h2>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16, marginBottom:16 }}>
-        <div>
-          <label className="field-label">Your Name</label>
-          <input placeholder="e.g. Alex Chen" value={name} onChange={e=>setName(e.target.value)} />
-        </div>
-        <div>
-          <label className="field-label">Current / Target Role *</label>
-          <input placeholder="e.g. Product Manager" value={role} onChange={e=>setRole(e.target.value)} />
-        </div>
-      </div>
-      <div style={{ marginBottom:16 }}>
-        <label className="field-label">Your Experience & Achievements</label>
-        <textarea
-          placeholder="e.g. 6 years in SaaS product management, led launch of 3 products, grew user base from 10k to 500k, team of 8..."
-          value={experience}
-          onChange={e=>setExperience(e.target.value)}
-          style={{ minHeight:120 }}
-        />
-      </div>
-      <div style={{ marginBottom:20 }}>
-        <label className="field-label">Tone</label>
-        <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-          {[
-            { id:"professional", label:"Professional" },
-            { id:"conversational", label:"Conversational" },
-            { id:"bold", label:"Bold & Direct" },
-            { id:"creative", label:"Creative" },
-          ].map(t => (
-            <button key={t.id} onClick={()=>setTone(t.id)} style={{
-              padding:"8px 16px", borderRadius:20, border:`1px solid ${tone===t.id?"var(--gold)":"rgba(255,255,255,0.1)"}`,
-              background: tone===t.id ? "var(--gold-dim)" : "transparent",
-              color: tone===t.id ? "var(--gold)" : "var(--ash)",
-              cursor:"pointer", fontSize:12, fontFamily:"var(--font-body)", transition:"all 0.2s"
-            }}>{t.label}</button>
-          ))}
-        </div>
-      </div>
-      <button className="gold-btn" onClick={generate} disabled={loading||!role.trim()} style={{ width:"100%", fontSize:14, padding:"14px" }}>
-        {loading ? <span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><span style={{ width:16,height:16,border:"2px solid rgba(0,0,0,0.25)",borderTopColor:"#0d0d0f",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block" }} />{loadMsg}</span> : "✍️ Write My LinkedIn Copy →"}
-      </button>
-    </div>
-  );
-}
-
 function LinkedInResults({ data }) {
   if (!data) return null;
   const pri = { high:"tag-high", medium:"tag-med", low:"tag-low" };
@@ -813,203 +901,6 @@ function Steps({ current }) {
   );
 }
 
-/* ─── Field wrapper ─── */
-function F({ label, children }) {
-  return (
-    <div style={{ marginBottom:16 }}>
-      <label className="field-label">{label}</label>
-      {children}
-    </div>
-  );
-}
-function GoldLine() {
-  return <div style={{ height:1, background:"linear-gradient(90deg,transparent,var(--gold-border),transparent)", margin:"20px 0" }} />;
-}
-const Spinner = () => (
-  <span style={{ width:14,height:14,border:"2px solid rgba(0,0,0,0.25)",borderTopColor:"#0d0d0f",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block" }} />
-);
-
-/* ─── Hero animated background ─── */
-function HeroGlow() {
-  return (
-    <>
-      <div style={{ position:"fixed", top:"-20%", left:"20%", width:"60%", height:600, background:"radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.04) 0%, transparent 70%)", pointerEvents:"none", zIndex:0 }} />
-      <div style={{ position:"fixed", bottom:"10%", right:"-5%", width:400, height:400, background:"radial-gradient(ellipse, rgba(201,168,76,0.03) 0%, transparent 65%)", pointerEvents:"none", zIndex:0 }} />
-    </>
-  );
-}
-
-/* ─── Job Recommendations ─── */
-const JOB_BOARDS = [
-  { name:"LinkedIn Jobs",  color:"#0a66c2", icon:"in", url:(r,l)=>`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(r)}&location=${encodeURIComponent(l||"")}` },
-  { name:"Indeed",         color:"#003a9b", icon:"in", url:(r,l)=>`https://www.indeed.com/jobs?q=${encodeURIComponent(r)}&l=${encodeURIComponent(l||"")}` },
-  { name:"Glassdoor",      color:"#0caa41", icon:"gd", url:(r,l)=>`https://www.glassdoor.com/Job/jobs.htm?sc.keyword=${encodeURIComponent(r)}&locT=C&locId=1` },
-  { name:"Google Jobs",    color:"#4285f4", icon:"g",  url:(r,l)=>`https://www.google.com/search?q=${encodeURIComponent(r+" jobs "+(l||""))}` },
-  { name:"Remotive",       color:"#7c3aed", icon:"re", url:(r)  =>`https://remotive.com/remote-jobs?search=${encodeURIComponent(r)}` },
-  { name:"We Work Remotely",color:"#1a9e6e",icon:"ww", url:(r)  =>`https://weworkremotely.com/remote-jobs/search?term=${encodeURIComponent(r)}` },
-];
-
-
-/* ─── Live Jobs Search Wrapper (landing page) ─── */
-function LiveJobsSearch() {
-  const [what, setWhat]     = useState("software engineer");
-  const [where, setWhere]   = useState("");
-  const [search, setSearch] = useState({ what:"software engineer", where:"" });
-
-  return (
-    <div>
-      <div style={{ display:"flex", gap:10, marginBottom:24, maxWidth:620, margin:"0 auto 24px" }}>
-        <input
-          value={what}
-          onChange={e=>setWhat(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&setSearch({what,where})}
-          placeholder="Job title or keyword..."
-          style={{ flex:2 }}
-        />
-        <input
-          value={where}
-          onChange={e=>setWhere(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&setSearch({what,where})}
-          placeholder="Location (optional)"
-          style={{ flex:1 }}
-        />
-        <button className="gold-btn" onClick={()=>setSearch({what,where})} style={{ flexShrink:0, padding:"10px 20px", fontSize:13 }}>Search</button>
-      </div>
-      <LiveJobs key={search.what+search.where} what={search.what} where={search.where} title={true} />
-    </div>
-  );
-}
-
-/* ─── Live Job Listings (Adzuna) ─── */
-function LiveJobs({ what, where, title, compact }) {
-  const [jobs, setJobs]       = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal]     = useState(0);
-  const [page, setPage]       = useState(1);
-  const [fetched, setFetched] = useState(false);
-  const [err, setErr]         = useState("");
-  const API = process.env.REACT_APP_API_URL || "";
-
-  const fetchJobs = async (p = 1) => {
-    setLoading(true);
-    setErr("");
-    try {
-      const params = new URLSearchParams({ what: what || "software engineer", page: p });
-      if (where) params.set("where", where);
-      const res = await fetch(`${API}/api/live-jobs?${params}`);
-      const data = await res.json();
-      if (!res.ok) {
-        setErr(data.error || "Could not load jobs. Please try again.");
-        setFetched(true);
-        return;
-      }
-      if (!data.jobs || data.jobs.length === 0) {
-        setErr(`No listings found for "${what}". Try a different search term.`);
-        setFetched(true);
-        return;
-      }
-      setJobs(data.jobs);
-      setTotal(data.total || 0);
-      setPage(p);
-      setFetched(true);
-    } catch(e) {
-      setErr("Network error — please check your connection and try again.");
-      setFetched(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatSalary = (min, max) => {
-    if (!min && !max) return null;
-    const fmt = n => n >= 1000 ? `$${Math.round(n/1000)}k` : `$${n}`;
-    if (min && max) return `${fmt(min)} – ${fmt(max)}`;
-    if (min) return `From ${fmt(min)}`;
-    return `Up to ${fmt(max)}`;
-  };
-
-  const timeAgo = (dateStr) => {
-    if (!dateStr) return "";
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const days = Math.floor(diff / 86400000);
-    if (days === 0) return "Today";
-    if (days === 1) return "Yesterday";
-    if (days < 7) return `${days}d ago`;
-    if (days < 30) return `${Math.floor(days/7)}w ago`;
-    return `${Math.floor(days/30)}mo ago`;
-  };
-
-  if (!fetched) {
-    return (
-      <div style={{ textAlign:"center", padding: compact ? "20px 0" : "40px 0" }}>
-        <button className="gold-btn" onClick={()=>fetchJobs(1)} disabled={loading} style={{ fontSize:13, padding:"11px 28px" }}>
-          {loading
-            ? <span style={{ display:"flex",alignItems:"center",gap:8 }}><span style={{ width:14,height:14,border:"2px solid rgba(0,0,0,0.25)",borderTopColor:"#0d0d0f",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block"}} />Loading jobs…</span>
-            : "✦ Load Live Job Listings"}
-        </button>
-        <div style={{ fontSize:12, color:"var(--ash)", marginTop:8 }}>Live listings from thousands of job boards</div>
-      </div>
-    );
-  }
-
-  if (err) {
-    return (
-      <div style={{ textAlign:"center", padding:"24px 0" }}>
-        <div style={{ fontSize:13, color:"#f87171", marginBottom:14 }}>{err}</div>
-        <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>{ setFetched(false); setErr(""); }}>Try Again</button>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      {title && (
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:16, flexWrap:"wrap", gap:8 }}>
-          <div style={{ fontSize:13, color:"var(--ash)" }}>{total.toLocaleString()} live listings for <strong style={{ color:"var(--text-primary)" }}>{what}</strong></div>
-          <button onClick={()=>fetchJobs(1)} disabled={loading} style={{ background:"none", border:"none", color:"var(--gold)", cursor:"pointer", fontSize:12, fontFamily:"var(--font-body)" }}>
-            {loading ? "Refreshing…" : "↺ Refresh"}
-          </button>
-        </div>
-      )}
-
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:12, marginBottom:16 }}>
-        {jobs.map((job,i) => (
-          <a key={job.id||i} href={job.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none" }}>
-            <div className="card" style={{ padding:"16px 18px", cursor:"pointer", height:"100%", transition:"all 0.2s", borderColor:"rgba(255,255,255,0.06)" }}
-              onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--gold-border)";e.currentTarget.style.transform="translateY(-2px)";}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.06)";e.currentTarget.style.transform="translateY(0)";}}
-            >
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6, gap:8 }}>
-                <div style={{ fontWeight:500, fontSize:14, color:"var(--text-primary)", lineHeight:1.3 }}>{job.title}</div>
-                <span style={{ fontSize:10, color:"var(--ash)", whiteSpace:"nowrap", flexShrink:0 }}>{timeAgo(job.created)}</span>
-              </div>
-              <div style={{ fontSize:12, color:"var(--gold)", marginBottom:4 }}>{job.company}</div>
-              <div style={{ fontSize:12, color:"var(--ash)", marginBottom:8 }}>{job.location}</div>
-              {formatSalary(job.salaryMin, job.salaryMax) && (
-                <div style={{ fontSize:11, padding:"3px 10px", borderRadius:8, background:"rgba(74,222,128,0.08)", border:"1px solid rgba(74,222,128,0.2)", color:"#4ade80", display:"inline-block", marginBottom:8 }}>
-                  {formatSalary(job.salaryMin, job.salaryMax)}
-                </div>
-              )}
-              <div style={{ fontSize:11, color:"var(--ash)", lineHeight:1.5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>
-                {job.description}
-              </div>
-              <div style={{ marginTop:10, fontSize:11, color:"var(--gold)", letterSpacing:"0.06em" }}>Apply ↗</div>
-            </div>
-          </a>
-        ))}
-      </div>
-
-      {/* Pagination */}
-      {total > 6 && (
-        <div style={{ display:"flex", justifyContent:"center", gap:8, marginTop:8 }}>
-          <button className="ghost-btn" style={{ fontSize:11, padding:"6px 14px" }} onClick={()=>fetchJobs(Math.max(1,page-1))} disabled={loading||page===1}>← Prev</button>
-          <span style={{ fontSize:12, color:"var(--ash)", padding:"6px 10px" }}>Page {page}</span>
-          <button className="ghost-btn" style={{ fontSize:11, padding:"6px 14px" }} onClick={()=>fetchJobs(page+1)} disabled={loading}>Next →</button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function JobRecommendations({ role, skills, location }) {
   const [tab, setTab]         = useState("live");       // "live" | "boolean" | "ai"
@@ -1180,414 +1071,94 @@ function JobRecommendations({ role, skills, location }) {
   );
 }
 
-/* ─── LinkedIn URL Import ─── */
+/* ─── Tools Dropdown ─── */
+function ToolsDropdown({ navigate, setErr, setResult, setLiResult, setApplyResult }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const tools = [
+    { label:"Build Resume",       icon:"✦",  path:"/build",           desc:"Start from scratch" },
+    { label:"Tailor to a Job",    icon:"↑",  path:"/tailor",          desc:"Rewrite for any role" },
+    { label:"LinkedIn Optimizer", icon:"in", path:"/linkedin",         desc:"Fix your profile" },
+    { label:"Apply Mode",         icon:"⚡", path:"/apply",           desc:"Full package from a URL", hot:true },
+    { label:"Interview Prep",     icon:"🎯", path:"/interview",       desc:"Tailored Q&A" },
+    { label:"LinkedIn Writer",    icon:"✍️", path:"/linkedin-writer", desc:"Headlines & About" },
+  ];
+
+  const handlePick = (path) => {
+    setOpen(false);
+    setErr && setErr("");
+    setResult && setResult(null);
+    setLiResult && setLiResult(null);
+    setApplyResult && setApplyResult(null);
+    navigate(path);
+  };
+
+  return (
+    <div ref={ref} style={{ position:"relative" }}>
+      <button
+        onClick={()=>setOpen(o=>!o)}
+        style={{ fontSize:11, letterSpacing:"0.07em", textTransform:"uppercase", padding:"6px 12px", borderRadius:7, border:"1px solid var(--ghost-border)", color: open ? "var(--gold)" : "var(--ash)", background:"transparent", cursor:"pointer", fontFamily:"var(--font-body)", display:"flex", alignItems:"center", gap:5, transition:"all 0.2s",
+          borderColor: open ? "var(--gold-border)" : "var(--ghost-border)" }}
+        onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--gold-border)";e.currentTarget.style.color="var(--gold)";}}
+        onMouseLeave={e=>{ if(!open){e.currentTarget.style.borderColor="var(--ghost-border)";e.currentTarget.style.color="var(--ash)";} }}
+      >
+        Tools
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ transition:"transform 0.2s", transform: open?"rotate(180deg)":"rotate(0deg)" }}>
+          <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div style={{
+          position:"absolute", top:"calc(100% + 8px)", right:0, width:240,
+          background:"var(--ink2)", border:"1px solid var(--border-subtle)", borderRadius:14,
+          boxShadow:"0 20px 60px rgba(0,0,0,0.5)", overflow:"hidden", zIndex:200,
+          animation:"fadeIn 0.15s ease"
+        }}>
+          <div style={{ padding:"6px" }}>
+            {tools.map((t,i) => (
+              <button key={t.path} onClick={()=>handlePick(t.path)} style={{
+                width:"100%", display:"flex", alignItems:"center", gap:12, padding:"10px 12px",
+                borderRadius:9, border:"none", background:"transparent", cursor:"pointer",
+                fontFamily:"var(--font-body)", textAlign:"left", transition:"background 0.15s", position:"relative"
+              }}
+                onMouseEnter={e=>e.currentTarget.style.background="var(--mist2)"}
+                onMouseLeave={e=>e.currentTarget.style.background="transparent"}
+              >
+                <span style={{ width:28, height:28, borderRadius:7, background:"var(--mist)", border:"1px solid var(--border-subtle)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, flexShrink:0 }}>{t.icon}</span>
+                <div>
+                  <div style={{ fontSize:13, fontWeight:500, color:"var(--text-primary)", marginBottom:1 }}>{t.label}</div>
+                  <div style={{ fontSize:11, color:"var(--ash)" }}>{t.desc}</div>
+                </div>
+                {t.hot && <span style={{ position:"absolute", top:8, right:10, fontSize:8, padding:"2px 7px", borderRadius:6, background:"linear-gradient(135deg,#c9a84c,#e8c96d)", color:"#0d0d0f", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase" }}>New</span>}
+              </button>
+            ))}
+          </div>
+          <div style={{ borderTop:"1px solid var(--border-subtle)", padding:"6px" }}>
+            <button onClick={()=>{ setOpen(false); navigate("/dashboard"); }} style={{ width:"100%", padding:"9px 12px", borderRadius:9, border:"none", background:"transparent", cursor:"pointer", fontFamily:"var(--font-body)", fontSize:12, color:"var(--ash)", textAlign:"left", transition:"background 0.15s" }}
+              onMouseEnter={e=>e.currentTarget.style.background="var(--mist2)"}
+              onMouseLeave={e=>e.currentTarget.style.background="transparent"}
+            >
+              View all tools →
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Shared Resume Page ─── */
-function LinkedInImport({ onImport }) {
-  const [text,setText]        = useState("");
-  const [url,setUrl]          = useState("");
-  const [loading,setLoading]  = useState(false);
-  const [msg,setMsg]          = useState("");
-  const [expanded,setExpanded]= useState(false);
-  const doImport = async () => {
-    if (!text.trim()) { setMsg("Please paste your LinkedIn profile text first."); return; }
-    setLoading(true); setMsg("");
-    try {
-      const API = process.env.REACT_APP_API_URL||"";
-      const res = await fetch(`${API}/api/linkedin-import`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify({text:text.trim(),url:url.trim()})});
-      const data = await res.json();
-      if (!res.ok){setMsg(data.error||"Import failed."); return;}
-      onImport(data);
-      setMsg("✓ Imported successfully — review and edit the fields below.");
-      setText(""); setUrl("");
-    } catch(e){setMsg("Couldn't reach the server.");}
-    finally{setLoading(false);}
-  };
-  return (
-    <div style={{marginBottom:24,padding:"16px 18px",background:"rgba(10,102,194,0.06)",border:"1px solid rgba(10,102,194,0.2)",borderRadius:12}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:expanded?12:0}}>
-        <div style={{fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:"#60a5fa"}}>Import from LinkedIn</div>
-        <button onClick={()=>setExpanded(e=>!e)} style={{background:"none",border:"none",color:"#60a5fa",cursor:"pointer",fontSize:12,fontFamily:"var(--font-body)"}}>
-          {expanded ? "▲ Hide" : "▼ Show"}
-        </button>
-      </div>
-      {expanded && (
-        <div className="fade-in">
-          <div style={{fontSize:12,color:"var(--ash)",marginBottom:12,lineHeight:1.6}}>
-            LinkedIn blocks direct access, so paste your profile text below.<br/>
-            <strong style={{color:"#60a5fa"}}>How:</strong> Open your LinkedIn profile → select all text (Ctrl+A) → copy (Ctrl+C) → paste here.
-          </div>
-          <textarea
-            placeholder="Paste your LinkedIn profile text here..."
-            value={text}
-            onChange={e=>setText(e.target.value)}
-            rows={5}
-            style={{width:"100%",marginBottom:8,resize:"vertical",minHeight:100}}
-          />
-          <input
-            placeholder="LinkedIn URL (optional, e.g. linkedin.com/in/yourname)"
-            value={url}
-            onChange={e=>setUrl(e.target.value)}
-            style={{width:"100%",marginBottom:8}}
-          />
-          <button onClick={doImport} disabled={loading||!text.trim()} style={{width:"100%",padding:"10px",borderRadius:9,border:"none",background:"#0a66c2",color:"#fff",fontFamily:"var(--font-body)",fontSize:13,fontWeight:500,cursor:loading||!text.trim()?"not-allowed":"pointer",opacity:loading||!text.trim()?0.5:1}}>
-            {loading ? "Importing…" : "Import Profile →"}
-          </button>
-          {msg && <div style={{marginTop:8,fontSize:12,color:msg.startsWith("✓")?"#4ade80":"#f87171"}}>{msg}</div>}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ─── Auth Pages ─── */
-function AuthPage({ mode, onSuccess, switchMode, onBack }) {
-  const [email,setEmail]     = useState("");
-  const [password,setPassword] = useState("");
-  const [name,setName]       = useState("");
-  const [loading,setLoading] = useState(false);
-  const [err,setErr]         = useState("");
-  const API = process.env.REACT_APP_API_URL||"";
-
-  const submit = async () => {
-    if (!email||!password) { setErr("Email and password required."); return; }
-    setLoading(true); setErr("");
-    try {
-      const endpoint = mode==="register" ? "/api/auth/register" : "/api/auth/login";
-      const body = mode==="register" ? {email,password,name} : {email,password};
-      const res = await fetch(`${API}${endpoint}`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify(body)});
-      const data = await res.json();
-      if (!res.ok) { setErr(data.error||"Something went wrong."); return; }
-      onSuccess(data.user);
-    } catch(e) { setErr("Network error. Please try again."); }
-    finally { setLoading(false); }
-  };
-
-  const googleLogin = () => { window.location.href = `${API}/api/auth/google`; };
-
-  return (
-    <div style={{minHeight:"100vh",background:"var(--ink)",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-      {onBack && (
-        <button className="ghost-btn" style={{position:"absolute",top:24,left:24,fontSize:12,padding:"7px 14px",zIndex:10}} onClick={onBack}>← Back</button>
-      )}
-      <div style={{width:"100%",maxWidth:400}}>
-        <div style={{textAlign:"center",marginBottom:36}}>
-          <div style={{fontFamily:"var(--font-display)",fontSize:32,fontWeight:300,marginBottom:8}}>
-            {mode==="register" ? "Create account" : "Welcome back"}
-          </div>
-          <div style={{fontSize:13,color:"var(--ash)"}}>
-            {mode==="register" ? "$15/month. Cancel anytime." : "Sign in to your Crafted Resume account."}
-          </div>
-        </div>
-
-        <div className="card" style={{padding:"32px 28px"}}>
-          {/* Google OAuth */}
-          <button onClick={googleLogin} style={{width:"100%",padding:"11px 16px",borderRadius:9,border:"1px solid var(--ghost-border)",background:"var(--mode-card-bg)",color:"var(--text-primary)",fontFamily:"var(--font-body)",fontSize:14,fontWeight:400,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:20,transition:"all 0.2s"}}
-            onMouseEnter={e=>e.currentTarget.style.borderColor="var(--gold-border)"}
-            onMouseLeave={e=>e.currentTarget.style.borderColor="var(--ghost-border)"}
-          >
-            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.32-8.16 2.32-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-            Continue with Google
-          </button>
-
-          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
-            <div style={{flex:1,height:1,background:"var(--border-subtle)"}} />
-            <span style={{fontSize:11,color:"var(--ash)",letterSpacing:"0.08em"}}>OR</span>
-            <div style={{flex:1,height:1,background:"var(--border-subtle)"}} />
-          </div>
-
-          {mode==="register" && (
-            <div style={{marginBottom:14}}>
-              <label className="field-label">Full Name</label>
-              <input placeholder="Alex Rivera" value={name} onChange={e=>setName(e.target.value)} />
-            </div>
-          )}
-          <div style={{marginBottom:14}}>
-            <label className="field-label">Email</label>
-            <input type="email" placeholder="you@email.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} />
-          </div>
-          <div style={{marginBottom:20}}>
-            <label className="field-label">Password {mode==="register"&&<span style={{fontWeight:300,textTransform:"none",letterSpacing:0}}>(min 8 characters)</span>}</label>
-            <input type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} />
-          </div>
-
-          {err && <div style={{marginBottom:14,padding:"10px 14px",background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:9,fontSize:13,color:"#f87171"}}>{err}</div>}
-
-          <button className="gold-btn" onClick={submit} disabled={loading} style={{width:"100%"}}>
-            {loading ? "Please wait…" : mode==="register" ? "Create Account →" : "Sign In →"}
-          </button>
-
-          <div style={{textAlign:"center",marginTop:18,fontSize:13,color:"var(--ash)"}}>
-            {mode==="register"
-              ? <>Already have an account? <button onClick={()=>switchMode("login")} style={{background:"none",border:"none",color:"var(--gold)",cursor:"pointer",fontSize:13,fontFamily:"var(--font-body)"}}>Sign in</button></>
-              : <>Need an account? <button onClick={()=>switchMode("register")} style={{background:"none",border:"none",color:"var(--gold)",cursor:"pointer",fontSize:13,fontFamily:"var(--font-body)"}}>Register</button></>
-            }
-          </div>
-          {mode==="login" && (
-            <div style={{textAlign:"center",marginTop:10}}>
-              <button onClick={()=>switchMode("forgot")} style={{background:"none",border:"none",color:"var(--ash)",cursor:"pointer",fontSize:12,fontFamily:"var(--font-body)"}}>Forgot password?</button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SubscribePage({ user, onSubscribed, onLogout, onBack }) {
-  const [loading,setLoading] = useState(false);
-  const [err,setErr]         = useState("");
-  const API = process.env.REACT_APP_API_URL||"";
-
-  const checkout = async () => {
-    setLoading(true); setErr("");
-    try {
-      const res = await fetch(`${API}/api/auth/billing/checkout`,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"}});
-      const data = await res.json();
-      if (!res.ok){setErr(data.error||"Something went wrong."); return;}
-      window.location.href = data.url;
-    } catch(e){ setErr("Network error. Please try again."); }
-    finally{ setLoading(false); }
-  };
-
-  const logout = async () => {
-    await fetch(`${API}/api/auth/logout`,{method:"POST",credentials:"include"});
-    onLogout();
-  };
-
-  return (
-    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-      <div style={{width:"100%",maxWidth:440,textAlign:"center"}}>
-        {/* Top bar with back + sign out */}
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:24}}>
-          {onBack
-            ? <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={onBack}>← Back</button>
-            : <div />
-          }
-          <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px",color:"#f87171",borderColor:"rgba(248,113,113,0.2)"}} onClick={logout}>
-            Sign Out
-          </button>
-        </div>
-        <div style={{fontFamily:"var(--font-display)",fontSize:40,fontWeight:300,marginBottom:10}}>
-          Unlock <em style={{color:"var(--gold)"}}>Crafted Resume</em>
-        </div>
-        <p style={{color:"var(--ash)",fontSize:15,marginBottom:36,lineHeight:1.7}}>
-          Full access to all tools — Apply Mode, PDF tailoring, LinkedIn optimizer, ATS scoring, and more.
-        </p>
-        <div className="card" style={{padding:"32px 28px",marginBottom:16}}>
-          <div style={{fontFamily:"var(--font-display)",fontSize:52,fontWeight:300,marginBottom:4}}>
-            $15<span style={{fontSize:18,color:"var(--ash)"}}>/month</span>
-          </div>
-          <div style={{fontSize:13,color:"var(--ash)",marginBottom:28}}>Cancel anytime. No contracts.</div>
-          {[
-            "Unlimited resume generations",
-            "Apply Mode — full package from any job URL",
-            "PDF tailoring for any role",
-            "LinkedIn profile optimizer",
-            "ATS scoring + job fit analysis",
-            "PDF export + share links",
-          ].map((f,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,textAlign:"left"}}>
-              <span style={{color:"#4ade80",flexShrink:0}}>✓</span>
-              <span style={{fontSize:14}}>{f}</span>
-            </div>
-          ))}
-          {err && <div style={{margin:"14px 0",padding:"10px 14px",background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:9,fontSize:13,color:"#f87171"}}>{err}</div>}
-          <button className="gold-btn pulse" onClick={checkout} disabled={loading} style={{width:"100%",marginTop:20,fontSize:14,padding:"14px"}}>
-            {loading ? "Redirecting to Stripe…" : "Subscribe — $15/month →"}
-          </button>
-          <div style={{marginTop:12,fontSize:11,color:"var(--ash)"}}>
-            Secured by Stripe. We never see your card details.
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AccountPage({ user, onLogout, onBack }) {
-  const [loading,setLoading] = useState(false);
-  const API = process.env.REACT_APP_API_URL||"";
-
-  const openPortal = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API}/api/auth/billing/portal`,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"}});
-      const data = await res.json();
-      if (res.ok) window.location.href = data.url;
-    } catch(e){}
-    finally { setLoading(false); }
-  };
-
-  const logout = async () => {
-    await fetch(`${API}/api/auth/logout`,{method:"POST",credentials:"include"});
-    onLogout();
-  };
-
-  return (
-    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-      <div style={{width:"100%",maxWidth:420}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:28}}>
-          <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={onBack}>← Back</button>
-          <div style={{fontFamily:"var(--font-display)",fontSize:32,fontWeight:300}}>Account</div>
-          <div style={{width:80}} />
-        </div>
-        <div className="card" style={{padding:"28px 24px"}}>
-          <div style={{marginBottom:20}}>
-            <div style={{fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--ash)",marginBottom:4}}>Signed in as</div>
-            <div style={{fontSize:15,fontWeight:500}}>{user?.name}</div>
-            <div style={{fontSize:13,color:"var(--ash)"}}>{user?.email}</div>
-          </div>
-          <div style={{height:1,background:"var(--border-subtle)",margin:"16px 0"}} />
-          <div style={{marginBottom:20}}>
-            <div style={{fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--ash)",marginBottom:6}}>Subscription</div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <span style={{width:8,height:8,borderRadius:"50%",background:user?.subscriptionStatus==="active"?"#4ade80":"#f87171",display:"inline-block"}} />
-              <span style={{fontSize:14,fontWeight:500,color:user?.subscriptionStatus==="active"?"#4ade80":"#f87171"}}>
-                {user?.subscriptionStatus==="active" ? "Active — $15/month" : user?.subscriptionStatus==="past_due" ? "⚠ Payment failed — update billing" : "No active subscription"}
-              </span>
-            </div>
-          </div>
-          <button className="ghost-btn" onClick={openPortal} disabled={loading} style={{width:"100%",marginBottom:10}}>
-            {loading ? "Opening…" : "Manage Billing / Cancel →"}
-          </button>
-          <button className="ghost-btn" onClick={logout} style={{width:"100%",color:"#f87171",borderColor:"rgba(248,113,113,0.2)"}}>
-            Sign Out
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
 /* ─── Forgot Password Page ─── */
-function ForgotPasswordPage({ switchMode }) {
-  const [email,setEmail]     = useState("");
-  const [loading,setLoading] = useState(false);
-  const [done,setDone]       = useState(false);
-  const [err,setErr]         = useState("");
-  const API = process.env.REACT_APP_API_URL||"";
-  const submit = async () => {
-    if (!email) { setErr("Email required."); return; }
-    setLoading(true); setErr("");
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
-      const res = await fetch(`${API}/api/auth/forgot-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      if (res.ok) {
-        setDone(true);
-      } else {
-        const data = await res.json().catch(() => ({}));
-        setErr(data.error || "Something went wrong. Please try again.");
-      }
-    } catch(e) {
-      if (e.name === "AbortError") {
-        setErr("Request timed out — the server may be waking up. Please try again in 30 seconds.");
-      } else {
-        setErr("Network error. Please try again.");
-      }
-    }
-    finally { setLoading(false); }
-  };
-  return (
-    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-      <div style={{position:"fixed",top:20,left:24}}>
-        <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>switchMode("login")}>← Back</button>
-      </div>
-      <div style={{width:"100%",maxWidth:400}}>
-        <div style={{textAlign:"center",marginBottom:32}}>
-          <div style={{fontFamily:"var(--font-display)",fontSize:30,fontWeight:300,marginBottom:8}}>Reset your password</div>
-          <div style={{fontSize:13,color:"var(--ash)"}}>Enter your email and we'll send a reset link.</div>
-        </div>
-        <div className="card" style={{padding:"32px 28px"}}>
-          {done ? (
-            <div style={{textAlign:"center"}}>
-              <div style={{fontSize:32,marginBottom:12}}>📬</div>
-              <div style={{fontWeight:500,marginBottom:8}}>Check your email</div>
-              <div style={{fontSize:13,color:"var(--ash)",marginBottom:20}}>If that address is registered, a reset link is on its way.</div>
-
-            </div>
-          ) : (
-            <>
-              <div style={{marginBottom:16}}>
-                <label className="field-label">Email</label>
-                <input type="email" placeholder="you@email.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} />
-              </div>
-              {err && <div style={{marginBottom:14,padding:"10px 14px",background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:9,fontSize:13,color:"#f87171"}}>{err}</div>}
-              <button className="gold-btn" onClick={submit} disabled={loading} style={{width:"100%",marginBottom:14}}>
-                {loading ? "Sending…" : "Send Reset Link →"}
-              </button>
-
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ─── Reset Password Page ─── */
-function ResetPasswordPage({ token, onDone }) {
-  const [password,setPassword]   = useState("");
-  const [password2,setPassword2] = useState("");
-  const [loading,setLoading]     = useState(false);
-  const [done,setDone]           = useState(false);
-  const [err,setErr]             = useState("");
-  const API = process.env.REACT_APP_API_URL||"";
-  const submit = async () => {
-    if (password.length < 8) { setErr("Password must be at least 8 characters."); return; }
-    if (password !== password2) { setErr("Passwords do not match."); return; }
-    setLoading(true); setErr("");
-    try {
-      const res = await fetch(`${API}/api/auth/reset-password`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,password})});
-      const data = await res.json();
-      if (!res.ok) { setErr(data.error||"Something went wrong."); return; }
-      setDone(true);
-    } catch { setErr("Network error. Please try again."); }
-    finally { setLoading(false); }
-  };
-  return (
-    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-      <div style={{width:"100%",maxWidth:400}}>
-        <div style={{textAlign:"center",marginBottom:32}}>
-          <div style={{fontFamily:"var(--font-display)",fontSize:30,fontWeight:300,marginBottom:8}}>New password</div>
-        </div>
-        <div className="card" style={{padding:"32px 28px"}}>
-          {done ? (
-            <div style={{textAlign:"center"}}>
-              <div style={{fontSize:32,marginBottom:12}}>✓</div>
-              <div style={{fontWeight:500,marginBottom:8}}>Password updated</div>
-              <div style={{fontSize:13,color:"var(--ash)",marginBottom:20}}>You can now sign in with your new password.</div>
-              <button className="gold-btn" style={{width:"100%"}} onClick={onDone}>Sign In →</button>
-            </div>
-          ) : (
-            <>
-              <div style={{marginBottom:14}}>
-                <label className="field-label">New Password</label>
-                <input type="password" placeholder="Min 8 characters" value={password} onChange={e=>setPassword(e.target.value)} />
-              </div>
-              <div style={{marginBottom:20}}>
-                <label className="field-label">Confirm Password</label>
-                <input type="password" placeholder="Repeat password" value={password2} onChange={e=>setPassword2(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} />
-              </div>
-              {err && <div style={{marginBottom:14,padding:"10px 14px",background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:9,fontSize:13,color:"#f87171"}}>{err}</div>}
-              <button className="gold-btn" onClick={submit} disabled={loading} style={{width:"100%"}}>
-                {loading ? "Updating…" : "Set New Password →"}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ─── Email Verified Banner ─── */
 /* ─── Expired Subscription Banner ─── */
 function ExpiredBanner({ status, onUpgrade }) {
@@ -1595,8 +1166,8 @@ function ExpiredBanner({ status, onUpgrade }) {
   const isPastDue = status === "past_due";
   return (
     <div className="fade-in" style={{
-      position:"fixed", top:70, left:"50%", transform:"translateX(-50%)",
-      zIndex:999, padding:"12px 20px", borderRadius:12, fontSize:13,
+      position:"fixed", top:68, left:"50%", transform:"translateX(-50%)",
+      zIndex:90, padding:"12px 20px", borderRadius:12, fontSize:13,
       display:"flex", alignItems:"center", gap:12,
       background: isPastDue ? "rgba(251,191,36,0.1)" : "rgba(248,113,113,0.08)",
       border: isPastDue ? "1px solid rgba(251,191,36,0.3)" : "1px solid rgba(248,113,113,0.2)",
@@ -1632,21 +1203,6 @@ function VerifyBanner({ onClose }) {
 /* ══════════════════════════════════════════════
    EXAMPLE DATA
 ══════════════════════════════════════════════ */
-const EXAMPLE_FORM = {
-  name:"Alex Rivera", email:"alex.rivera@email.com", phone:"+1 415 555 0192",
-  location:"San Francisco, CA", linkedin:"linkedin.com/in/alexrivera",
-  targetRole:"Senior Product Manager", targetIndustry:"Technology / SaaS",
-  template:"executive",
-  experiences:[
-    {company:"Acme Tech",role:"Product Manager",startDate:"Jan 2021",endDate:"",current:true,
-     bullets:"Led cross-functional team of 12 to ship payments redesign, increasing conversion by 24%.\nOwned roadmap for core checkout flow serving 2M monthly users.\nDrove 0→1 launch of subscription product generating $1.8M ARR in first year."},
-    {company:"StartupCo",role:"Associate PM",startDate:"Jun 2019",endDate:"Dec 2020",current:false,
-     bullets:"Defined MVP requirements for mobile app, shipped in 10 weeks.\nManaged backlog of 200+ tickets across 3 engineering squads.\nIncreased DAU by 18% through A/B tested onboarding redesign."},
-  ],
-  education:[{school:"UC Berkeley",degree:"BSc",field:"Computer Science",year:"2019"}],
-  skills:"Product Strategy, Roadmapping, A/B Testing, SQL, Figma, Agile / Scrum, Stakeholder Management",
-  certifications:"Pragmatic Marketing Certified",
-};
 
 /* ══════════════════════════════════════════════
    MAIN APP
@@ -1656,21 +1212,20 @@ const blankEdu = () => ({ school:"",degree:"",field:"",year:"" });
 const init = { name:"",email:"",phone:"",location:"",linkedin:"",targetRole:"",targetIndustry:"",experiences:[blank()],education:[blankEdu()],skills:"",certifications:"",template:"executive" };
 
 export default function App() {
+  const navigate    = useNavigate();
+  const location    = useLocation();
+
   const [step,setStep]         = useState(0);
   const [mode,setMode]         = useState("");
   const [form,setForm]         = useState(init);
-  const [loading,setLoading]   = useState(false);
+  const [,setLoading]          = useState(false);
   const [loadMsg,setLoadMsg]   = useState("");
   const [result,setResult]     = useState(null);
   const [liResult,setLiResult] = useState(null);
   const [err,setErr]           = useState("");
-  const [uploadedPdf,setUploadedPdf]       = useState(null);
-  const [jobDescription,setJobDescription] = useState("");
-  const [dragOver,setDragOver]             = useState(false);
-  const [liData,setLiData]     = useState({name:"",targetRole:"",headline:"",about:"",experience:"",skills:""});
   const [darkMode,setDarkMode] = useState(true);
   const [shareMsg,setShareMsg] = useState("");
-  const [user,setUser]         = useState(null);   // null = not loaded, false = logged out
+  const [user,setUser]         = useState(null);
   const [authReady,setAuthReady] = useState(false);
   const [page,setPage]         = useState("app");
   const [resetToken,setResetToken] = useState("");
@@ -1678,17 +1233,53 @@ export default function App() {
   const [isShared,setIsShared] = useState(false);
 
   // Apply Mode state
-  const [applyInput,setApplyInput]   = useState({ jobUrl:"", jobText:"", inputMode:"url" });
-  const [applyResume,setApplyResume] = useState(null);
   const [applyResult,setApplyResult] = useState(null);
   const [applyTab,setApplyTab]       = useState("resume");
-  const applyFileRef = useRef(null);
 
   // New tools state
   const [interviewResult,setInterviewResult]           = useState(null);
   const [linkedInWriterResult,setLinkedInWriterResult] = useState(null);
 
-  const fileRef      = useRef(null);
+  // ── URL is the single source of truth ────────────────────────────
+  // Derive step, mode, page directly from the current URL.
+  // All navigation goes through navigate() — never setStep/setMode/setPage directly.
+  const pathToState = (path) => {
+    const map = {
+      "/":               { page:"app",      step:0, mode:"" },
+      "/dashboard":      { page:"app",      step:1, mode:"" },
+      "/build":          { page:"app",      step:2, mode:"build" },
+      "/tailor":         { page:"app",      step:2, mode:"tailor" },
+      "/linkedin":       { page:"app",      step:2, mode:"linkedin" },
+      "/apply":          { page:"app",      step:2, mode:"apply" },
+      "/interview":      { page:"app",      step:2, mode:"interview" },
+      "/linkedin-writer":{ page:"app",      step:2, mode:"linkedin-quick" },
+      "/build/results":  { page:"app",      step:3, mode:"build" },
+      "/tailor/results": { page:"app",      step:3, mode:"tailor" },
+      "/linkedin/results":{ page:"app",     step:3, mode:"linkedin" },
+      "/apply/results":  { page:"app",      step:3, mode:"apply" },
+      "/interview/results":{ page:"app",    step:3, mode:"interview" },
+      "/linkedin-writer/results":{ page:"app", step:3, mode:"linkedin-quick" },
+      "/login":          { page:"login",    step:0, mode:"" },
+      "/register":       { page:"register", step:0, mode:"" },
+      "/forgot":         { page:"forgot",   step:0, mode:"" },
+      "/reset":          { page:"reset",    step:0, mode:"" },
+      "/account":        { page:"account",  step:0, mode:"" },
+      "/subscribe":      { page:"subscribe",step:0, mode:"" },
+    };
+    return map[path] || { page:"app", step:0, mode:"" };
+  };
+
+  // Apply state from URL on every navigation (including browser back/forward)
+  useEffect(() => {
+    if (!authReady) return;
+    const { page: p, step: s, mode: m } = pathToState(location.pathname);
+    setPage(p);
+    setStep(s);
+    setMode(m);
+    setTimeout(() => containerRef.current?.scrollTo({ top:0, behavior:"smooth" }), 50);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authReady, location.pathname]);
+
   const containerRef = useRef(null);
 
   /* ── Theme ── */
@@ -1723,20 +1314,7 @@ export default function App() {
     try { localStorage.setItem(LS_KEY, JSON.stringify(form)); } catch(e){}
   }, [form]);
 
-  /* ── Persist step + mode across refresh (sessionStorage) ── */
-  useEffect(() => {
-    try {
-      const s = sessionStorage.getItem("cr_nav");
-      if (s) {
-        const { step: savedStep, mode: savedMode } = JSON.parse(s);
-        if (savedStep && savedStep > 0) { setStep(savedStep); setMode(savedMode||""); }
-      }
-    } catch(e) {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  useEffect(() => {
-    try { sessionStorage.setItem("cr_nav", JSON.stringify({ step, mode })); } catch(e) {}
-  }, [step, mode]);
+  /* ── sessionStorage removed — URL is now source of truth ── */
 
   /* ── Share link: encode result into URL ── */
   const makeShareLink = (data) => {
@@ -1769,14 +1347,14 @@ export default function App() {
             if (data?.user) {
               setUser(data.user);
               setAuthReady(true);
-              setPage(data.user.subscriptionStatus === "active" ? "app" : "app");
+              // auth loaded — URL already set correctly
             } else {
               setUser(false);
               setAuthReady(true);
-              setPage("login");
+              navigate("/login");
             }
           })
-          .catch(() => { setUser(false); setAuthReady(true); setPage("login"); });
+          .catch(() => { setUser(false); setAuthReady(true); navigate("/login"); });
         return;
       }
 
@@ -1794,7 +1372,7 @@ export default function App() {
       // Email verified redirect
       if (p.get("verified") === "true") {
         setShowVerifyBanner(true);
-        setPage("login");
+        navigate("/login");
         window.history.replaceState({}, "", window.location.pathname);
         return;
       }
@@ -1802,7 +1380,7 @@ export default function App() {
       const resetTok = p.get("token");
       if (resetTok) {
         setResetToken(resetTok);
-        setPage("reset");
+        navigate("/reset");
         window.history.replaceState({}, "", window.location.pathname);
         return;
       }
@@ -1822,21 +1400,18 @@ export default function App() {
     }).from(el).save();
   };
 
-  const set    = (k,v) => setForm(f=>({...f,[k]:v}));
-  const setExp = (i,k,v) => { const a=[...form.experiences]; a[i]={...a[i],[k]:v}; set("experiences",a); };
-  const setEdu = (i,k,v) => { const a=[...form.education];   a[i]={...a[i],[k]:v}; set("education",a);   };
-  const addExp = () => set("experiences",[...form.experiences,blank()]);
-  const rmExp  = i  => set("experiences",form.experiences.filter((_,j)=>j!==i));
-  const addEdu = () => set("education",[...form.education,blankEdu()]);
-  const go     = n  => { setStep(n); setTimeout(()=>containerRef.current?.scrollTo({top:0,behavior:"smooth"}),50); };
-  const resetAll = () => { setResult(null);setLiResult(null);setApplyResult(null);setInterviewResult(null);setLinkedInWriterResult(null);setUploadedPdf(null);setApplyResume(null);setJobDescription("");setMode("");setApplyInput({jobUrl:"",jobText:"",inputMode:"url"});try{sessionStorage.removeItem("cr_nav");}catch(e){}go(1); };
-
-  const handleFile = file => {
-    if (!file||file.type!=="application/pdf"){ setErr("Please upload a PDF file."); return; }
-    if (file.size>5*1024*1024){ setErr("PDF must be under 5MB."); return; }
-    const r=new FileReader();
-    r.onload=e=>{ setUploadedPdf({name:file.name,base64:e.target.result.split(",")[1]}); setErr(""); };
-    r.readAsDataURL(file);
+  const resetAll = () => {
+    // Clear all results
+    setResult(null); setLiResult(null); setApplyResult(null);
+    setInterviewResult(null); setLinkedInWriterResult(null);
+    // Navigate back to the form that produced the result
+    const path = window.location.pathname;
+    if (path.startsWith("/apply"))               navigate("/apply");
+    else if (path.startsWith("/linkedin-writer")) navigate("/linkedin-writer");
+    else if (path.startsWith("/linkedin"))        navigate("/linkedin");
+    else if (path.startsWith("/interview"))       navigate("/interview");
+    else if (path.startsWith("/tailor"))          navigate("/tailor");
+    else                                          navigate("/build");
   };
 
   const startLoad = msgs => {
@@ -1862,62 +1437,10 @@ export default function App() {
     return res.json();
   };
 
-  const generateBuild = async () => {
-    const iv=startLoad(["Analysing your details…","Writing your bullet points…","Optimising for ATS…","Adding the finishing touches…"]);
-    setResult(null);
-    try { setResult(await callAPI("/api/generate",{name:form.name,email:form.email,phone:form.phone,location:form.location,linkedin:form.linkedin,targetRole:form.targetRole,targetIndustry:form.targetIndustry,experiences:form.experiences,education:form.education,skills:form.skills,certifications:form.certifications})); go(3); }
-    catch(e){ if(e.message==="premium_required"){setPage("subscribe");}else if(e.message==="login_required"){setErr("Please sign in to generate your resume.");setPage("login");}else{setErr(e.message||"Generation failed.");} }
-    finally { clearInterval(iv); setLoading(false); }
-  };
 
-  const generateTailor = async () => {
-    if (!uploadedPdf){ setErr("Please upload your resume PDF first."); return; }
-    if (!jobDescription.trim()){ setErr("Please describe the job you're targeting."); return; }
-    const iv=startLoad(["Reading your resume…","Matching it to the role…","Rewriting your experience…","Polishing the result…"]);
-    setResult(null);
-    try { setResult(await callAPI("/api/tailor",{pdfBase64:uploadedPdf.base64,jobDescription,template:form.template})); go(3); }
-    catch(e){ if(e.message==="premium_required"){setPage("subscribe");}else if(e.message==="login_required"){setErr("Please sign in to continue.");setPage("login");}else{setErr(e.message||"Tailoring failed.");} }
-    finally { clearInterval(iv); setLoading(false); }
-  };
+;
 
-  const generateLinkedIn = async () => {
-    if (!liData.name.trim()){ setErr("Please enter your name at minimum."); return; }
-    const iv=startLoad(["Reading your profile…","Spotting what to improve…","Writing your suggestions…","Putting it all together…"]);
-    setLiResult(null);
-    try { setLiResult(await callAPI("/api/linkedin",liData)); go(3); }
-    catch(e){ if(e.message==="premium_required"){setPage("subscribe");}else if(e.message==="login_required"){setErr("Please sign in to continue.");setPage("login");}else{setErr(e.message||"LinkedIn analysis failed.");} }
-    finally { clearInterval(iv); setLoading(false); }
-  };
-
-  const generateApply = async () => {
-    const hasUrl  = applyInput.inputMode==="url"  && applyInput.jobUrl.trim();
-    const hasText = applyInput.inputMode==="text" && applyInput.jobText.trim();
-    const hasBoth = applyInput.inputMode==="both" && (applyInput.jobUrl.trim()||applyInput.jobText.trim());
-    if (!hasUrl && !hasText && !hasBoth){ setErr("Please provide a job URL or paste the job description."); return; }
-    if (!applyResume){ setErr("Please upload your resume PDF."); return; }
-
-    const iv=startLoad([
-      "Reading the job posting…",
-      "Matching your background to the role…",
-      "Rewriting your resume…",
-      "Writing your cover letter…",
-      "Preparing interview questions…",
-      "Putting it all together…",
-    ]);
-    setApplyResult(null);
-    try {
-      const res = await callAPI("/api/apply", {
-        jobUrl:      applyInput.jobUrl.trim(),
-        jobText:     applyInput.jobText.trim(),
-        pdfBase64:   applyResume.base64,
-        template:    form.template,
-      });
-      setApplyResult(res);
-      setApplyTab("resume");
-      go(3);
-    } catch(e){ if(e.message==="premium_required"){setPage("subscribe");}else if(e.message==="login_required"){setErr("Please sign in to use Apply Mode.");setPage("login");}else{setErr(e.message||"Apply Mode failed — please try again.");} }
-    finally { clearInterval(iv); setLoading(false); }
-  };
+;
 
   const downloadTxt = () => {
     if (!result) return;
@@ -1942,18 +1465,6 @@ export default function App() {
     }
   };
 
-  const g2 = { display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))", gap:14 };
-
-  const TemplateSelector = () => (
-    <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
-      {[{id:"executive",title:"Executive",desc:"Serif, commanding"},{id:"modern",title:"Modern",desc:"Clean sans-serif"},{id:"minimal",title:"Minimal",desc:"Let content lead"},{id:"elegant",title:"Elegant",desc:"Warm serif tones"},{id:"bold",title:"Bold",desc:"High contrast"},{id:"navy",title:"Navy",desc:"Corporate blue"},{id:"creative",title:"Creative",desc:"Purple accent"}].map(t=>(
-        <div key={t.id} className={`mode-card${form.template===t.id?" active":""}`} onClick={()=>set("template",t.id)} style={{ padding:16 }}>
-          <div style={{ fontWeight:500,fontSize:13,marginBottom:3,color:form.template===t.id?"var(--gold)":"#e2e2ea" }}>{t.title}</div>
-          <div style={{ fontSize:11,color:"var(--ash)" }}>{t.desc}</div>
-        </div>
-      ))}
-    </div>
-  );
 
   return (
     <>
@@ -1964,15 +1475,15 @@ export default function App() {
           <span style={{width:20,height:20,border:"2px solid rgba(201,168,76,0.3)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block"}} />
         </div>
       )}
-      {authReady && page==="login"    && <AuthPage mode="login"    onBack={()=>setPage("app")} onSuccess={u=>{setUser(u);setPage("app");}} switchMode={m=>setPage(m)} />}
-      {authReady && page==="register" && <AuthPage mode="register" onBack={()=>setPage("app")} onSuccess={u=>{setUser(u);setPage("app");}} switchMode={m=>setPage(m)} />}
-      {page==="forgot"    && <ForgotPasswordPage switchMode={m=>setPage(m)} />}
-      {page==="reset"     && <ResetPasswordPage token={resetToken} onDone={()=>setPage("login")} />}
-      {authReady && page==="subscribe" && <SubscribePage user={user} onSubscribed={()=>setPage("app")} onBack={()=>setPage("app")} onLogout={()=>{setUser(false);setPage("login");}} />}
-      {authReady && page==="account"   && <AccountPage user={user} onBack={()=>setPage("app")} onLogout={()=>{setUser(false);setPage("login");}} />}
+      {authReady && page==="login"     && <Login />}
+      {authReady && page==="register"  && <Register />}
+      {page==="forgot"                 && <ForgotPassword />}
+      {page==="reset"                  && <ResetPassword token={resetToken} />}
+      {authReady && page==="subscribe" && <Subscribe user={user} setUser={setUser} />}
+      {authReady && page==="account"   && <Account   user={user} setUser={setUser} />}
       {showVerifyBanner && <VerifyBanner onClose={()=>setShowVerifyBanner(false)} />}
       {user && user.subscriptionStatus !== "active" && page==="app" && (
-        <ExpiredBanner status={user.subscriptionStatus} onUpgrade={()=>setPage("subscribe")} />
+        <ExpiredBanner status={user.subscriptionStatus} onUpgrade={()=>navigate("/subscribe")} />
       )}
       {authReady && page==="app" && (
       <div style={{ minHeight:"100vh", background:"var(--ink)", position:"relative", overflowX:"hidden" }}>
@@ -1986,16 +1497,18 @@ export default function App() {
         {/* ══ HEADER ══ */}
         <header style={{ position:"sticky", top:0, zIndex:100, borderBottom:"1px solid var(--border-subtle)", background:"var(--header-bg)", backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)", padding:"0 20px" }}>
           <div style={{ maxWidth:880, margin:"0 auto", display:"flex", alignItems:"center", height:60 }}>
-            <div onClick={resetAll} style={{ display:"flex", alignItems:"center", gap:11, cursor:"pointer" }}
+
+            {/* Logo → landing page */}
+            <div onClick={()=>navigate("/")} style={{ display:"flex", alignItems:"center", gap:11, cursor:"pointer" }}
               onMouseEnter={e=>e.currentTarget.style.opacity="0.8"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
               <LogoMark size={36} />
               <div>
                 <div style={{ fontFamily:"var(--font-display)", fontSize:20, fontWeight:300, letterSpacing:"0.06em", color:"var(--text-primary)", lineHeight:1 }}>
                   Crafted<span style={{ color:"var(--gold)", fontWeight:400 }}>Resume</span>
                 </div>
-                
               </div>
             </div>
+
             <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
               {step===2 && mode==="build" && (
                 <div style={{ fontSize:10, color:"var(--ash)", display:"flex", alignItems:"center", gap:5 }}>
@@ -2003,38 +1516,19 @@ export default function App() {
                   Saved
                 </div>
               )}
-              <div className="header-pills" style={{ display:"flex", gap:6 }}>
-                {[
-                  {label:"Build",    mode:"build"},
-                  {label:"Tailor",   mode:"tailor"},
-                  {label:"LinkedIn", mode:"linkedin"},
-                  {label:"Apply",    mode:"apply"},
-                  {label:"Interview",mode:"interview"},
-                  {label:"LI Writer",mode:"linkedin-quick"},
-                ].map((f,i)=>(
-                  <button key={f.label} onClick={()=>{
-                    if (page !== "app") setPage("app");
-                    setErr("");
-                    setResult(null);
-                    setLiResult(null);
-                    setApplyResult(null);
-                    setMode(f.mode);
-                    go(2);
-                  }} style={{ fontSize:10, letterSpacing:"0.07em", textTransform:"uppercase", padding:"5px 11px", borderRadius:7, border:"1px solid var(--ghost-border)", color:"var(--ash)", transition:"all 0.25s", cursor:"pointer", background:"transparent", fontFamily:"var(--font-body)" }}
-                    onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--gold-border)";e.currentTarget.style.color="var(--gold)";}}
-                    onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--ghost-border)";e.currentTarget.style.color="var(--ash)";}}
-                  >{f.label}</button>
-                ))}
-              </div>
+
+              {/* Tools dropdown */}
+              <ToolsDropdown navigate={navigate} setErr={setErr} setResult={setResult} setLiResult={setLiResult} setApplyResult={setApplyResult} />
+
               <button className="theme-toggle" onClick={()=>setDarkMode(d=>!d)} title="Toggle light/dark mode">
                 {darkMode ? "☀️" : "🌙"}
               </button>
               {user ? (
-                <button className="ghost-btn" style={{fontSize:11,padding:"6px 12px"}} onClick={()=>setPage("account")}>
+                <button className="ghost-btn" style={{fontSize:11,padding:"6px 12px"}} onClick={()=>navigate("/account")}>
                   {user.name?.split(" ")[0] || "Account"} ↗
                 </button>
               ) : (
-                <button className="gold-btn" style={{fontSize:11,padding:"7px 16px"}} onClick={()=>setPage("login")}>
+                <button className="gold-btn" style={{fontSize:11,padding:"7px 16px"}} onClick={()=>navigate("/login")}>
                   Sign In
                 </button>
               )}
@@ -2046,532 +1540,106 @@ export default function App() {
         <div ref={containerRef} className="main-pad" style={{ maxWidth: step===0 ? 1200 : 960, margin:"0 auto", padding:"0 40px 90px", position:"relative", zIndex:2 }}>
 
           {/* ══ LANDING (step 0) ══ */}
-          {step===0 && (
-            <div>
-
-              {/* ── Hero ── */}
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))", gap:40, alignItems:"center", padding:"60px 0 60px", maxWidth:1100, margin:"0 auto" }}>
-                {/* Left — copy */}
-                <div>
-                  <div className="fade-up" style={{ display:"inline-flex", alignItems:"center", gap:8, fontSize:11, letterSpacing:"0.18em", textTransform:"uppercase", color:"var(--gold)", border:"1px solid var(--gold-border)", borderRadius:20, padding:"5px 16px", marginBottom:28 }}>
-                    <span style={{ width:5, height:5, borderRadius:"50%", background:"var(--gold)", display:"inline-block" }} />
-                    AI-Powered Resume Tools
-                  </div>
-                  <h1 className="hero-h1 fade-up" style={{ fontFamily:"var(--font-display)", fontSize:62, fontWeight:300, letterSpacing:"-2px", lineHeight:1.05, marginBottom:24, animationDelay:"0.1s" }}>
-                    From resume to<br />
-                    <em style={{ background:"linear-gradient(135deg,#c9a84c,#f0d98a,#c9a84c)", backgroundSize:"200% auto", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text", animation:"gradientShift 4s ease infinite" }}>
-                      interview-ready.
-                    </em>
-                  </h1>
-                  <p className="fade-up" style={{ color:"var(--ash)", fontSize:17, fontWeight:300, lineHeight:1.8, marginBottom:40, animationDelay:"0.18s" }}>
-                    Build, tailor, and optimize your resume with AI. Get a tailored cover letter, interview prep, and ATS score — all from one job posting.
-                  </p>
-                  <div className="fade-up" style={{ display:"flex", gap:12, flexWrap:"wrap", animationDelay:"0.26s", maxWidth:380 }}>
-                    <button className="gold-btn pulse" onClick={()=>go(1)} style={{ fontSize:14, padding:"14px 36px" }}>
-                      Get Started Free →
-                    </button>
-                    <button className="ghost-btn" onClick={()=>go(1)} style={{ fontSize:14, padding:"14px 28px" }}>
-                      Sign In
-                    </button>
-                  </div>
-                  <div className="fade-in" style={{ marginTop:32, display:"flex", alignItems:"center", gap:24, flexWrap:"wrap", animationDelay:"0.4s" }}>
-                    {["Free to start","No watermarks","Cancel anytime"].map((t,i)=>(
-                      <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--ash)" }}>
-                        <span style={{ color:"#4ade80" }}>✓</span> {t}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Right — product preview card */}
-                <div className="fade-up" style={{ animationDelay:"0.3s", position:"relative" }}>
-                  {/* Glow behind card */}
-                  <div style={{ position:"absolute", inset:-40, background:"radial-gradient(ellipse at center, rgba(201,168,76,0.08) 0%, transparent 70%)", pointerEvents:"none" }} />
-                  <div style={{ background:"#fff", borderRadius:16, padding:"32px 36px", boxShadow:"0 40px 100px rgba(0,0,0,0.6)", position:"relative", fontFamily:"Georgia, serif" }}>
-                    {/* Mock resume header */}
-                    <div style={{ borderBottom:"2px solid #1a1a2e", paddingBottom:16, marginBottom:18 }}>
-                      <div style={{ fontSize:22, fontWeight:300, color:"#1a1a2e", letterSpacing:"-0.5px" }}>Alexandra Chen</div>
-                      <div style={{ fontSize:13, color:"#8a8a96", fontStyle:"italic", marginBottom:8 }}>Senior Product Manager</div>
-                      <div style={{ fontSize:11, color:"#666", display:"flex", gap:14, flexWrap:"wrap" }}>
-                        <span>alex.chen@email.com</span><span>San Francisco, CA</span><span>linkedin.com/in/alexchen</span>
-                      </div>
-                    </div>
-                    {/* Mock profile */}
-                    <div style={{ marginBottom:14 }}>
-                      <div style={{ fontSize:8, fontWeight:700, letterSpacing:"0.15em", textTransform:"uppercase", color:"#1a1a2e", borderBottom:"1px solid rgba(26,26,46,0.15)", paddingBottom:4, marginBottom:8 }}>Profile</div>
-                      <div style={{ fontSize:11, color:"#333", lineHeight:1.6, fontStyle:"italic" }}>Results-driven Product Manager with 7+ years scaling B2B SaaS products from 0 to $12M ARR. Led cross-functional teams of 15+ across 3 time zones, delivering 40% improvement in user retention.</div>
-                    </div>
-                    {/* Mock experience lines */}
-                    <div style={{ marginBottom:10 }}>
-                      <div style={{ fontSize:8, fontWeight:700, letterSpacing:"0.15em", textTransform:"uppercase", color:"#1a1a2e", borderBottom:"1px solid rgba(26,26,46,0.15)", paddingBottom:4, marginBottom:8 }}>Experience</div>
-                      {[
-                        { role:"Senior Product Manager", co:"Stripe", dates:"2021–Present" },
-                        { role:"Product Manager", co:"Notion", dates:"2019–2021" },
-                      ].map((j,i)=>(
-                        <div key={i} style={{ marginBottom:8 }}>
-                          <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, fontWeight:600, color:"#1a1a2e" }}><span>{j.role} · {j.co}</span><span style={{ color:"#8a8a96", fontWeight:400 }}>{j.dates}</span></div>
-                          <div style={{ width:"100%", height:5, background:"rgba(0,0,0,0.06)", borderRadius:3, marginTop:5 }} />
-                          <div style={{ width:"85%", height:5, background:"rgba(0,0,0,0.06)", borderRadius:3, marginTop:4 }} />
-                        </div>
-                      ))}
-                    </div>
-                    {/* ATS badge overlay */}
-                    <div style={{ position:"absolute", bottom:24, right:24, background:"linear-gradient(135deg,#0d0d0f,#1a1a1f)", borderRadius:12, padding:"10px 16px", display:"flex", alignItems:"center", gap:10, border:"1px solid var(--gold-border)" }}>
-                      <div>
-                        <div style={{ fontSize:9, letterSpacing:"0.12em", textTransform:"uppercase", color:"#5a5a68", marginBottom:2 }}>ATS Score</div>
-                        <div style={{ fontFamily:"var(--font-display)", fontSize:22, fontWeight:300, color:"#4ade80" }}>94<span style={{ fontSize:11, color:"#5a5a68" }}>/100</span></div>
-                      </div>
-                      <div style={{ width:36, height:36, borderRadius:"50%", border:"2.5px solid #4ade80", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                        <span style={{ color:"#4ade80", fontSize:14 }}>✓</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* ── Stats bar ── */}
-              <div className="fade-in" style={{ borderTop:"1px solid var(--border-subtle)", borderBottom:"1px solid var(--border-subtle)", padding:"32px 0", marginBottom:80 }}>
-                <div style={{ display:"flex", justifyContent:"center", gap:40, flexWrap:"wrap" }}>
-                  {[
-                    { stat:"4 tools", label:"in one platform" },
-                    { stat:"ATS optimised", label:"every resume" },
-                    { stat:"$15/month", label:"all features included" },
-                    { stat:"Cancel anytime", label:"no lock-in" },
-                  ].map((s,i)=>(
-                    <div key={i} style={{ textAlign:"center" }}>
-                      <div style={{ fontFamily:"var(--font-display)", fontSize:28, fontWeight:300, color:"var(--gold)", marginBottom:4 }}>{s.stat}</div>
-                      <div style={{ fontSize:12, color:"var(--ash)" }}>{s.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* ── Features ── */}
-              <div style={{ maxWidth:1100, margin:"0 auto 100px" }}>
-                <div style={{ textAlign:"center", marginBottom:56 }}>
-                  <h2 style={{ fontFamily:"var(--font-display)", fontSize:44, fontWeight:300, letterSpacing:"-1px", marginBottom:14 }}>Everything you need to get hired</h2>
-                  <p style={{ color:"var(--ash)", fontSize:16, fontWeight:300 }}>Four powerful tools. One platform.</p>
-                </div>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:20 }}>
-                  {[
-                    { icon:"⚡", title:"Apply Mode",        badge:"Premium", mode:"apply",          desc:"Paste any job URL. Get a tailored resume, cover letter, and interview prep — all in one shot. The fastest way to apply." },
-                    { icon:"✦", title:"Build Resume",       badge:"Free",    mode:"build",          desc:"Start from scratch. Fill in your details and get a polished, ATS-optimised resume in under 2 minutes." },
-                    { icon:"↑", title:"Tailor to a Job",    badge:"Free",    mode:"tailor",         desc:"Already have a resume? Upload your PDF and rewrite it specifically for any role — even if the industries are different." },
-                    { icon:"in", title:"LinkedIn Optimizer",badge:"Free",    mode:"linkedin",       desc:"Get a full AI audit of your LinkedIn profile with prioritised, actionable fixes to attract more recruiters." },
-                  ].map((f,i)=>(
-                    <div key={i} className="card" style={{ padding:"28px 24px", cursor:"pointer" }} onClick={()=>{ setMode(f.mode); go(2); }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
-                        <span style={{ fontSize:24, color:"var(--gold)" }}>{f.icon}</span>
-                        <span style={{ fontSize:9, padding:"3px 10px", borderRadius:8, background: f.badge==="Premium" ? "linear-gradient(135deg,#c9a84c,#e8c96d)" : "rgba(74,222,128,0.1)", color: f.badge==="Premium" ? "#0d0d0f" : "#4ade80", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", border: f.badge==="Free" ? "1px solid rgba(74,222,128,0.3)" : "none" }}>{f.badge}</span>
-                      </div>
-                      <div style={{ fontWeight:500, fontSize:16, marginBottom:10, color:"var(--text-primary)" }}>{f.title}</div>
-                      <div style={{ fontSize:13, color:"var(--text-secondary)", lineHeight:1.7 }}>{f.desc}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* ── Pricing ── */}
-              <div style={{ maxWidth:480, margin:"0 auto 100px", textAlign:"center" }}>
-                <h2 style={{ fontFamily:"var(--font-display)", fontSize:44, fontWeight:300, letterSpacing:"-1px", marginBottom:14 }}>Simple pricing</h2>
-                <p style={{ color:"var(--ash)", fontSize:16, fontWeight:300, marginBottom:40 }}>Start free. Upgrade when you're ready.</p>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16, marginBottom:32 }}>
-                  {/* Free tier */}
-                  <div className="card" style={{ padding:"28px 24px", textAlign:"left" }}>
-                    <div style={{ fontSize:11, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--ash)", marginBottom:8 }}>Free</div>
-                    <div style={{ fontFamily:"var(--font-display)", fontSize:36, fontWeight:300, marginBottom:4 }}>$0</div>
-                    <div style={{ fontSize:12, color:"var(--ash)", marginBottom:20 }}>No card needed</div>
-                    {["Build Resume","Tailor to Job","LinkedIn Optimizer","ATS Score + Tips"].map((f,i)=>(
-                      <div key={i} style={{ display:"flex", gap:8, marginBottom:8, fontSize:13 }}>
-                        <span style={{ color:"#4ade80", flexShrink:0 }}>✓</span><span style={{ color:"var(--text-secondary)" }}>{f}</span>
-                      </div>
-                    ))}
-                    <button className="ghost-btn" style={{ width:"100%", marginTop:20, fontSize:13 }} onClick={()=>go(1)}>Get Started →</button>
-                  </div>
-                  {/* Premium tier */}
-                  <div style={{ padding:"28px 24px", textAlign:"left", background:"var(--gold-dim)", border:"1px solid var(--gold-border)", borderRadius:16, position:"relative" }}>
-                    <div style={{ position:"absolute", top:-10, right:16, fontSize:9, padding:"3px 12px", borderRadius:8, background:"linear-gradient(135deg,#c9a84c,#e8c96d)", color:"#0d0d0f", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase" }}>Popular</div>
-                    <div style={{ fontSize:11, letterSpacing:"0.12em", textTransform:"uppercase", color:"var(--gold)", marginBottom:8 }}>Premium</div>
-                    <div style={{ fontFamily:"var(--font-display)", fontSize:36, fontWeight:300, color:"var(--gold)", marginBottom:4 }}>$15<span style={{ fontSize:14, color:"var(--ash)" }}>/mo</span></div>
-                    <div style={{ fontSize:12, color:"var(--ash)", marginBottom:20 }}>Cancel anytime</div>
-                    {["Everything in Free","Apply Mode","PDF Download","Share Link","ATS Fix My Score","AI Resume Assistant","Job Recommendations"].map((f,i)=>(
-                      <div key={i} style={{ display:"flex", gap:8, marginBottom:8, fontSize:13 }}>
-                        <span style={{ color:"var(--gold)", flexShrink:0 }}>✦</span><span style={{ color:"var(--text-primary)" }}>{f}</span>
-                      </div>
-                    ))}
-                    <button className="gold-btn pulse" style={{ width:"100%", marginTop:20, fontSize:13 }} onClick={()=>go(1)}>Start Free →</button>
-                  </div>
-                </div>
-              </div>
-
-              {/* ── Live Job Listings ── */}
-              <div style={{ marginBottom:80 }}>
-                <div style={{ textAlign:"center", marginBottom:32 }}>
-                  <h2 style={{ fontFamily:"var(--font-display)", fontSize:44, fontWeight:300, letterSpacing:"-1px", marginBottom:10 }}>Live job listings</h2>
-                  <p style={{ color:"var(--ash)", fontSize:15, fontWeight:300 }}>Real jobs from thousands of boards — updated daily.</p>
-                </div>
-                <LiveJobsSearch />
-              </div>
-
-              {/* ── ATS Score Hook ── */}
-              <ATSScoreHook onSignUp={()=>setPage("register")} />
-
-              {/* ── Final CTA ── */}
-              <div style={{ textAlign:"center", padding:"80px 0 60px", borderTop:"1px solid var(--border-subtle)" }}>
-                <h2 style={{ fontFamily:"var(--font-display)", fontSize:48, fontWeight:300, letterSpacing:"-1.5px", marginBottom:16 }}>
-                  Your next job starts<br />
-                  <em style={{ background:"linear-gradient(135deg,#c9a84c,#f0d98a)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>with a great resume.</em>
-                </h2>
-                <p style={{ color:"var(--ash)", fontSize:16, marginBottom:36 }}>Join thousands of job seekers who use Crafted Resume to stand out.</p>
-                <button className="gold-btn pulse" onClick={()=>go(1)} style={{ fontSize:15, padding:"16px 48px" }}>
-                  Get Started Free →
-                </button>
-              </div>
-
-            </div>
-          )}
+          {step===0 && <Landing user={user} navigate={navigate} />}
 
           {/* ══ TOOL PICKER (step 1) ══ */}
-          {step===1 && (
-            <div className="scale-in">
-              <div style={{ textAlign:"center", padding:"52px 0 36px" }}>
-                {(() => {
-                  const firstName = user?.name?.split(" ")[0] || "there";
-                  const greetings = [
-                    `Good to see you, ${firstName}. What are we working on?`,
-                    `Hey ${firstName} — let's get you hired. What do you need?`,
-                    `Welcome back, ${firstName}. What's the move today?`,
-                    `Ready when you are, ${firstName}. Pick a tool.`,
-                    `Let's get to work, ${firstName}. What do you need?`,
-                    `${firstName}, your next opportunity starts here. What's first?`,
-                  ];
-                  const greeting = greetings[Math.floor(Math.random() * greetings.length)];
-                  return (
-                    <>
-                      <h2 style={{ fontFamily:"var(--font-display)", fontSize:40, fontWeight:300, letterSpacing:"-1px", marginBottom:10 }}>
-                        {greeting}
-                      </h2>
-                      <p style={{ color:"var(--ash)", fontSize:15, fontWeight:300 }}>Pick a tool to get started.</p>
-                    </>
-                  );
-                })()}
-              </div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))", gap:16, marginBottom:20 }}>
-                {[
-                  { id:"apply",    hot:true,
-                    icon:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
-                    title:"Apply Mode",
-                    desc:"Paste a job URL. Get a tailored resume, cover letter, and interview prep in one shot." },
-                  { id:"build",
-                    icon:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
-                    title:"Build Resume",
-                    desc:"Start from scratch. Fill in your details and get a polished resume in seconds." },
-                  { id:"tailor",
-                    icon:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
-                    title:"Tailor to a Job",
-                    desc:"Upload your existing resume PDF and rewrite it for any role." },
-                  { id:"linkedin",
-                    icon:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>,
-                    title:"LinkedIn Optimizer",
-                    desc:"AI audit of your LinkedIn profile with prioritised, actionable fixes." },
-                  { id:"interview",
-                    icon:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
-                    title:"Interview Prep",
-                    desc:"Enter a role and company. Get tailored interview questions with expert guidance." },
-                  { id:"linkedin-quick",
-                    icon:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-                    title:"LinkedIn Writer",
-                    desc:"Write a punchy LinkedIn headline and About section in seconds." },
-                ].map((m,i)=>(
-                  <div key={m.id} className={`mode-card fade-up d${i+1}`}
-                    onClick={()=>{ setMode(m.id); go(2); }}
-                    style={{ position:"relative", padding:"28px 24px" }}>
-                    {m.hot && (
-                      <div style={{ position:"absolute", top:14, right:14, fontSize:8, padding:"2px 8px", borderRadius:8, background:"linear-gradient(135deg,#c9a84c,#e8c96d)", color:"#0d0d0f", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase" }}>New</div>
-                    )}
-                    <div style={{ color:"var(--text-secondary)", marginBottom:16, transition:"color 0.3s" }}>{m.icon}</div>
-                    <div style={{ fontWeight:500, fontSize:16, marginBottom:8, color:"var(--text-primary)" }}>{m.title}</div>
-                    <div style={{ fontSize:13, color:"var(--text-secondary)", fontWeight:300, lineHeight:1.6 }}>{m.desc}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ textAlign:"center", paddingTop:8 }}>
-                <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>go(0)}>← Back</button>
-              </div>
-            </div>
-          )}
+          {step===1 && <Dashboard user={user} />}
 
           {/* Steps indicator — only show on form + results, not shared view */}
           {step > 1 && !isShared && <Steps current={step-1} />}
 
-          {/* ══ STEP 1 — BUILD ══ */}
+          {/* ══ BUILD RESUME ══ */}
           {step===2 && mode==="build" && (
             <div>
-              <div className="card fade-up d1">
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20, flexWrap:"wrap", gap:10 }}>
-                  <div>
-                    <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Personal Information</h2>
-                    <p style={{ color:"var(--ash)", fontSize:13, fontWeight:300 }}>Your basic details and target role.</p>
-                  </div>
-                  <button className="ghost-btn" style={{ fontSize:11, padding:"7px 14px" }} onClick={()=>setForm({...EXAMPLE_FORM})}>
-                    ✦ Fill Example
-                  </button>
-                </div>
-                <div style={g2}><F label="Full Name"><input placeholder="Alexandra Chen" value={form.name} onChange={e=>set("name",e.target.value)} /></F><F label="Target Role"><input placeholder="Chief Product Officer" value={form.targetRole} onChange={e=>set("targetRole",e.target.value)} /></F></div>
-                <div style={g2}><F label="Email"><input placeholder="alex@example.com" value={form.email} onChange={e=>set("email",e.target.value)} /></F><F label="Phone"><input placeholder="+1 555 000 1234" value={form.phone} onChange={e=>set("phone",e.target.value)} /></F></div>
-                <div style={g2}><F label="Location"><input placeholder="San Francisco, CA" value={form.location} onChange={e=>set("location",e.target.value)} /></F><F label="Target Industry"><input placeholder="Technology / FinTech" value={form.targetIndustry} onChange={e=>set("targetIndustry",e.target.value)} /></F></div>
-                <F label="LinkedIn URL"><input placeholder="linkedin.com/in/alexandrachen" value={form.linkedin} onChange={e=>set("linkedin",e.target.value)} /></F>
-              </div>
-              {form.experiences.map((exp,i)=>(
-                <div key={i} className="card fade-up" style={{ animationDelay:`${0.1+i*0.08}s` }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-                    <div>
-                      <div style={{ fontSize:9, letterSpacing:"0.15em", textTransform:"uppercase", color:"var(--gold)", marginBottom:4 }}>Position {i+1}</div>
-                      <h3 style={{ fontFamily:"var(--font-display)", fontSize:20, fontWeight:300 }}>{exp.role||"New Role"}{exp.company&&<span style={{ color:"var(--ash)" }}> · {exp.company}</span>}</h3>
-                    </div>
-                    {i>0&&<button className="ghost-btn" style={{ fontSize:12,padding:"6px 14px" }} onClick={()=>rmExp(i)}>Remove</button>}
-                  </div>
-                  <div style={g2}><F label="Company"><input placeholder="Acme Corp" value={exp.company} onChange={e=>setExp(i,"company",e.target.value)} /></F><F label="Role"><input placeholder="VP Engineering" value={exp.role} onChange={e=>setExp(i,"role",e.target.value)} /></F></div>
-                  <div style={g2}>
-                    <F label="Start Date"><input placeholder="March 2020" value={exp.startDate} onChange={e=>setExp(i,"startDate",e.target.value)} /></F>
-                    <F label="End Date">
-                      <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                        <input placeholder="December 2023" value={exp.endDate} onChange={e=>setExp(i,"endDate",e.target.value)} disabled={exp.current} style={{ opacity:exp.current?0.3:1 }} />
-                        <label style={{ display:"flex",gap:8,alignItems:"center",whiteSpace:"nowrap",fontSize:13,color:"var(--ash)",cursor:"pointer" }}>
-                          <input type="checkbox" checked={exp.current} onChange={e=>setExp(i,"current",e.target.checked)} style={{ width:15,height:15,accentColor:"var(--gold)" }} /> Present
-                        </label>
-                      </div>
-                    </F>
-                  </div>
-                  <F label="Responsibilities & Achievements"><textarea placeholder="Led team of 12, reduced costs by 30%..." value={exp.bullets} onChange={e=>setExp(i,"bullets",e.target.value)} style={{ minHeight:100 }} /></F>
-                  
-                </div>
-              ))}
-              <button className="ghost-btn" onClick={addExp} style={{ width:"100%",padding:15,marginBottom:20,textAlign:"center",borderStyle:"dashed",borderRadius:12 }}>+ Add Another Position</button>
-              <div className="card fade-up d2">
-                <h2 style={{ fontFamily:"var(--font-display)", fontSize:22, fontWeight:300, marginBottom:20 }}>Education</h2>
-                {form.education.map((edu,i)=>(
-                  <div key={i} style={{ marginBottom:14 }}>
-                    <div style={g2}><F label="Institution"><input placeholder="MIT" value={edu.school} onChange={e=>setEdu(i,"school",e.target.value)} /></F><F label="Degree"><input placeholder="BSc Computer Science" value={edu.degree} onChange={e=>setEdu(i,"degree",e.target.value)} /></F></div>
-                    <div style={g2}><F label="Field"><input placeholder="Computer Science" value={edu.field} onChange={e=>setEdu(i,"field",e.target.value)} /></F><F label="Year"><input placeholder="2019" value={edu.year} onChange={e=>setEdu(i,"year",e.target.value)} /></F></div>
-                    {i<form.education.length-1&&<GoldLine />}
-                  </div>
-                ))}
-                <button className="ghost-btn" style={{ fontSize:12,marginTop:4 }} onClick={addEdu}>+ Add Education</button>
-              </div>
-              <div className="card fade-up d3">
-                <h2 style={{ fontFamily:"var(--font-display)", fontSize:22, fontWeight:300, marginBottom:20 }}>Skills & Certifications</h2>
-                <F label="Key Skills"><textarea placeholder="Leadership, Product Strategy, SQL, Figma, Agile..." value={form.skills} onChange={e=>set("skills",e.target.value)} /></F>
-                <F label="Certifications"><input placeholder="PMP, AWS, Google Analytics..." value={form.certifications} onChange={e=>set("certifications",e.target.value)} /></F>
-              </div>
-              <div className="card fade-up d4">
-                <h2 style={{ fontFamily:"var(--font-display)", fontSize:22, fontWeight:300, marginBottom:16 }}>Resume Style</h2>
-                <TemplateSelector />
-              </div>
-              <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                <button className="ghost-btn" onClick={()=>{setMode("");go(1);}}>← Back</button>
-                <button className="gold-btn" onClick={generateBuild} disabled={loading} style={{ minWidth:210 }}>
-                  {loading?<span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>:"✦ Generate Resume"}
-                </button>
-              </div>
+              <BuildResume
+                callAPI={callAPI}
+                startLoad={startLoad}
+                loadMsg={loadMsg}
+                onResult={(res, template) => {
+                  setResult(res);
+                  setForm(f => ({...f, template: template||f.template}));
+                }}
+              />
             </div>
           )}
 
-          {/* ══ STEP 1 — TAILOR ══ */}
+          {/* ══ TAILOR JOB ══ */}
           {step===2 && mode==="tailor" && (
             <div>
-              <div className="card fade-up d1">
-                <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Upload Your Existing Resume</h2>
-                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:24, fontWeight:300 }}>Your PDF is read and rewritten to match the job you want — even if the roles are completely different.</p>
-                <div className={`drop-zone${dragOver?" drag-over":""}`} onClick={()=>fileRef.current?.click()} onDragOver={e=>{e.preventDefault();setDragOver(true);}} onDragLeave={()=>setDragOver(false)} onDrop={e=>{e.preventDefault();setDragOver(false);handleFile(e.dataTransfer.files[0]);}} style={{ marginBottom:24 }}>
-                  <input ref={fileRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={e=>handleFile(e.target.files[0])} />
-                  {uploadedPdf ? (
-                    <div>
-                      <div style={{ fontSize:28,color:"var(--gold)",marginBottom:8 }}>✓</div>
-                      <div style={{ fontWeight:500,color:"var(--gold)",marginBottom:4,fontSize:14 }}>{uploadedPdf.name}</div>
-                      <div style={{ fontSize:12,color:"var(--ash)" }}>Click to replace</div>
-                    </div>
-                  ) : (
-                    <div>
-                      <div style={{ marginBottom:12,color:"var(--ash)" }}>
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                      </div>
-                      <div style={{ fontWeight:500,marginBottom:4,fontSize:14 }}>Drop your PDF resume here</div>
-                      <div style={{ fontSize:12,color:"var(--ash)" }}>or click to browse · PDF only · Max 5MB</div>
-                    </div>
-                  )}
-                </div>
-                <F label="Target Job — Describe the role you're applying for">
-                  <textarea placeholder={"Example: I'm applying for a Cashier position at a local café. The job involves handling cash, serving customers, and keeping the counter tidy. I want my cybersecurity background reframed to highlight transferable skills: attention to detail, following procedures precisely, reliability, and working under pressure."} value={jobDescription} onChange={e=>setJobDescription(e.target.value)} style={{ minHeight:150 }} />
-                </F>
-                <p style={{ fontSize:11,color:"rgba(255,255,255,0.18)",marginTop:-8,marginBottom:20 }}>The more context you give, the better the tailoring.</p>
-                <F label="Resume Style"><TemplateSelector /></F>
-              </div>
-              <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                <button className="ghost-btn" onClick={()=>{setMode("");go(1);}}>← Back</button>
-                <button className="gold-btn" onClick={generateTailor} disabled={loading} style={{ minWidth:220 }}>
-                  {loading?<span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>:"⟳ Tailor My Resume"}
-                </button>
-              </div>
+              <TailorJob
+                callAPI={callAPI}
+                startLoad={startLoad}
+                loadMsg={loadMsg}
+                onResult={(res, template) => {
+                  setResult(res);
+                  setForm(f => ({...f, template: template||f.template}));
+                }}
+              />
             </div>
           )}
+
 
           {/* ══ STEP 1 — LINKEDIN ══ */}
           {step===2 && mode==="linkedin" && (
-            <div>
-              <div className="card fade-up d1">
-                <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Your LinkedIn Profile</h2>
-                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:20, fontWeight:300 }}>Paste your LinkedIn URL to auto-import, or fill in the fields manually.</p>
-                <LinkedInImport onImport={data=>setLiData(d=>({...d,...Object.fromEntries(Object.entries(data).filter(([,v])=>v))}))} />
-                <div style={g2}>
-                  <F label="Your Name"><input placeholder="Alexandra Chen" value={liData.name} onChange={e=>setLiData(d=>({...d,name:e.target.value}))} /></F>
-                  <F label="Target Role / Industry"><input placeholder="Cybersecurity Engineer · Tech" value={liData.targetRole} onChange={e=>setLiData(d=>({...d,targetRole:e.target.value}))} /></F>
-                </div>
-                <F label="Current Headline"><input placeholder="Security Analyst at XYZ Corp | Protecting digital assets" value={liData.headline} onChange={e=>setLiData(d=>({...d,headline:e.target.value}))} /></F>
-                <F label="About / Summary Section"><textarea placeholder="Paste your current About section here..." value={liData.about} onChange={e=>setLiData(d=>({...d,about:e.target.value}))} style={{ minHeight:120 }} /></F>
-                <F label="Experience"><textarea placeholder={"Senior Security Analyst at ABC Corp (2021–present)\n– Monitored network traffic\n– Led incident response\n\nJunior Analyst at DEF Ltd (2019–2021)"} value={liData.experience} onChange={e=>setLiData(d=>({...d,experience:e.target.value}))} style={{ minHeight:140 }} /></F>
-                <F label="Skills (comma separated)"><input placeholder="Penetration Testing, SIEM, Python, Network Security..." value={liData.skills} onChange={e=>setLiData(d=>({...d,skills:e.target.value}))} /></F>
-              </div>
-              <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                <button className="ghost-btn" onClick={()=>{setMode("");go(1);}}>← Back</button>
-                <button className="gold-btn" onClick={generateLinkedIn} disabled={loading} style={{ minWidth:220 }}>
-                  {loading?<span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>:"Analyse My Profile"}
-                </button>
-              </div>
-            </div>
+            <LinkedInOptimizer
+              callAPI={callAPI}
+              startLoad={startLoad}
+              loadMsg={loadMsg}
+              onResult={res => setLiResult(res)}
+            />
           )}
+
 
           {/* ══ STEP 1 — APPLY MODE ══ */}
           {step===2 && mode==="apply" && (
-            <div>
-              {/* Glowing banner */}
-              <div className="fade-up" style={{ background:"linear-gradient(135deg,rgba(201,168,76,0.08),rgba(201,168,76,0.04))", border:"1px solid var(--gold-border)", borderRadius:14, padding:"18px 24px", marginBottom:20, display:"flex", alignItems:"center", gap:14 }}>
-                <div style={{ fontSize:28 }}>⚡</div>
-                <div>
-                  <div style={{ fontFamily:"var(--font-display)", fontSize:18, fontWeight:300, color:"var(--gold)", marginBottom:2 }}>Apply Mode — Full Pre-Interview Package</div>
-                  <div style={{ fontSize:13, color:"var(--ash)", fontWeight:300 }}>Paste a job URL or description + upload your resume → get a tailored resume, cover letter, and interview prep in one shot.</div>
-                </div>
-              </div>
-
-              <div className="card fade-up d1">
-                <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>The Job</h2>
-                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:20, fontWeight:300 }}>Provide the job you want to apply for. You can paste the URL, paste the description, or both.</p>
-
-                {/* Input mode toggle */}
-                <div style={{ display:"flex", gap:8, marginBottom:20 }}>
-                  {[{id:"url",label:"Job URL"},{id:"text",label:"Paste Description"},{id:"both",label:"Both"}].map(t=>(
-                    <button key={t.id} onClick={()=>setApplyInput(a=>({...a,inputMode:t.id}))}
-                      style={{ padding:"8px 16px", borderRadius:8, border:`1px solid ${applyInput.inputMode===t.id?"var(--gold)":"rgba(255,255,255,0.1)"}`, background:applyInput.inputMode===t.id?"var(--gold-dim)":"transparent", color:applyInput.inputMode===t.id?"var(--gold)":"var(--ash)", cursor:"pointer", fontSize:12, fontFamily:"var(--font-body)", fontWeight:500, transition:"all 0.2s" }}
-                    >{t.label}</button>
-                  ))}
-                </div>
-
-                {(applyInput.inputMode==="url"||applyInput.inputMode==="both") && (
-                  <F label="Job Posting URL">
-                    <input placeholder="https://www.linkedin.com/jobs/view/... or any job board URL" value={applyInput.jobUrl} onChange={e=>setApplyInput(a=>({...a,jobUrl:e.target.value}))} />
-                    <p style={{ fontSize:11,color:"rgba(255,255,255,0.2)",marginTop:5 }}>The full job posting is fetched and read automatically.</p>
-                  </F>
-                )}
-                {(applyInput.inputMode==="text"||applyInput.inputMode==="both") && (
-                  <F label="Job Description">
-                    <textarea placeholder={"Paste the full job description here...\n\nExample:\nSoftware Engineer – Payments Team\nAcme Corp · San Francisco, CA\n\nWe're looking for a backend engineer to join our payments team...\n\nRequirements:\n• 3+ years Python experience\n• Experience with distributed systems..."} value={applyInput.jobText} onChange={e=>setApplyInput(a=>({...a,jobText:e.target.value}))} style={{ minHeight:180 }} />
-                  </F>
-                )}
-              </div>
-
-              {/* Resume upload */}
-              <div className="card fade-up d2">
-                <h2 style={{ fontFamily:"var(--font-display)", fontSize:24, fontWeight:300, marginBottom:4 }}>Your Resume</h2>
-                <p style={{ color:"var(--ash)", fontSize:13, marginBottom:20, fontWeight:300 }}>Upload your current resume PDF and it will be tailored specifically to this job.</p>
-                <div className={`drop-zone${dragOver?" drag-over":""}`}
-                  onClick={()=>applyFileRef.current?.click()}
-                  onDragOver={e=>{e.preventDefault();setDragOver(true);}}
-                  onDragLeave={()=>setDragOver(false)}
-                  onDrop={e=>{e.preventDefault();setDragOver(false);
-                    const file=e.dataTransfer.files[0];
-                    if(!file||file.type!=="application/pdf"){setErr("Please upload a PDF.");return;}
-                    const r=new FileReader(); r.onload=ev=>{setApplyResume({name:file.name,base64:ev.target.result.split(",")[1]});setErr("");}; r.readAsDataURL(file);
-                  }}>
-                  <input ref={applyFileRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={e=>{
-                    const file=e.target.files[0]; if(!file) return;
-                    const r=new FileReader(); r.onload=ev=>{setApplyResume({name:file.name,base64:ev.target.result.split(",")[1]});setErr("");}; r.readAsDataURL(file);
-                  }} />
-                  {applyResume ? (
-                    <div><div style={{ fontSize:28,color:"var(--gold)",marginBottom:8 }}>✓</div><div style={{ fontWeight:500,color:"var(--gold)",fontSize:14,marginBottom:4 }}>{applyResume.name}</div><div style={{ fontSize:12,color:"var(--ash)" }}>Click to replace</div></div>
-                  ) : (
-                    <div>
-                      <div style={{ marginBottom:12,color:"var(--ash)" }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-                      <div style={{ fontWeight:500,marginBottom:4,fontSize:14 }}>Drop your resume PDF here</div>
-                      <div style={{ fontSize:12,color:"var(--ash)" }}>or click to browse · Max 5MB</div>
-                    </div>
-                  )}
-                </div>
-                <div style={{ marginTop:20 }}>
-                  <F label="Resume Style"><TemplateSelector /></F>
-                </div>
-              </div>
-
-              <div className="btn-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                <button className="ghost-btn" onClick={()=>{setMode("");go(1);}}>← Back</button>
-                <button className="gold-btn" onClick={generateApply} disabled={loading} style={{ minWidth:240 }}>
-                  {loading
-                    ? <span style={{ display:"flex",alignItems:"center",gap:10,justifyContent:"center" }}><Spinner />{loadMsg}</span>
-                    : "⚡ Generate Full Package"}
-                </button>
-              </div>
-            </div>
+            <ApplyMode
+              callAPI={callAPI}
+              startLoad={startLoad}
+              loadMsg={loadMsg}
+              onResult={(res, template) => {
+                setApplyResult(res);
+                setApplyTab("resume");
+                setForm(f => ({...f, template: template||f.template}));
+              }}
+            />
           )}
 
-          {/* ══ INTERVIEW PREP FORM ══ */}
+
+          {/* ══ INTERVIEW PREP ══ */}
           {step===2 && mode==="interview" && (
-            <div>
-              <div style={{marginBottom:16}}>
-                <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>{setMode("");go(1);}}>← Back</button>
-              </div>
-              <div className="fade-up" style={{ background:"linear-gradient(135deg,rgba(74,222,128,0.06),rgba(74,222,128,0.02))", border:"1px solid rgba(74,222,128,0.2)", borderRadius:14, padding:"18px 24px", marginBottom:20, display:"flex", alignItems:"center", gap:14 }}>
-                <div style={{ fontSize:28 }}>🎯</div>
-                <div>
-                  <div style={{ fontFamily:"var(--font-display)", fontSize:18, fontWeight:300, color:"#4ade80", marginBottom:2 }}>Interview Prep Generator</div>
-                  <div style={{ fontSize:13, color:"var(--ash)", fontWeight:300 }}>Enter the role, company, and your background — get tailored interview questions with expert guidance on how to answer.</div>
-                </div>
-              </div>
-              <div className="card fade-up d1">
-                <InterviewPrepForm onResult={r=>{ setInterviewResult(r); go(3); }} setErr={setErr} loading={loading} setLoading={setLoading} loadMsg={loadMsg} startLoad={startLoad} />
-              </div>
-              <div style={{ textAlign:"center", marginTop:16 }}>
-                <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>go(1)}>← Back</button>
-              </div>
-            </div>
+            <InterviewPrep
+              callAPI={callAPI}
+              startLoad={startLoad}
+              loadMsg={loadMsg}
+              onResult={r => setInterviewResult(r)}
+            />
           )}
 
-          {/* ══ LINKEDIN WRITER FORM ══ */}
+          {/* ══ LINKEDIN WRITER ══ */}
           {step===2 && mode==="linkedin-quick" && (
-            <div>
-              <div style={{marginBottom:16}}>
-                <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>{setMode("");go(1);}}>← Back</button>
-              </div>
-              <div className="fade-up" style={{ background:"linear-gradient(135deg,rgba(10,102,194,0.08),rgba(10,102,194,0.02))", border:"1px solid rgba(10,102,194,0.2)", borderRadius:14, padding:"18px 24px", marginBottom:20, display:"flex", alignItems:"center", gap:14 }}>
-                <div style={{ fontSize:28 }}>✍️</div>
-                <div>
-                  <div style={{ fontFamily:"var(--font-display)", fontSize:18, fontWeight:300, color:"#60a5fa", marginBottom:2 }}>LinkedIn Headline & Summary Writer</div>
-                  <div style={{ fontSize:13, color:"var(--ash)", fontWeight:300 }}>Get a punchy LinkedIn headline and compelling About section written by AI in seconds.</div>
-                </div>
-              </div>
-              <div className="card fade-up d1">
-                <LinkedInWriterForm onResult={r=>{ setLinkedInWriterResult(r); go(3); }} setErr={setErr} loading={loading} setLoading={setLoading} loadMsg={loadMsg} startLoad={startLoad} />
-              </div>
-              <div style={{ textAlign:"center", marginTop:16 }}>
-                <button className="ghost-btn" style={{ fontSize:12 }} onClick={()=>go(1)}>← Back</button>
-              </div>
-            </div>
+            <LinkedInWriter
+              callAPI={callAPI}
+              startLoad={startLoad}
+              loadMsg={loadMsg}
+              onResult={r => setLinkedInWriterResult(r)}
+            />
           )}
 
           {/* ══ STEP 2 — RESULTS ══ */}
           {step===3 && (
             <div>
               {/* Back button + Start Over on all results */}
-              <div style={{marginBottom:16, display:"flex", alignItems:"center", justifyContent:"space-between"}}>
-                <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>{setMode("");go(1);}}>← Back</button>
+              <div style={{marginBottom:16, display:"flex", gap:8}}>
+                <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={()=>{
+                  // Derive back destination from current URL
+                  const path = location.pathname;
+                  if (path.startsWith("/apply"))          navigate("/apply");
+                  else if (path.startsWith("/linkedin-writer")) navigate("/linkedin-writer");
+                  else if (path.startsWith("/linkedin"))  navigate("/linkedin");
+                  else if (path.startsWith("/interview")) navigate("/interview");
+                  else if (path.startsWith("/tailor"))    navigate("/tailor");
+                  else                                    navigate("/build");
+                }}>← Back</button>
                 <button className="ghost-btn" style={{fontSize:12,padding:"7px 14px"}} onClick={resetAll}>Start Over</button>
               </div>
               {/* Apply Mode Results */}
@@ -2595,7 +1663,7 @@ export default function App() {
                             <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>exportPDF(applyResult.resume?.name)}>⬇ Download PDF</button>
                           </>
                         ) : (
-                          <button className="gold-btn pulse" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>setPage("subscribe")}>✦ Upgrade for Full Access</button>
+                          <button className="gold-btn pulse" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>navigate("/subscribe")}>✦ Upgrade for Full Access</button>
                         )}
                       </div>
                     </div>
@@ -2643,11 +1711,11 @@ export default function App() {
                     const isPaidApply = user?.subscriptionStatus === "active";
                     return (
                       <div className="scale-in">
-                        <ATSMeter text={`${applyResult.resume.summary||""} ${applyResult.resume.experience||""} ${applyResult.resume.skills||""}`} onFix={isPaidApply ? fixATS : null} onUpgrade={()=>setPage("subscribe")} />
+                        <ATSMeter text={`${applyResult.resume.summary||""} ${applyResult.resume.experience||""} ${applyResult.resume.skills||""}`} onFix={isPaidApply ? fixATS : null} onUpgrade={()=>navigate("/subscribe")} />
                         <div style={{ marginTop:16 }}>
                           {isPaidApply
                             ? <div style={{ borderRadius:18,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.65)" }}><Preview data={applyResult.resume} template={form.template} /></div>
-                            : <LockedPreview data={applyResult.resume} template={form.template} onUpgrade={()=>setPage("subscribe")} />
+                            : <LockedPreview data={applyResult.resume} template={form.template} onUpgrade={()=>navigate("/subscribe")} />
                           }
                         </div>
                       </div>
@@ -2683,7 +1751,7 @@ export default function App() {
                         <div style={{ position:"absolute", inset:0, background:"linear-gradient(to bottom, transparent 30%, rgba(255,255,255,0.97) 65%)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-end", paddingBottom:32, gap:10 }}>
                           <div style={{ fontSize:14, fontWeight:500, color:"#1a1a2e" }}>🔒 Cover letter is a premium feature</div>
                           <div style={{ fontSize:12, color:"#666", marginBottom:4 }}>Upgrade to read, download and send your cover letter</div>
-                          <button className="gold-btn" style={{ fontSize:13, padding:"10px 28px" }} onClick={()=>setPage("subscribe")}>Unlock with Premium →</button>
+                          <button className="gold-btn" style={{ fontSize:13, padding:"10px 28px" }} onClick={()=>navigate("/subscribe")}>Unlock with Premium →</button>
                         </div>
                       </div>
                     );
@@ -2736,7 +1804,7 @@ export default function App() {
                           <div style={{ fontSize:18, marginBottom:12 }}>🎯</div>
                           <div style={{ fontSize:15, fontWeight:500, marginBottom:8 }}>{(applyResult.interviewPrep?.length||0)} interview questions ready</div>
                           <div style={{ fontSize:13, color:"var(--ash)", marginBottom:20 }}>Tailored to this exact role and your background. Unlock to see all questions with detailed guidance.</div>
-                          <button className="gold-btn pulse" style={{ fontSize:13, padding:"11px 28px" }} onClick={()=>setPage("subscribe")}>Unlock Interview Prep →</button>
+                          <button className="gold-btn pulse" style={{ fontSize:13, padding:"11px 28px" }} onClick={()=>navigate("/subscribe")}>Unlock Interview Prep →</button>
                         </div>
                       </div>
                     );
@@ -2771,7 +1839,7 @@ export default function App() {
                               <button className="gold-btn" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>exportPDF(result.name)}>⬇ Download PDF</button>
                             </>
                           ) : (
-                            <button className="gold-btn pulse" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>setPage("subscribe")}>
+                            <button className="gold-btn pulse" style={{ fontSize:12,padding:"10px 22px" }} onClick={()=>navigate("/subscribe")}>
                               ✦ Upgrade to Download
                             </button>
                           )}
@@ -2780,14 +1848,14 @@ export default function App() {
                       <ATSMeter
                         text={`${result.summary||""} ${result.experience||""} ${result.skills||""}`}
                         onFix={isPaid ? fixATS : null}
-                        onUpgrade={()=>setPage("subscribe")}
+                        onUpgrade={()=>navigate("/subscribe")}
                       />
                     </div>
                   )}
                   <div className="fade-up" style={{ marginBottom:32 }}>
                     {isPaid || isShared
                       ? <div style={{ borderRadius:18,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.65)" }}><Preview data={result} template={form.template} /></div>
-                      : <LockedPreview data={result} template={form.template} onUpgrade={()=>setPage("subscribe")} />
+                      : <LockedPreview data={result} template={form.template} onUpgrade={()=>navigate("/subscribe")} />
                     }
                   </div>
                   {isPaid && !isShared && (
@@ -2801,7 +1869,7 @@ export default function App() {
                         <div style={{marginTop:24,padding:"20px 24px",borderRadius:14,border:"1px solid var(--gold-border)",background:"var(--gold-dim)",textAlign:"center"}}>
                           <div style={{fontSize:14,fontWeight:500,marginBottom:8}}>✦ Job Recommendations</div>
                           <div style={{fontSize:13,color:"var(--ash)",marginBottom:16}}>Get matched to live job postings based on your resume — premium feature.</div>
-                          <button className="gold-btn" style={{fontSize:12,padding:"8px 20px"}} onClick={()=>setPage("subscribe")}>Unlock with Premium →</button>
+                          <button className="gold-btn" style={{fontSize:12,padding:"8px 20px"}} onClick={()=>navigate("/subscribe")}>Unlock with Premium →</button>
                         </div>
                       );
                   })()}

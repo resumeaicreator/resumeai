@@ -828,23 +828,26 @@ app.post("/api/interview-prep", limiter, requireAuth, async (req, res) => {
     const role       = sanitize(req.body.role       || "", 200);
     const company    = sanitize(req.body.company    || "", 200);
     const background = sanitize(req.body.background || "", 1000);
+    const pdfBase64  = req.body.pdfBase64 || "";
 
     if (!role) return res.status(400).json({ error: "Role is required." });
 
-    const prompt = `You are an expert interview coach with 15+ years preparing candidates for roles at top companies.
+    // Build message content — include PDF if provided
+    const textPrompt = `You are an expert interview coach with 15+ years preparing candidates for roles at top companies.
 
 The candidate is preparing for: ${role}${company ? ` at ${company}` : ""}
-Their background: ${background || "Not provided — generate general questions for this role"}
+${background ? `Their background summary: ${background}` : ""}
+${pdfBase64 ? "Their resume is attached — use specific details from it to make questions highly personalised." : "No resume provided — generate general questions for this role."}
 
 Generate 8 highly specific interview questions for this exact role${company ? ` at ${company}` : ""}. Include:
-- 2 behavioural questions (past experience)
-- 2 situational questions (hypothetical scenarios)
+- 2 behavioural questions (past experience — reference specific roles/companies from their resume if available)
+- 2 situational questions (hypothetical scenarios relevant to this role)
 - 2 technical/domain questions specific to this role
 - 1 motivation/culture question
 - 1 tricky question they might not expect
 
 For each question provide:
-- Specific guidance on how to answer based on their background
+- Specific guidance on how to answer (referencing their actual experience where possible)
 - 3 key points to hit in their answer
 
 Also provide 2-3 sentences of general advice for this specific role/company.
@@ -864,10 +867,18 @@ Return ONLY a raw JSON object, no markdown:
   "generalTips": "2-3 sentences of general advice for this role/company"
 }`;
 
+    // Build message — with or without PDF
+    const messageContent = pdfBase64
+      ? [
+          { type:"document", source:{ type:"base64", media_type:"application/pdf", data:pdfBase64 } },
+          { type:"text", text:textPrompt },
+        ]
+      : textPrompt;
+
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type":"application/json", "x-api-key":ANTHROPIC_API_KEY, "anthropic-version":"2023-06-01" },
-      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:2000, messages:[{ role:"user", content:prompt }] }),
+      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:2000, messages:[{ role:"user", content:messageContent }] }),
     });
 
     if (!anthropicRes.ok) return res.status(502).json({ error:"AI service error — please try again." });
@@ -1101,6 +1112,72 @@ app.get("/api/live-jobs", limiter, async (req, res) => {
   } catch(err) {
     console.error("Live jobs error:", err.message);
     return res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// ─── AI Job Search — generates targeted Google search links ──────────
+app.post("/api/job-search-links", limiter, async (req, res) => {
+  try {
+    const role     = sanitize(req.body.role     || "", 200);
+    const location = sanitize(req.body.location || "", 120);
+
+    if (!role) return res.status(400).json({ error: "Role is required." });
+
+    const prompt = `You are a job search expert. Generate 6 highly targeted Google search queries to find job listings for someone looking for: "${role}"${location ? ` in ${location}` : ""}.
+
+Each query should target a different source or angle:
+1. Lever.co job board (direct company postings)
+2. Greenhouse.io job board (direct company postings)  
+3. LinkedIn Jobs
+4. Indeed
+5. Remote-specific search
+6. One creative/niche angle specific to this role (e.g. for a nurse: healthcare job boards, for a developer: startup jobs)
+
+Rules:
+- Keep queries short and effective — 3-6 words max after the site: operator
+- Do NOT use date filters, quote everything, or add too many constraints
+- Make each query genuinely different and useful
+- For the role title, use the most common industry term
+
+Return ONLY raw JSON, no markdown:
+{
+  "searches": [
+    {
+      "label": "Short friendly label (2-4 words)",
+      "query": "The actual Google search query",
+      "icon": "Single emoji that fits the source"
+    }
+  ]
+}`;
+
+    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type":"application/json", "x-api-key":ANTHROPIC_API_KEY, "anthropic-version":"2023-06-01" },
+      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:600, messages:[{ role:"user", content:prompt }] }),
+    });
+
+    if (!anthropicRes.ok) return res.status(502).json({ error:"AI service error." });
+
+    const aiData  = await anthropicRes.json();
+    const rawText = (aiData.content||[]).map(b=>b.text||"").join("");
+    const cleaned = rawText.replace(/```json|```/g,"").trim();
+
+    let data;
+    try { data = JSON.parse(cleaned); }
+    catch { return res.status(502).json({ error:"Could not parse response." }); }
+
+    const searches = (data.searches||[]).slice(0,6).map(s => ({
+      label: String(s.label||""),
+      query: String(s.query||""),
+      icon:  String(s.icon||"🔍"),
+      url:   `https://www.google.com/search?q=${encodeURIComponent(s.query)}`,
+    }));
+
+    return res.json({ searches });
+
+  } catch(err) {
+    console.error("Job search links error:", err);
+    return res.status(500).json({ error:"Internal server error." });
   }
 });
 
