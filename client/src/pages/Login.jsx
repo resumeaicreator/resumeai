@@ -95,13 +95,13 @@ function AuthPage({ mode, onSuccess, switchMode, onBack }) {
 }
 
 
-export default function Login() {
+export default function Login({ onSuccess }) {
   const navigate = useNavigate();
   return (
     <AuthPage
       mode="login"
       onBack={()=>navigate("/")}
-      onSuccess={()=>navigate("/dashboard")}
+      onSuccess={onSuccess || (()=>navigate("/dashboard"))}
       switchMode={m=>navigate("/"+m)}
     />
   );

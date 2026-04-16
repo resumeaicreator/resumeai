@@ -1298,7 +1298,16 @@ export default function App() {
     }
     const API = process.env.REACT_APP_API_URL || "";
     fetch(`${API}/api/auth/me`, { credentials: "include" })
-      .then(r => r.ok ? r.json() : null)
+      .then(async r => {
+        if (r.ok) return r.json();
+        // Access token expired — try refresh before giving up
+        const ref = await fetch(`${API}/api/auth/refresh`, { method:"POST", credentials:"include" }).catch(()=>null);
+        if (ref?.ok) {
+          const r2 = await fetch(`${API}/api/auth/me`, { credentials:"include" });
+          if (r2.ok) return r2.json();
+        }
+        return null;
+      })
       .then(data => { setUser(data?.user || false); setAuthReady(true); })
       .catch(() => { setUser(false); setAuthReady(true); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1430,7 +1439,11 @@ export default function App() {
           if (refresh.ok) return callAPI(endpoint, body, true);
         } catch(e) {}
       }
-      setUser(false); throw new Error("login_required");
+      setUser(false);
+      if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
+        sessionStorage.setItem("cr_redirect", window.location.pathname);
+      }
+      throw new Error("login_required");
     }
     if (res.status===402) { throw new Error("premium_required"); }
     if (!res.ok){ const d=await res.json().catch(()=>({})); throw new Error(d.error||"Server error"); }
@@ -1475,8 +1488,8 @@ export default function App() {
           <span style={{width:20,height:20,border:"2px solid rgba(201,168,76,0.3)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin 0.75s linear infinite",display:"inline-block"}} />
         </div>
       )}
-      {authReady && page==="login"     && <Login />}
-      {authReady && page==="register"  && <Register />}
+      {authReady && page==="login"     && <Login onSuccess={()=>{ const dest=sessionStorage.getItem("cr_redirect")||"/dashboard"; sessionStorage.removeItem("cr_redirect"); navigate(dest); }} />}
+      {authReady && page==="register"  && <Register onSuccess={()=>navigate("/dashboard")} />}
       {page==="forgot"                 && <ForgotPassword />}
       {page==="reset"                  && <ResetPassword token={resetToken} />}
       {authReady && page==="subscribe" && <Subscribe user={user} setUser={setUser} />}
