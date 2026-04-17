@@ -62,7 +62,7 @@ export default function Account({ user, setUser }) {
   return (
     <AccountPage
       user={user}
-      onBack={()=>navigate("/dashboard")}
+      onBack={()=>navigate(-1)}
       onLogout={()=>{ try{localStorage.removeItem("cr_user");}catch{} setUser(false); navigate("/login"); }}
     />
   );

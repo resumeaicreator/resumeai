@@ -18,7 +18,9 @@ function AuthPage({ mode, onSuccess, switchMode, onBack }) {
       const res = await fetch(`${API}${endpoint}`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify(body)});
       const data = await res.json();
       if (!res.ok) { setErr(data.error||"Something went wrong."); return; }
-      onSuccess(data.user);
+      // Handle both {user: {...}} and flat user object
+      const userData = data.user || data;
+      onSuccess(userData);
     } catch(e) { setErr("Network error. Please try again."); }
     finally { setLoading(false); }
   };
@@ -102,7 +104,7 @@ export default function Login() {
     <AuthPage
       mode="login"
       onBack={()=>navigate("/")}
-      onSuccess={u=>{ try{localStorage.setItem("cr_user",JSON.stringify(u));}catch{} sessionStorage.removeItem("cr_redirect"); navigate(dest); }}
+      onSuccess={u=>{ try{localStorage.setItem("cr_user",JSON.stringify(u)); window.dispatchEvent(new CustomEvent("cr_login",{detail:u}));}catch{} sessionStorage.removeItem("cr_redirect"); navigate(dest); }}
       switchMode={m=>navigate("/"+m)}
     />
   );

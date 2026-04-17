@@ -1297,6 +1297,10 @@ export default function App() {
       return;
     }
     const API = process.env.REACT_APP_API_URL || "";
+    // Listen for login events from Login page
+    const onLogin = e => { setUser(e.detail); setAuthReady(true); };
+    window.addEventListener("cr_login", onLogin);
+
     // Read cached user from localStorage for instant load (no flash)
     try {
       const cached = localStorage.getItem("cr_user");
@@ -1326,6 +1330,8 @@ export default function App() {
         setAuthReady(true);
       })
       .catch(() => { setUser(false); setAuthReady(true); });
+
+    return () => window.removeEventListener("cr_login", onLogin);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
