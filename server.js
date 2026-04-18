@@ -146,7 +146,7 @@ function validateBody(body) {
 }
 
 // ─── Generate endpoint ───────────────────────
-app.post("/api/generate", limiter, requireAuth, async (req, res) => {
+app.post("/api/generate", limiter, async (req, res) => {
   try {
     // 1. Validate
     const errors = validateBody(req.body);
@@ -249,7 +249,7 @@ app.post("/api/generate", limiter, requireAuth, async (req, res) => {
 });
 
 // ─── Tailor endpoint (PDF upload + job description) ──
-app.post("/api/tailor", limiter, requireAuth, async (req, res) => {
+app.post("/api/tailor", limiter, async (req, res) => {
   try {
     const { pdfBase64, jobDescription, template } = req.body;
     if (!pdfBase64)       return res.status(400).json({ error: "PDF is required." });
@@ -338,7 +338,7 @@ Return ONLY a raw JSON object with no markdown, no preamble:
 });
 
 // ─── LinkedIn optimizer endpoint ──────────────
-app.post("/api/linkedin", limiter, requireAuth, async (req, res) => {
+app.post("/api/linkedin", limiter, async (req, res) => {
   try {
     const { name, targetRole, headline, about, experience, skills } = req.body;
     if (!name?.trim()) return res.status(400).json({ error: "Name is required." });
@@ -453,7 +453,7 @@ Provide 4-6 suggestions total. Be specific — generic advice is not helpful.`;
 });
 
 // ─── Job recommendations endpoint ─────────────
-app.post("/api/jobs", limiter, requireAuth, async (req, res) => {
+app.post("/api/jobs", limiter, async (req, res) => {
   try {
     const role     = sanitize(req.body.role || "", 200);
     const skills   = (req.body.skills || []).slice(0, 8).map(s => sanitize(s, 60));
@@ -530,7 +530,7 @@ Match is 0-100. Be honest — don't inflate scores.`;
 });
 
 // ─── Apply Mode endpoint ───────────────────────
-app.post("/api/apply", limiter, requireAuth, async (req, res) => {
+app.post("/api/apply", limiter, async (req, res) => {
   try {
     const { jobUrl, jobText, pdfBase64, template } = req.body;
     if (!pdfBase64) return res.status(400).json({ error:"Resume PDF is required." });
@@ -659,7 +659,7 @@ Return ONLY a raw JSON object, no markdown:
 
 // ─── LinkedIn profile import endpoint ─────────
 // LinkedIn profile import — accepts pasted profile text (URL fetch blocked by LinkedIn)
-app.post("/api/linkedin-import", limiter, requireAuth, async (req, res) => {
+app.post("/api/linkedin-import", limiter, async (req, res) => {
   try {
     const { text, url } = req.body;
     const profileText = sanitize(text || "", 10000);
@@ -823,7 +823,7 @@ If no resume update is needed (just answering a question or directing to templat
 });
 
 // ─── Interview Prep endpoint ──────────────────────────────────────────
-app.post("/api/interview-prep", limiter, requireAuth, async (req, res) => {
+app.post("/api/interview-prep", limiter, async (req, res) => {
   try {
     const role       = sanitize(req.body.role       || "", 200);
     const company    = sanitize(req.body.company    || "", 200);
@@ -910,7 +910,7 @@ Return ONLY a raw JSON object, no markdown:
 });
 
 // ─── LinkedIn Quick Writer endpoint ───────────────────────────────────
-app.post("/api/linkedin-quick", limiter, requireAuth, async (req, res) => {
+app.post("/api/linkedin-quick", limiter, async (req, res) => {
   try {
     const name       = sanitize(req.body.name       || "", 120);
     const role       = sanitize(req.body.role       || "", 200);

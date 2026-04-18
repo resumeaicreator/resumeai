@@ -49,7 +49,6 @@ export default function TailorJob({ callAPI, onResult, startLoad, loadMsg }) {
       navigate("/tailor/results");
     } catch(e) {
       if (e.message==="premium_required") navigate("/subscribe");
-      else if (e.message==="login_required") navigate("/login");
       else setErr(e.message || "Tailoring failed — please try again.");
     } finally { clearInterval(iv); setLoading(false); }
   };

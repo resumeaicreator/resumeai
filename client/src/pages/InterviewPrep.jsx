@@ -40,8 +40,7 @@ export default function InterviewPrep({ callAPI, onResult, startLoad, loadMsg })
       onResult(res);
       navigate("/interview/results");
     } catch(e) {
-      if (e.message==="login_required") navigate("/login");
-      else setErr(e.message || "Something went wrong.");
+      setErr(e.message || "Something went wrong.");
     } finally { clearInterval(iv); setLoading(false); }
   };
 

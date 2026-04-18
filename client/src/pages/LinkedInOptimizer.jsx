@@ -92,7 +92,6 @@ export default function LinkedInOptimizer({ callAPI, onResult, startLoad, loadMs
       navigate("/linkedin/results");
     } catch(e) {
       if (e.message==="premium_required") navigate("/subscribe");
-      else if (e.message==="login_required") navigate("/login");
       else setErr(e.message || "LinkedIn analysis failed.");
     } finally { clearInterval(iv); setLoading(false); }
   };

@@ -1518,7 +1518,7 @@ export default function App() {
       {authReady && page==="subscribe" && <Subscribe user={user} setUser={setUser} />}
       {authReady && page==="account"   && <Account   user={user} setUser={setUser} />}
       {showVerifyBanner && <VerifyBanner onClose={()=>setShowVerifyBanner(false)} />}
-      {user && user.subscriptionStatus !== "active" && page==="app" && (
+      {user && user.subscriptionStatus !== "active" && user.subscriptionStatus === "past_due" && page==="app" && (
         <ExpiredBanner status={user.subscriptionStatus} onUpgrade={()=>navigate("/subscribe")} />
       )}
       {authReady && page==="app" && (

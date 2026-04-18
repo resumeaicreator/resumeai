@@ -72,7 +72,6 @@ export default function BuildResume({ callAPI, onResult, startLoad, loadMsg }) {
       navigate("/build/results");
     } catch(e) {
       if (e.message==="premium_required") navigate("/subscribe");
-      else if (e.message==="login_required") navigate("/login");
       else setErr(e.message || "Generation failed — please try again.");
     } finally { clearInterval(iv); setLoading(false); }
   };

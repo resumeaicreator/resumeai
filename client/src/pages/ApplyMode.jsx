@@ -59,7 +59,6 @@ export default function ApplyMode({ callAPI, onResult, startLoad, loadMsg }) {
       navigate("/apply/results");
     } catch(e) {
       if (e.message==="premium_required") navigate("/subscribe");
-      else if (e.message==="login_required") navigate("/login");
       else setErr(e.message || "Apply Mode failed — please try again.");
     } finally { clearInterval(iv); setLoading(false); }
   };
