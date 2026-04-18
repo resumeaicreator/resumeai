@@ -337,6 +337,235 @@ function LiveJobsSearch({ user, navigate }) {
   );
 }
 
+
+function HeroDemo() {
+  const [slide, setSlide] = useState(0);
+  const [fields, setFields] = useState({fn:'',fr:'',fe:'',fl:'',fs:''});
+  const [cursorPos, setCursorPos] = useState({x:-100,y:-100,visible:false});
+  const [loadMsg, setLoadMsg] = useState('Crafting your story…');
+  const [loadStep, setLoadStep] = useState(0);
+  const [pdfReady, setPdfReady] = useState(false);
+
+  const FIELD_DATA = [
+    {key:'fn', val:'Alexandra Chen',   x:100, y:170},
+    {key:'fr', val:'Product Manager',  x:290, y:170},
+    {key:'fe', val:'alex@email.com',   x:100, y:208},
+    {key:'fl', val:'San Francisco',    x:290, y:208},
+    {key:'fs', val:'SQL · Figma · Agile · Strategy', x:195, y:245},
+  ];
+  const LOAD_MSGS = ['Crafting your story…','Polishing bullet points…','Optimising for ATS…','Almost there…'];
+
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      // Reset
+      setSlide(0); setPdfReady(false);
+      setFields({fn:'',fr:'',fe:'',fl:'',fs:''});
+      setCursorPos({x:-100,y:-100,visible:false});
+      await sleep(700);
+
+      // Type each field
+      for (const f of FIELD_DATA) {
+        if (cancelled) return;
+        setCursorPos({x:f.x, y:f.y, visible:true});
+        await sleep(350);
+        for (let i = 1; i <= f.val.length; i++) {
+          if (cancelled) return;
+          setFields(prev => ({...prev, [f.key]: f.val.slice(0,i)}));
+          await sleep(f.val.length > 20 ? 38 : 55);
+        }
+        await sleep(120);
+      }
+
+      // Click generate
+      if (cancelled) return;
+      setCursorPos({x:400, y:310, visible:true});
+      await sleep(500);
+      setSlide(1);
+      setCursorPos({x:-100,y:-100,visible:false});
+
+      // Loading messages
+      for (let i = 0; i < 4; i++) {
+        if (cancelled) return;
+        setLoadMsg(LOAD_MSGS[i]); setLoadStep(i);
+        await sleep(950);
+      }
+
+      // Result
+      if (cancelled) return;
+      setSlide(2);
+      await sleep(1800);
+
+      // Click download
+      if (cancelled) return;
+      setCursorPos({x:390, y:118, visible:true});
+      await sleep(500);
+      setSlide(3); setPdfReady(false);
+      setCursorPos({x:-100,y:-100,visible:false});
+      await sleep(400);
+      setPdfReady(true);
+      await sleep(2400);
+      if (!cancelled) run();
+    }
+    run();
+    return () => { cancelled = true; };
+  }, []);
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  const slideStyle = (n) => ({
+    position:'absolute', inset:0,
+    opacity: slide===n ? 1 : 0,
+    transition:'opacity 0.5s',
+    pointerEvents: slide===n ? 'all' : 'none',
+  });
+
+  const inp = (key) => ({
+    background:'#0d0d0f', border:`1px solid ${fields[key] ? 'rgba(201,168,76,0.3)' : 'rgba(255,255,255,0.07)'}`,
+    borderRadius:7, padding:'7px 10px', fontSize:11, color:'#e2e2ea',
+    width:'100%', fontFamily:'Outfit,sans-serif', minHeight:32,
+  });
+
+  return (
+    <div style={{ background:'#111113', borderRadius:14, overflow:'hidden', border:'1px solid rgba(255,255,255,0.07)', boxShadow:'0 40px 100px rgba(0,0,0,0.7)', position:'relative', fontFamily:'Outfit,sans-serif' }}>
+      {/* Browser bar */}
+      <div style={{ background:'#0d0d0f', padding:'9px 14px', display:'flex', alignItems:'center', gap:10, borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ display:'flex', gap:4 }}>
+          {['#ff5f57','#febc2e','#28c840'].map((c,i)=><div key={i} style={{ width:10,height:10,borderRadius:'50%',background:c }} />)}
+        </div>
+        <div style={{ flex:1, background:'#1a1a1f', borderRadius:5, padding:'3px 10px', fontSize:10, color:'rgba(255,255,255,0.25)', fontFamily:'monospace' }}>
+          craftedresume.io/{slide < 2 ? 'build' : 'build/results'}
+        </div>
+      </div>
+
+      {/* Mini header */}
+      <div style={{ background:'#111113', borderBottom:'1px solid rgba(255,255,255,0.05)', padding:'0 16px', height:40, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ fontSize:13, fontWeight:300, color:'#e2e2ea', letterSpacing:'0.06em' }}>Crafted<span style={{ color:'#c9a84c', fontWeight:400 }}>Resume</span></div>
+        <div style={{ display:'flex', gap:6 }}>
+          <div style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.4)', borderRadius:6, padding:'3px 10px', fontSize:10 }}>Sign In</div>
+          <div style={{ background:'linear-gradient(135deg,#c9a84c,#e8c96d)', color:'#0d0d0f', borderRadius:6, padding:'3px 10px', fontSize:10, fontWeight:600 }}>Get Started</div>
+        </div>
+      </div>
+
+      {/* Step pills */}
+      <div style={{ background:'#0d0d0f', borderBottom:'1px solid rgba(255,255,255,0.05)', padding:'6px 16px', display:'flex', gap:10, alignItems:'center' }}>
+        {['Fill details','Generate','Review','Download'].map((s,i)=>(
+          <div key={i} style={{ display:'flex', alignItems:'center', gap:5 }}>
+            <div style={{ width:6,height:6,borderRadius:'50%', background: i<slide?'rgba(201,168,76,0.5)':i===slide?'#c9a84c':'rgba(255,255,255,0.1)', transition:'background 0.3s', boxShadow:i===slide?'0 0 6px rgba(201,168,76,0.5)':'none' }} />
+            <span style={{ fontSize:10, color:i===slide?'rgba(201,168,76,0.8)':'rgba(255,255,255,0.25)', transition:'color 0.3s' }}>{s}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Screen */}
+      <div style={{ position:'relative', height:320, overflow:'hidden', background:'#0d0d0f' }}>
+
+        {/* Cursor */}
+        <div style={{ position:'absolute', left:cursorPos.x, top:cursorPos.y, opacity:cursorPos.visible?1:0, transition:'left 0.6s cubic-bezier(0.4,0,0.2,1),top 0.6s cubic-bezier(0.4,0,0.2,1),opacity 0.3s', pointerEvents:'none', zIndex:50, width:16, height:16 }}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 1.5L13 8L8.5 9.5L6.5 14L3 1.5Z" fill="white" stroke="rgba(0,0,0,0.5)" strokeWidth="0.5"/>
+          </svg>
+        </div>
+
+        {/* Slide 0: Form */}
+        <div style={slideStyle(0)}>
+          <div style={{ padding:'14px 16px' }}>
+            <div style={{ background:'#111113', border:'1px solid rgba(255,255,255,0.06)', borderRadius:10, padding:'14px' }}>
+              <div style={{ fontSize:13, fontWeight:400, color:'#e2e2ea', marginBottom:2 }}>Personal Information</div>
+              <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', marginBottom:12 }}>Your basic details and target role.</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
+                <div>
+                  <div style={{ fontSize:9, color:'rgba(255,255,255,0.35)', letterSpacing:'0.08em', marginBottom:3 }}>FULL NAME</div>
+                  <div style={inp('fn')}>{fields.fn || <span style={{ color:'rgba(255,255,255,0.15)' }}>Alexandra Chen</span>}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize:9, color:'rgba(255,255,255,0.35)', letterSpacing:'0.08em', marginBottom:3 }}>TARGET ROLE</div>
+                  <div style={inp('fr')}>{fields.fr || <span style={{ color:'rgba(255,255,255,0.15)' }}>Product Manager</span>}</div>
+                </div>
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
+                <div>
+                  <div style={{ fontSize:9, color:'rgba(255,255,255,0.35)', letterSpacing:'0.08em', marginBottom:3 }}>EMAIL</div>
+                  <div style={inp('fe')}>{fields.fe || <span style={{ color:'rgba(255,255,255,0.15)' }}>alex@email.com</span>}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize:9, color:'rgba(255,255,255,0.35)', letterSpacing:'0.08em', marginBottom:3 }}>LOCATION</div>
+                  <div style={inp('fl')}>{fields.fl || <span style={{ color:'rgba(255,255,255,0.15)' }}>San Francisco</span>}</div>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize:9, color:'rgba(255,255,255,0.35)', letterSpacing:'0.08em', marginBottom:3 }}>SKILLS</div>
+                <div style={inp('fs')}>{fields.fs || <span style={{ color:'rgba(255,255,255,0.15)' }}>SQL · Figma · Agile</span>}</div>
+              </div>
+              <div style={{ display:'flex', justifyContent:'flex-end', marginTop:12 }}>
+                <div style={{ background:'linear-gradient(135deg,#c9a84c,#e8c96d)', color:'#0d0d0f', borderRadius:7, padding:'9px 24px', fontSize:12, fontWeight:600, cursor:'pointer' }}>✦ Generate Resume</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Slide 1: Loading */}
+        <div style={slideStyle(1)}>
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', gap:16 }}>
+            <div style={{ width:36,height:36,border:'2.5px solid rgba(201,168,76,0.15)',borderTopColor:'#c9a84c',borderRadius:'50%',animation:'spin 0.85s linear infinite' }} />
+            <div style={{ fontSize:14, color:'#c9a84c', fontWeight:300, transition:'opacity 0.3s' }}>{loadMsg}</div>
+            <div style={{ fontSize:11, color:'rgba(255,255,255,0.25)' }}>Claude AI is writing your resume</div>
+            <div style={{ display:'flex', gap:6, marginTop:4 }}>
+              {[0,1,2,3].map(i=>(
+                <div key={i} style={{ width:6,height:6,borderRadius:'50%', background:i===loadStep?'#c9a84c':'rgba(255,255,255,0.1)', transition:'background 0.3s' }} />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Slide 2: Result */}
+        <div style={slideStyle(2)}>
+          <div style={{ padding:'12px 14px' }}>
+            <div style={{ background:'rgba(74,222,128,0.04)', border:'1px solid rgba(74,222,128,0.15)', borderRadius:10, padding:'10px 14px', marginBottom:10, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <div>
+                <div style={{ fontSize:13, color:'#4ade80', marginBottom:1 }}>✓ Resume Complete</div>
+                <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)' }}>Review below, then download or share</div>
+              </div>
+              <div style={{ display:'flex', gap:6 }}>
+                <div style={{ border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.4)', borderRadius:6, padding:'5px 10px', fontSize:10 }}>🔗 Share</div>
+                <div style={{ background:'linear-gradient(135deg,#c9a84c,#e8c96d)', color:'#0d0d0f', borderRadius:6, padding:'5px 10px', fontSize:10, fontWeight:600 }}>⬇ Download PDF</div>
+              </div>
+            </div>
+            <div style={{ background:'#fff', borderRadius:10, padding:'14px 16px', boxShadow:'0 20px 60px rgba(0,0,0,0.5)' }}>
+              <div style={{ fontFamily:'Georgia,serif', fontSize:16, fontWeight:700, color:'#1a1a2e', borderBottom:'1.5px solid #1a1a2e', paddingBottom:6, marginBottom:6 }}>Alexandra Chen</div>
+              <div style={{ fontSize:10, color:'#8a8a96', fontStyle:'italic', marginBottom:4 }}>Senior Product Manager</div>
+              <div style={{ fontSize:8, color:'#999', marginBottom:10 }}>alex@email.com · San Francisco, CA · linkedin.com/in/alex</div>
+              {['PROFILE','EXPERIENCE','SKILLS'].map((s,si)=>(
+                <div key={s} style={{ marginBottom:8 }}>
+                  <div style={{ fontSize:7, fontWeight:700, letterSpacing:'1.5px', color:'#1a1a2e', borderBottom:'0.5px solid rgba(26,26,46,0.2)', paddingBottom:2, marginBottom:4 }}>{s}</div>
+                  {[90,76,si<2?62:0].filter(Boolean).map((w,i)=>(
+                    <div key={i} style={{ height:5, width:`${w}%`, background:'#eee', borderRadius:2, marginBottom:3 }} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Slide 3: PDF */}
+        <div style={slideStyle(3)}>
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', gap:14 }}>
+            <div style={{ background:'#1a1a1f', borderRadius:10, padding:'20px', position:'relative' }}>
+              <div style={{ background:'#fff', width:140, height:190, borderRadius:4, boxShadow:'0 12px 40px rgba(0,0,0,0.4)', padding:'12px' }}>
+                <div style={{ height:7,background:'#1a1a2e',borderRadius:2,width:'55%',marginBottom:3 }} />
+                <div style={{ height:4,background:'#eee',borderRadius:1,width:'38%',marginBottom:8 }} />
+                {[90,76,85,70,60].map((w,i)=><div key={i} style={{ height:4,background:'#eee',borderRadius:1,width:`${w}%`,marginBottom:3 }} />)}
+              </div>
+              <div style={{ position:'absolute', top:-10, right:-10, width:32, height:32, background:'#4ade80', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:14, opacity:pdfReady?1:0, transform:pdfReady?'scale(1)':'scale(0)', transition:'all 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}>✓</div>
+            </div>
+            <div style={{ fontSize:12, color:'#4ade80', opacity:pdfReady?1:0, transition:'opacity 0.5s' }}>PDF saved to your device</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Landing({ user, navigate }) {
   const go = (step) => navigate(step===1 ? "/dashboard" : "/");
 
@@ -375,38 +604,7 @@ export default function Landing({ user, navigate }) {
           </div>
           <div className="fade-up" style={{ animationDelay:"0.3s", position:"relative" }}>
             <div style={{ position:"absolute", inset:-40, background:"radial-gradient(ellipse at center, rgba(201,168,76,0.08) 0%, transparent 70%)", pointerEvents:"none" }} />
-            <div style={{ background:"#fff", borderRadius:16, padding:"32px 36px", boxShadow:"0 40px 100px rgba(0,0,0,0.6)", position:"relative", fontFamily:"Georgia, serif" }}>
-              <div style={{ borderBottom:"2px solid #1a1a2e", paddingBottom:16, marginBottom:18 }}>
-                <div style={{ fontSize:22, fontWeight:300, color:"#1a1a2e" }}>Alexandra Chen</div>
-                <div style={{ fontSize:13, color:"#8a8a96", fontStyle:"italic", marginBottom:8 }}>Senior Product Manager</div>
-                <div style={{ fontSize:11, color:"#666", display:"flex", gap:14, flexWrap:"wrap" }}>
-                  <span>alex.chen@email.com</span><span>San Francisco, CA</span>
-                </div>
-              </div>
-              <div style={{ marginBottom:14 }}>
-                <div style={{ fontSize:8, fontWeight:700, letterSpacing:"0.15em", textTransform:"uppercase", color:"#1a1a2e", borderBottom:"1px solid rgba(26,26,46,0.15)", paddingBottom:4, marginBottom:8 }}>Profile</div>
-                <div style={{ fontSize:11, color:"#333", lineHeight:1.6, fontStyle:"italic" }}>Results-driven Product Manager with 7+ years scaling B2B SaaS products from 0 to $12M ARR. Led cross-functional teams delivering 40% improvement in user retention.</div>
-              </div>
-              <div>
-                <div style={{ fontSize:8, fontWeight:700, letterSpacing:"0.15em", textTransform:"uppercase", color:"#1a1a2e", borderBottom:"1px solid rgba(26,26,46,0.15)", paddingBottom:4, marginBottom:8 }}>Experience</div>
-                {[{role:"Senior Product Manager",co:"Stripe",dates:"2021–Present"},{role:"Product Manager",co:"Notion",dates:"2019–2021"}].map((j,i)=>(
-                  <div key={i} style={{ marginBottom:8 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, fontWeight:600, color:"#1a1a2e" }}><span>{j.role} · {j.co}</span><span style={{ color:"#8a8a96", fontWeight:400 }}>{j.dates}</span></div>
-                    <div style={{ width:"100%", height:5, background:"rgba(0,0,0,0.06)", borderRadius:3, marginTop:5 }} />
-                    <div style={{ width:"85%", height:5, background:"rgba(0,0,0,0.06)", borderRadius:3, marginTop:4 }} />
-                  </div>
-                ))}
-              </div>
-              <div style={{ position:"absolute", bottom:24, right:24, background:"linear-gradient(135deg,#0d0d0f,#1a1a1f)", borderRadius:12, padding:"10px 16px", display:"flex", alignItems:"center", gap:10, border:"1px solid var(--gold-border)" }}>
-                <div>
-                  <div style={{ fontSize:9, letterSpacing:"0.12em", textTransform:"uppercase", color:"#5a5a68", marginBottom:2 }}>ATS Score</div>
-                  <div style={{ fontFamily:"var(--font-display)", fontSize:22, fontWeight:300, color:"#4ade80" }}>94<span style={{ fontSize:11, color:"#5a5a68" }}>/100</span></div>
-                </div>
-                <div style={{ width:36, height:36, borderRadius:"50%", border:"2.5px solid #4ade80", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  <span style={{ color:"#4ade80", fontSize:14 }}>✓</span>
-                </div>
-              </div>
-            </div>
+            <HeroDemo />
           </div>
         </div>
 
