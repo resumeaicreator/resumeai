@@ -108,6 +108,7 @@ function LiveJobs({ what, where, title, compact }) {
 
   // Fetch when scrolled into view — avoids rate limiting on page load
   const containerRef = useRef(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -338,6 +339,15 @@ function LiveJobsSearch({ user, navigate }) {
 }
 
 
+const HERO_FIELDS = [
+  {key:'fn', val:'Alexandra Chen',   x:100, y:170},
+  {key:'fr', val:'Product Manager',  x:290, y:170},
+  {key:'fe', val:'alex@email.com',   x:100, y:208},
+  {key:'fl', val:'San Francisco',    x:290, y:208},
+  {key:'fs', val:'SQL · Figma · Agile · Strategy', x:195, y:245},
+];
+const HERO_LOAD_MSGS = ['Crafting your story…','Polishing bullet points…','Optimising for ATS…','Almost there…'];
+
 function HeroDemo() {
   const [slide, setSlide] = useState(0);
   const [fields, setFields] = useState({fn:'',fr:'',fe:'',fl:'',fs:''});
@@ -346,15 +356,9 @@ function HeroDemo() {
   const [loadStep, setLoadStep] = useState(0);
   const [pdfReady, setPdfReady] = useState(false);
 
-  const FIELD_DATA = [
-    {key:'fn', val:'Alexandra Chen',   x:100, y:170},
-    {key:'fr', val:'Product Manager',  x:290, y:170},
-    {key:'fe', val:'alex@email.com',   x:100, y:208},
-    {key:'fl', val:'San Francisco',    x:290, y:208},
-    {key:'fs', val:'SQL · Figma · Agile · Strategy', x:195, y:245},
-  ];
-  const LOAD_MSGS = ['Crafting your story…','Polishing bullet points…','Optimising for ATS…','Almost there…'];
 
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     let cancelled = false;
     async function run() {
@@ -365,7 +369,7 @@ function HeroDemo() {
       await sleep(700);
 
       // Type each field
-      for (const f of FIELD_DATA) {
+      for (const f of HERO_FIELDS) {
         if (cancelled) return;
         setCursorPos({x:f.x, y:f.y, visible:true});
         await sleep(350);
@@ -387,7 +391,7 @@ function HeroDemo() {
       // Loading messages
       for (let i = 0; i < 4; i++) {
         if (cancelled) return;
-        setLoadMsg(LOAD_MSGS[i]); setLoadStep(i);
+        setLoadMsg(HERO_LOAD_MSGS[i]); setLoadStep(i);
         await sleep(950);
       }
 
