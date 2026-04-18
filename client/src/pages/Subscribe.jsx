@@ -1,12 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-function SubscribePage({ user, onSubscribed, onLogout, onBack }) {
+function SubscribePage({ user, onSubscribed, onLogout, onBack, onRegister }) {
   const [loading,setLoading] = useState(false);
   const [err,setErr]         = useState("");
   const API = process.env.REACT_APP_API_URL||"";
 
   const checkout = async () => {
+    if (!user) {
+      try { sessionStorage.setItem("cr_redirect", "/subscribe"); } catch {}
+      if (onRegister) onRegister();
+      return;
+    }
     setLoading(true); setErr("");
     try {
       const res = await fetch(`${API}/api/auth/billing/checkout`,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"}});
@@ -79,8 +84,9 @@ export default function Subscribe({ user, setUser }) {
     <SubscribePage
       user={user}
       onSubscribed={()=>navigate("/dashboard")}
-      onBack={()=>navigate("/dashboard")}
-      onLogout={()=>{ setUser(false); navigate("/login"); }}
+      onBack={()=>navigate(-1)}
+      onRegister={()=>navigate("/register")}
+      onLogout={()=>{ try{localStorage.removeItem("cr_user");}catch{} setUser(false); navigate("/login"); }}
     />
   );
 }

@@ -1301,10 +1301,11 @@ export default function App() {
     const onLogin = e => { setUser(e.detail); setAuthReady(true); };
     window.addEventListener("cr_login", onLogin);
 
-    // Read cached user from localStorage for instant load (no flash)
+    // Read cached user from localStorage for instant load
+    // Only set authReady=true if we have cached data (server will verify)
     try {
       const cached = localStorage.getItem("cr_user");
-      if (cached) { setUser(JSON.parse(cached)); setAuthReady(true); }
+      if (cached) { setUser(JSON.parse(cached)); }
     } catch {}
 
     // Verify with server in background
@@ -1324,12 +1325,17 @@ export default function App() {
           try { localStorage.setItem("cr_user", JSON.stringify(data.user)); } catch {}
           setUser(data.user);
         } else {
+          // Server says not logged in — clear any cached user
           try { localStorage.removeItem("cr_user"); } catch {}
           setUser(false);
         }
         setAuthReady(true);
       })
-      .catch(() => { setUser(false); setAuthReady(true); });
+      .catch(() => {
+        try { localStorage.removeItem("cr_user"); } catch {}
+        setUser(false);
+        setAuthReady(true);
+      });
 
     return () => window.removeEventListener("cr_login", onLogin);
   // eslint-disable-next-line react-hooks/exhaustive-deps
