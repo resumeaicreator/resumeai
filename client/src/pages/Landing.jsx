@@ -178,7 +178,167 @@ function LiveJobs({ what, where, title, compact }) {
   );
 }
 
+function SmartSearchDemo() {
+  const [step, setStep]               = useState(0);
+  const [role, setRole]               = useState('');
+  const [loc, setLoc]                 = useState('');
+  const [links, setLinks]             = useState([]);
+  const [hoveredLink, setHoveredLink] = useState(null);
+  const [clickedLink, setClickedLink] = useState(null);
+  const [curX, setCurX]               = useState(-100);
+  const [curY, setCurY]               = useState(-100);
+  const [curVis, setCurVis]           = useState(false);
+  const [loadMsg, setLoadMsg]         = useState('Finding the best searches...');
+  const [gQuery, setGQuery]           = useState('');
+
+  const ROLE = 'Software Engineer';
+  const LOC  = 'San Francisco, CA';
+  const DEMO_LINKS = [
+    { icon:'\u{1F3E2}', label:'Lever & Greenhouse', q:'(site:lever.co OR site:greenhouse.io) Software Engineer San Francisco' },
+    { icon:'\u{1F4BC}', label:'LinkedIn Jobs',      q:'site:linkedin.com/jobs Software Engineer San Francisco' },
+    { icon:'\u{1F310}', label:'Indeed SF',          q:'site:indeed.com Software Engineer San Francisco CA' },
+    { icon:'\u{1F30D}', label:'Remote roles',       q:'remote Software Engineer site:lever.co OR site:greenhouse.io' },
+    { icon:'\u{1F680}', label:'Startups (YC)',      q:'site:workatastartup.com Software Engineer San Francisco' },
+    { icon:'\u{1F3AF}', label:'Big Tech',           q:'Software Engineer San Francisco Google Apple Meta 2025' },
+  ];
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      setStep(0); setRole(''); setLoc(''); setLinks([]);
+      setHoveredLink(null); setClickedLink(null); setCurVis(false);
+      await sleep(600);
+      setCurX(130); setCurY(88); setCurVis(true); await sleep(350);
+      for (let i = 1; i <= ROLE.length; i++) { if (cancelled) return; setRole(ROLE.slice(0,i)); await sleep(52); }
+      await sleep(200);
+      setCurX(340); setCurY(88); await sleep(350);
+      for (let i = 1; i <= LOC.length; i++) { if (cancelled) return; setLoc(LOC.slice(0,i)); await sleep(60); }
+      await sleep(300);
+      setCurX(240); setCurY(148); await sleep(400);
+      setStep(1); setCurVis(false);
+      const msgs = ['Finding the best searches...','Crafting targeted queries...','Almost ready...'];
+      for (const m of msgs) { if (cancelled) return; setLoadMsg(m); await sleep(800); }
+      setStep(2); setLinks([]);
+      for (let i = 0; i < DEMO_LINKS.length; i++) {
+        if (cancelled) return;
+        setLinks(prev => [...prev, DEMO_LINKS[i]]);
+        await sleep(160);
+      }
+      await sleep(500);
+      setCurX(240); setCurY(240); setCurVis(true); await sleep(300);
+      setHoveredLink(0); await sleep(700);
+      setClickedLink(0); setHoveredLink(null); await sleep(300);
+      setGQuery(DEMO_LINKS[0].q);
+      setStep(3); setCurVis(false);
+      await sleep(3500);
+      setCurX(76); setCurY(228); setCurVis(true);
+      await sleep(2000);
+      setCurVis(false); await sleep(800);
+      if (!cancelled) run();
+    }
+    run();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const inp = (val) => ({
+    background:'#111113',
+    border:`1px solid ${val ? 'rgba(201,168,76,0.4)' : 'rgba(255,255,255,0.08)'}`,
+    borderRadius:8, padding:'8px 12px', fontSize:12, color:'#e2e2ea', minHeight:34, transition:'border-color .2s',
+  });
+
+  return (
+    <div style={{ background:'#0d0d0f', minHeight:300, position:'relative', overflow:'hidden' }}>
+      <div style={{ position:'absolute', left:curX, top:curY, opacity:curVis?1:0, transition:'left .6s cubic-bezier(.4,0,.2,1),top .6s cubic-bezier(.4,0,.2,1),opacity .3s', pointerEvents:'none', zIndex:20 }}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 1.5L13 8L8.5 9.5L6.5 14L3 1.5Z" fill="white" stroke="rgba(0,0,0,0.5)" strokeWidth="0.5"/></svg>
+      </div>
+
+      {step===0 && (
+        <div style={{ padding:16 }}>
+          <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginBottom:10 }}>Enter your role and location to generate targeted job search links:</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
+            <div>
+              <div style={{ fontSize:9, color:'rgba(255,255,255,0.35)', letterSpacing:'.08em', marginBottom:4 }}>JOB TITLE / ROLE</div>
+              <div style={inp(role)}>{role || <span style={{ color:'rgba(255,255,255,0.2)' }}>e.g. Software Engineer</span>}</div>
+            </div>
+            <div>
+              <div style={{ fontSize:9, color:'rgba(255,255,255,0.35)', letterSpacing:'.08em', marginBottom:4 }}>LOCATION</div>
+              <div style={inp(loc)}>{loc || <span style={{ color:'rgba(255,255,255,0.2)' }}>e.g. San Francisco, CA</span>}</div>
+            </div>
+          </div>
+          <div style={{ background:'linear-gradient(135deg,#c9a84c,#e8c96d)', color:'#0d0d0f', borderRadius:8, padding:'9px 24px', fontSize:12, fontWeight:600, textAlign:'center' }}>Generate Job Search Links</div>
+        </div>
+      )}
+
+      {step===1 && (
+        <div style={{ textAlign:'center', padding:'28px 0' }}>
+          <div style={{ width:28, height:28, border:'2px solid rgba(201,168,76,0.15)', borderTopColor:'#c9a84c', borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto 14px' }} />
+          <div style={{ fontSize:13, color:'#c9a84c' }}>{loadMsg}</div>
+          <div style={{ fontSize:11, color:'rgba(255,255,255,0.25)', marginTop:4 }}>Claude is tailoring queries for your role</div>
+        </div>
+      )}
+
+      {step===2 && (
+        <div style={{ padding:16 }}>
+          <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginBottom:10 }}>6 searches for {ROLE} in {LOC} — click any to open Google:</div>
+          {links.map((l,i) => (
+            <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', borderRadius:9, border:`1px solid ${hoveredLink===i||clickedLink===i?'rgba(201,168,76,0.4)':'rgba(255,255,255,0.06)'}`, background:hoveredLink===i||clickedLink===i?'rgba(201,168,76,0.06)':'rgba(255,255,255,0.02)', cursor:'pointer', marginBottom:6, transition:'all .2s' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ fontSize:15 }}>{l.icon}</span>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:500, color:'#e2e2ea', marginBottom:1 }}>{l.label}</div>
+                  <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', fontFamily:'monospace' }}>{l.q.length>42?l.q.slice(0,42)+'...':l.q}</div>
+                </div>
+              </div>
+              <span style={{ fontSize:13, color:'#c9a84c', opacity:hoveredLink===i||clickedLink===i?1:0.4 }}>&#8599;</span>
+            </div>
+          ))}
+          <div style={{ textAlign:'center', marginTop:6, fontSize:10, color:'rgba(255,255,255,0.2)' }}>Each link opens Google — browse results — apply directly</div>
+        </div>
+      )}
+
+      {step===3 && (
+        <div style={{ background:'#fff', borderRadius:10, margin:10, overflow:'hidden' }}>
+          <div style={{ background:'#fff', padding:'10px 14px', display:'flex', alignItems:'center', gap:10, borderBottom:'1px solid #eee' }}>
+            <div style={{ fontSize:18, fontWeight:700, letterSpacing:-1 }}>
+              <span style={{ color:'#4285f4' }}>G</span><span style={{ color:'#ea4335' }}>o</span><span style={{ color:'#fbbc05' }}>o</span><span style={{ color:'#34a853' }}>g</span><span style={{ color:'#ea4335' }}>l</span><span style={{ color:'#4285f4' }}>e</span>
+            </div>
+            <div style={{ flex:1, border:'1.5px solid #ddd', borderRadius:24, padding:'5px 14px', fontSize:10, color:'#444', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span>{gQuery.length>50?gQuery.slice(0,50)+'...':gQuery}</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4285f4" strokeWidth="2.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+            </div>
+          </div>
+          <div style={{ display:'flex', padding:'0 14px', borderBottom:'1px solid #eee' }}>
+            {['All','Jobs','News'].map((t,i) => (
+              <div key={t} style={{ padding:'7px 12px', fontSize:11, color:i===0?'#1a73e8':'#666', borderBottom:`2px solid ${i===0?'#1a73e8':'transparent'}` }}>{t}</div>
+            ))}
+          </div>
+          <div style={{ padding:'4px 0' }}>
+            <div style={{ padding:'4px 14px', fontSize:10, color:'#666' }}>About 14,200,000 results (0.43 seconds)</div>
+            {[
+              { url:'lever.co/stripe/software-engineer-sf', title:'Software Engineer, Payments Infrastructure - Stripe', desc:'San Francisco, CA · Full-time · $160K-$220K. Join our payments infrastructure team...' },
+              { url:'greenhouse.io/openai/software-engineer', title:'Software Engineer - Applied AI, OpenAI', desc:'San Francisco, CA · On-site · Build systems powering next-gen AI products. Strong Python & distributed systems required...' },
+              { url:'lever.co/coinbase/software-engineer', title:'Software Engineer, Platform - Coinbase', desc:'San Francisco, CA (Hybrid) · Competitive salary + equity. 2+ yrs backend experience preferred...' },
+            ].map((r,i) => (
+              <div key={i} style={{ padding:'9px 14px 8px', borderBottom:'1px solid #f5f5f5' }}>
+                <div style={{ fontSize:10, color:'#188038', marginBottom:2 }}>{r.url}</div>
+                <div style={{ fontSize:13, color:'#1a0dab', marginBottom:3, cursor:'pointer' }}>{r.title}</div>
+                <div style={{ fontSize:11, color:'#666', lineHeight:1.5 }}>{r.desc}</div>
+                <div style={{ display:'inline-block', marginTop:4, background:'#1a73e8', color:'#fff', borderRadius:4, padding:'2px 8px', fontSize:10, cursor:'pointer' }}>Apply Now</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function LiveJobsSearch({ user, navigate }) {
+  const [showSmartDemo, setShowSmartDemo] = useState(false);
   const [what, setWhat]   = useState("software engineer");
   const [where, setWhere] = useState("");
   const [search, setSearch] = useState({ what:"software engineer", where:"" });
@@ -238,11 +398,32 @@ function LiveJobsSearch({ user, navigate }) {
       {/* Smart Search tab */}
       {tab==="boolean" && (
         <div className="fade-in" style={{ maxWidth:600, margin:"0 auto" }}>
-          <div style={{ textAlign:"center", marginBottom:24 }}>
+          <div style={{ textAlign:"center", marginBottom:24, position:"relative" }}>
             <div style={{ fontSize:15, fontWeight:500, color:"var(--text-primary)", marginBottom:8 }}>AI-powered job search</div>
-            <div style={{ fontSize:13, color:"var(--ash)", lineHeight:1.7 }}>
+            <div style={{ fontSize:13, color:"var(--ash)", lineHeight:1.7, marginBottom:10 }}>
               Claude generates targeted search links across Lever, Greenhouse, LinkedIn, Indeed and more — tailored to your role.
             </div>
+            {/* How to use button */}
+            <button onClick={()=>setShowSmartDemo(true)} style={{ display:"inline-flex", alignItems:"center", gap:6, background:"none", border:"none", cursor:"pointer", color:"var(--ash)", fontSize:12, fontFamily:"var(--font-body)", padding:"4px 8px", borderRadius:8, transition:"color 0.2s" }}
+              onMouseEnter={e=>e.currentTarget.style.color="var(--gold)"}
+              onMouseLeave={e=>e.currentTarget.style.color="var(--ash)"}
+            >
+              <span style={{ width:16, height:16, borderRadius:"50%", border:"1.5px solid currentColor", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:600, flexShrink:0 }}>?</span>
+              How to use Smart Search?
+            </button>
+            {/* Demo popup */}
+            {showSmartDemo && (
+              <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:1000, width:520, background:"#111113", borderRadius:16, border:"1px solid rgba(255,255,255,0.08)", boxShadow:"0 40px 100px rgba(0,0,0,0.8)", overflow:"hidden" }}>
+                {/* Popup header */}
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 18px", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ fontSize:13, fontWeight:500, color:"var(--text-primary)" }}>🎯 How to use Smart Search</div>
+                  <button onClick={()=>setShowSmartDemo(false)} style={{ background:"none", border:"1px solid rgba(255,255,255,0.1)", borderRadius:6, color:"var(--ash)", fontSize:12, padding:"3px 10px", cursor:"pointer", fontFamily:"var(--font-body)" }}>✕ Close</button>
+                </div>
+                {/* Backdrop */}
+                <div onClick={()=>setShowSmartDemo(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:-1 }} />
+                <SmartSearchDemo />
+              </div>
+            )}
           </div>
 
           {!aiSearches && !aiSearchLoading && (
