@@ -217,14 +217,6 @@ const FontLink = () => {
 };
 
 
-const JOB_BOARDS = [
-  { name:"LinkedIn Jobs",   color:"#0a66c2", icon:"in", url:(r,l)=>`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(r)}&location=${encodeURIComponent(l||"")}` },
-  { name:"Indeed",          color:"#003a9b", icon:"in", url:(r,l)=>`https://www.indeed.com/jobs?q=${encodeURIComponent(r)}&l=${encodeURIComponent(l||"")}` },
-  { name:"Glassdoor",       color:"#0caa41", icon:"gd", url:(r,l)=>`https://www.glassdoor.com/Job/jobs.htm?sc.keyword=${encodeURIComponent(r)}&locT=C&locId=1` },
-  { name:"Google Jobs",     color:"#4285f4", icon:"g",  url:(r,l)=>`https://www.google.com/search?q=${encodeURIComponent(r+" jobs "+(l||""))}` },
-  { name:"Remotive",        color:"#7c3aed", icon:"re", url:(r)=>`https://remotive.com/remote-jobs?search=${encodeURIComponent(r)}` },
-  { name:"We Work Remotely",color:"#1a9e6e", icon:"ww", url:(r)=>`https://weworkremotely.com/remote-jobs/search?term=${encodeURIComponent(r)}` },
-];
 
 function HeroGlow() {
   return (
@@ -1065,7 +1057,7 @@ function SmartSearchLinks({ role, location }) {
   const [loading, setLoading]     = useState(false);
   const [err, setErr]             = useState("");
   const [showDemo, setShowDemo]   = useState(false);
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // eslint-disable-line
   const API = process.env.REACT_APP_API_URL || "";
 
   const fetch_ = async () => {
@@ -1171,19 +1163,10 @@ function JobRecommendations({ role, skills, location }) {
   const [tab, setTab]         = useState("live");       // "live" | "boolean" | "ai"
   const [aiJobs, setAiJobs]   = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
-  const [boolQuery, setBoolQuery] = useState("");
   const [expanded, setExpanded]   = useState(false);
 
   const roleClean = (role||"").trim();
   const skillList = (skills||"").split(/[,|]/).map(s=>s.trim()).filter(Boolean).slice(0,10);
-
-  // Generate boolean search query from resume
-  const generateBoolean = () => {
-    const loc = location || "United States";
-    const topSkills = skillList.slice(0,4).join(" OR ");
-    const query = `site:lever.co OR site:greenhouse.io ("${roleClean}" OR ${topSkills}) remote "${loc}" after:${new Date(Date.now()-7*86400000).toISOString().split("T")[0]}`;
-    return query;
-  };
 
   const fetchAiJobs = async () => {
     setAiLoading(true);
