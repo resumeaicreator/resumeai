@@ -1,0 +1,15 @@
+[build]
+  base = "client"
+  command = "npm run build"
+  publish = "build"
+
+[[edge_functions]]
+  path = "/*"
+  function = "prerender"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
