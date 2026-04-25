@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Landing      from "./pages/Landing";
+import Blog         from "./pages/Blog";
 import Login        from "./pages/Login";
 import Register     from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -1464,6 +1465,7 @@ export default function App() {
       "/apply/results":  { page:"app",      step:3, mode:"apply" },
       "/interview/results":{ page:"app",    step:3, mode:"interview" },
       "/linkedin-writer/results":{ page:"app", step:3, mode:"linkedin-quick" },
+      "/blog":             { page:"blog",     step:0, mode:"" },
       "/login":          { page:"login",    step:0, mode:"" },
       "/register":       { page:"register", step:0, mode:"" },
       "/forgot":         { page:"forgot",   step:0, mode:"" },
@@ -1471,6 +1473,7 @@ export default function App() {
       "/account":        { page:"account",  step:0, mode:"" },
       "/subscribe":      { page:"subscribe",step:0, mode:"" },
     };
+    if (path.startsWith("/blog")) return { page:"blog", step:0, mode:"" };
     return map[path] || { page:"app", step:0, mode:"" };
   };
 
@@ -1728,6 +1731,7 @@ export default function App() {
       {page==="reset"                  && <ResetPassword token={resetToken} />}
       {authReady && page==="subscribe" && <Subscribe user={user} setUser={setUser} />}
       {authReady && page==="account"   && <Account   user={user} setUser={setUser} />}
+      {page==="blog" && <Blog />}
       {showVerifyBanner && <VerifyBanner onClose={()=>setShowVerifyBanner(false)} />}
       {user && user.subscriptionStatus !== "active" && user.subscriptionStatus === "past_due" && page==="app" && (
         <ExpiredBanner status={user.subscriptionStatus} onUpgrade={()=>navigate("/subscribe")} />
